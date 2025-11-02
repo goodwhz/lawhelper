@@ -1,7 +1,7 @@
 import type { AppInfo } from '@/types/app'
-export const APP_ID = ''
-export const API_KEY = 'app-y5rIJA5AAq86u5H6mrcK6bBg'
-export const API_URL = `${process.env.NEXT_PUBLIC_API_URL}`
+export const APP_ID = 'd6393d63-bfa1-4716-af18-6b5c0939c297'
+export const API_KEY = 'app-hHPWNXhnx5py8mCU285IJFWH'
+export const API_URL = 'https://dify.aipfuture.com/v1'
 export const APP_INFO: AppInfo = {
   title: 'AI劳动法助手',
   description: '专业的劳动法咨询与工具平台，提供智能问答、法律计算器和文书模板服务',
