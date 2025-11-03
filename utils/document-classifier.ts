@@ -11,11 +11,11 @@ interface LawDocument {
 // 直接按照文件夹名称分类
 export function classifyDocument(filePath: string): string {
   // 根据文件路径判断分类
-  if (filePath.includes('/国家法律/')) {
+  if (filePath.includes('国家法律/')) {
     return '国家法律'
-  } else if (filePath.includes('/国家新政法规/')) {
-    return '国家新政法规'
-  } else if (filePath.includes('/地方性法规/')) {
+  } else if (filePath.includes('国家新政法规/')) {
+    return '国家行政法规'
+  } else if (filePath.includes('地方性法规/')) {
     return '地方性法规'
   }
   
