@@ -31,8 +31,11 @@ export function generateDescription(title: string, category: string): string {
 // 处理所有文件
 export function processAllDocuments(filenames: string[]): LawDocument[] {
   return filenames.map((filename, index) => {
+    // 首先提取文件名（移除文件夹路径）
+    const fileNameOnly = filename.split('/').pop() || filename
+    
     // 提取标题（移除下划线和日期）
-    const title = filename
+    const title = fileNameOnly
       .replace(/_[\d]{8}/g, '') // 移除日期
       .replace(/[+]/g, '') // 移除加号
       .replace(/\.(docx?)$/i, '') // 移除文件扩展名
