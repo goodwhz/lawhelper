@@ -338,13 +338,13 @@ const Welcome: FC<IWelcomeProps> = ({
   }
 
   return (
-    <div className='relative mobile:min-h-[48px] tablet:min-h-[64px]'>
+    <div className='relative h-full'>
       {hasSetInputs && renderHeader()}
-      <div className='mx-auto pc:w-[794px] max-w-full mobile:w-full px-3.5'>
+      <div className='mx-auto pc:w-[794px] max-w-full mobile:w-full px-3.5 h-full flex flex-col'>
         {/*  Has't set inputs  */}
         {
           !hasSetInputs && (
-            <div className='mobile:pt-[72px] tablet:pt-[128px] pc:pt-[200px]'>
+            <div className='flex-1 flex flex-col justify-center items-center'>
               {hasVar
                 ? (
                   renderVarPanel()
@@ -361,7 +361,7 @@ const Welcome: FC<IWelcomeProps> = ({
 
         {/* foot */}
         {!hasSetInputs && (
-          <div className='mt-4 flex justify-between items-center h-8 text-xs text-gray-400'>
+          <div className='flex-shrink-0 flex justify-between items-center h-8 text-xs text-gray-400 mt-4'>
 
             {siteInfo.privacy_policy
               ? <div>{t('app.chat.privacyPolicyLeft')}
