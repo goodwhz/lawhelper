@@ -42,16 +42,12 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ isOpen, onClose, docu
   const handlePreview = async () => {
     setIsLoading(true)
     try {
-      // 从文件路径中提取文件名
-      const fileName = doc.filePath.startsWith('/') ? doc.filePath.substring(1) : doc.filePath
+      // 直接触发下载，因为在线预览需要公开可访问的URL
+      // 本地开发环境无法提供公开URL给Microsoft Office Online服务
+      handleDownload()
       
-      // 构建完整的文件URL
-      const fileUrl = `${window.location.origin}/api/law/${encodeURIComponent(fileName)}`
-      
-      // 使用Microsoft Office Online预览服务
-      const previewUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fileUrl)}`
-      
-      setPreviewUrl(previewUrl)
+      // 显示提示信息
+      alert('由于安全限制，在线预览功能暂时不可用。文档已开始下载，请使用本地Word或其他文档查看器打开。')
     } catch (error) {
       console.error('预览错误:', error)
       alert('预览功能暂时不可用，请下载后查看。')

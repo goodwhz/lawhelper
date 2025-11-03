@@ -11,7 +11,7 @@ export async function GET(
     const { filename } = await params
     const decodedFilename = decodeURIComponent(filename)
     
-    // 构建文件路径
+    // 构建文件路径 - 直接使用完整的相对路径
     const filePath = join(process.cwd(), 'law', decodedFilename)
     
     // 检查文件是否存在
@@ -31,12 +31,15 @@ export async function GET(
       contentType = 'application/msword'
     }
     
+    // 提取文件名用于下载（不包含文件夹路径）
+    const downloadFilename = decodedFilename.split('/').pop() || decodedFilename
+    
     // 使用encodeURIComponent处理中文字符问题
     return new NextResponse(fileBuffer, {
       status: 200,
       headers: {
         'Content-Type': contentType,
-        'Content-Disposition': `attachment; filename="${encodeURIComponent(decodedFilename)}"`,
+        'Content-Disposition': `attachment; filename="${encodeURIComponent(downloadFilename)}"`,
         'Cache-Control': 'public, max-age=3600',
       },
     })
