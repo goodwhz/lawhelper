@@ -8,41 +8,15 @@ interface LawDocument {
   filePath: string
 }
 
-// 分类规则
-const categoryRules = {
-  '行政法规': ['条例', '规定', '办法'],
-  '地方性法规': ['省', '市', '自治区', '州', '县', '区'],
-  '国家法律': ['中华人民共和国', '劳动法', '劳动合同法', '民法典'],
-  '部门规章': ['规定', '办法', '细则'],
-  '司法解释': ['解释', '规定', '批复']
-}
-
-// 自动分类函数
-export function classifyDocument(filename: string): string {
-  const title = filename.replace(/[_.\d]/g, ' ').trim()
-  
-  // 检查国家法律 - 只包含指定的5个法律文件
-  const nationalLaws = [
-    '中华人民共和国劳动法',
-    '中华人民共和国劳动合同法', 
-    '中华人民共和国劳动合同法实施条例',
-    '中华人民共和国劳动争议调解仲裁法',
-    '中华人民共和国民法典'
-  ]
-  
-  if (nationalLaws.some(law => title.includes(law))) {
+// 直接按照文件夹名称分类
+export function classifyDocument(filePath: string): string {
+  // 根据文件路径判断分类
+  if (filePath.includes('/国家法律/')) {
     return '国家法律'
-  }
-  
-  // 检查地方性法规
-  if (title.includes('省') || title.includes('市') || title.includes('自治区') ||
-      title.includes('州') || title.includes('县') || title.includes('区')) {
+  } else if (filePath.includes('/国家新政法规/')) {
+    return '国家新政法规'
+  } else if (filePath.includes('/地方性法规/')) {
     return '地方性法规'
-  }
-  
-  // 检查行政法规
-  if (title.includes('条例') && !title.includes('省') && !title.includes('市')) {
-    return '行政法规'
   }
   
   // 默认分类
