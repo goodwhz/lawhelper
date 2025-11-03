@@ -21,9 +21,16 @@ const categoryRules = {
 export function classifyDocument(filename: string): string {
   const title = filename.replace(/[_.\d]/g, ' ').trim()
   
-  // 检查国家法律
-  if (title.includes('中华人民共和国') || title.includes('劳动法') || 
-      title.includes('劳动合同法') || title.includes('民法典')) {
+  // 检查国家法律 - 只包含指定的5个法律文件
+  const nationalLaws = [
+    '中华人民共和国劳动法',
+    '中华人民共和国劳动合同法', 
+    '中华人民共和国劳动合同法实施条例',
+    '中华人民共和国劳动争议调解仲裁法',
+    '中华人民共和国民法典'
+  ]
+  
+  if (nationalLaws.some(law => title.includes(law))) {
     return '国家法律'
   }
   
