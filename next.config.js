@@ -17,6 +17,15 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   output: 'standalone',
+  // 配置静态文件服务，允许访问law目录下的文档文件
+  async rewrites() {
+    return [
+      {
+        source: '/law/:path*',
+        destination: '/law/:path*',
+      },
+    ]
+  },
 }
 
 module.exports = nextConfig

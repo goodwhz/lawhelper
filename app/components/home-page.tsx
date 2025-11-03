@@ -12,7 +12,7 @@ const HomePage: FC = () => {
       description: 'AI劳动法助手',
       icon: '🤖',
       href: '/ai-chat',
-      color: 'from-blue-500 to-blue-600',
+      color: 'from-law-red-500 to-law-red-600',
       features: ['专业法律咨询', '实时问题解答', '个性化建议']
     },
     {
@@ -20,7 +20,7 @@ const HomePage: FC = () => {
       description: '实用计算工具',
       icon: '🛠️',
       href: '/tools',
-      color: 'from-green-500 to-green-600',
+      color: 'from-law-orange-500 to-law-orange-600',
       features: ['赔偿计算器', '加班费计算', '年假计算器', '合同生成器']
     },
     {
@@ -28,13 +28,13 @@ const HomePage: FC = () => {
       description: '法规与文书模板',
       icon: '📚',
       href: '/knowledge-base',
-      color: 'from-purple-500 to-purple-600',
+      color: 'from-law-blue-500 to-law-blue-600',
       features: ['法律法规查询', '文书模板下载', '案例参考']
     }
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-law-red-50 via-law-orange-50 to-law-blue-50">
       <Header 
         title="AI劳动法助手" 
         isMobile={false}
@@ -46,10 +46,10 @@ const HomePage: FC = () => {
       
       {/* 英雄区域 */}
       <div className="text-center py-16 px-4">
-        <h1 className="text-5xl font-bold text-gray-900 mb-6">
+        <h1 className="text-5xl font-bold text-law-red-800 mb-6">
           专业的劳动法咨询平台
         </h1>
-        <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+        <p className="text-xl text-law-blue-700 mb-8 max-w-3xl mx-auto">
           集AI智能问答、法律计算工具、法规知识库于一体的综合性劳动法服务平台，
           为劳动者和企业提供全方位的法律支持
         </p>
@@ -60,23 +60,23 @@ const HomePage: FC = () => {
         <div className="grid md:grid-cols-3 gap-8">
           {features.map((feature, index) => (
             <Link key={index} href={feature.href}>
-              <div className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer">
-                <div className={`p-8 rounded-t-xl bg-gradient-to-r ${feature.color} text-white`}>
+              <div className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer h-full flex flex-col">
+                <div className={`p-8 rounded-t-xl bg-gradient-to-r ${feature.color} text-white flex-1 flex flex-col justify-center`}>
                   <div className="text-4xl mb-4">{feature.icon}</div>
                   <h3 className="text-2xl font-bold mb-2">{feature.title}</h3>
-                  <p className="text-blue-100">{feature.description}</p>
+                  <p className="text-white/90">{feature.description}</p>
                 </div>
-                <div className="p-6">
-                  <ul className="space-y-2">
+                <div className="p-6 flex-1 flex flex-col justify-between">
+                  <ul className="space-y-2 mb-6">
                     {feature.features.map((item, idx) => (
                       <li key={idx} className="flex items-center text-gray-600">
-                        <span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
+                        <span className="w-2 h-2 bg-law-red-500 rounded-full mr-3"></span>
                         {item}
                       </li>
                     ))}
                   </ul>
-                  <div className="mt-6 text-center">
-                    <button className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                  <div className="text-center">
+                    <button className="bg-law-red-600 text-white px-6 py-2 rounded-lg hover:bg-law-red-700 transition-colors w-full">
                       开始使用
                     </button>
                   </div>
@@ -92,19 +92,19 @@ const HomePage: FC = () => {
         <div className="max-w-7xl mx-auto px-4">
           <div className="grid md:grid-cols-4 gap-8 text-center">
             <div>
-              <div className="text-3xl font-bold text-blue-600">1000+</div>
+              <div className="text-3xl font-bold text-law-red-600">1000+</div>
               <div className="text-gray-600">法律咨询案例</div>
             </div>
             <div>
-              <div className="text-3xl font-bold text-green-600">500+</div>
+              <div className="text-3xl font-bold text-law-orange-600">500+</div>
               <div className="text-gray-600">工具使用次数</div>
             </div>
             <div>
-              <div className="text-3xl font-bold text-purple-600">50+</div>
+              <div className="text-3xl font-bold text-law-blue-600">50+</div>
               <div className="text-gray-600">法律法规文件</div>
             </div>
             <div>
-              <div className="text-3xl font-bold text-orange-600">99%</div>
+              <div className="text-3xl font-bold text-law-red-500">99%</div>
               <div className="text-gray-600">用户满意度</div>
             </div>
           </div>
@@ -112,20 +112,20 @@ const HomePage: FC = () => {
       </div>
 
       {/* 底部CTA */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-16">
+      <div className="bg-gradient-to-r from-law-red-600 via-law-orange-600 to-law-blue-600 text-white py-16">
         <div className="max-w-4xl mx-auto text-center px-4">
           <h2 className="text-3xl font-bold mb-4">立即体验专业的劳动法服务</h2>
-          <p className="text-xl mb-8 text-blue-100">
+          <p className="text-xl mb-8 text-white/90">
             无论是个人咨询还是企业需求，我们都能为您提供专业的法律支持
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/ai-chat">
-              <button className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+              <button className="bg-white text-law-red-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
                 开始咨询
               </button>
             </Link>
             <Link href="/tools">
-              <button className="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-blue-600 transition-colors">
+              <button className="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-law-red-600 transition-colors">
                 使用工具
               </button>
             </Link>
