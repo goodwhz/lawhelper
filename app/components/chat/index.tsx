@@ -142,29 +142,33 @@ const Chat: FC<IChatProps> = ({
   }
 
   return (
-    <div className={cn(!feedbackDisabled && 'px-3.5', 'h-full flex flex-col')}>
+    <div className={cn(!feedbackDisabled && 'px-3.5', 'h-full flex flex-col overflow-x-hidden')}>
       {/* Chat List */}
-      <div className="flex-1 overflow-y-auto space-y-[30px] pb-4">
-        {chatList.map((item) => {
+      <div className="flex-1 overflow-y-auto overflow-x-hidden pb-4">
+        {chatList.map((item, index) => {
           if (item.isAnswer) {
             const isLast = item.id === chatList[chatList.length - 1].id
-            return <Answer
-              key={item.id}
-              item={item}
-              feedbackDisabled={feedbackDisabled}
-              onFeedback={onFeedback}
-              isResponding={isResponding && isLast}
-              suggestionClick={suggestionClick}
-            />
+            return (
+              <div key={item.id} className={index > 0 ? 'mt-6' : ''}>
+                <Answer
+                  item={item}
+                  feedbackDisabled={feedbackDisabled}
+                  onFeedback={onFeedback}
+                  isResponding={isResponding && isLast}
+                  suggestionClick={suggestionClick}
+                />
+              </div>
+            )
           }
           return (
-            <Question
-              key={item.id}
-              id={item.id}
-              content={item.content}
-              useCurrentUserAvatar={useCurrentUserAvatar}
-              imgSrcs={(item.message_files && item.message_files?.length > 0) ? item.message_files.map(item => item.url) : []}
-            />
+            <div key={item.id} className={index > 0 ? 'mt-6' : ''}>
+              <Question
+                id={item.id}
+                content={item.content}
+                useCurrentUserAvatar={useCurrentUserAvatar}
+                imgSrcs={(item.message_files && item.message_files?.length > 0) ? item.message_files.map(item => item.url) : []}
+              />
+            </div>
           )
         })}
       </div>

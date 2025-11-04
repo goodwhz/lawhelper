@@ -9,36 +9,7 @@ const Navigation: FC = () => {
   const pathname = usePathname()
   const [isWeChatModalOpen, setIsWeChatModalOpen] = useState(false)
 
-  const navItems = [
-    {
-      id: 'home',
-      label: '首页',
-      icon: '🏠',
-      description: '综合功能',
-      href: '/',
-    },
-    {
-      id: 'ai',
-      label: '智能核心',
-      icon: '🤖',
-      description: 'AI劳动法助手',
-      href: '/ai-chat',
-    },
-    {
-      id: 'tools',
-      label: '劳动法工具箱',
-      icon: '🛠️',
-      description: '实用计算工具',
-      href: '/tools',
-    },
-    {
-      id: 'knowledge',
-      label: '法律知识库',
-      icon: '📚',
-      description: '法规与文书模板',
-      href: '/knowledge-base',
-    },
-  ]
+  const navItems = []
 
   const isActive = (href: string) => {
     if (href === '/') { return pathname === '/' }
@@ -50,44 +21,22 @@ const Navigation: FC = () => {
       <nav className="bg-white shadow-lg border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex justify-between items-center py-4">
-            {/* Logo区域 */}
+            {/* Logo区域 - 置于最左边 */}
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-law-red-500 to-law-red-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">法</span>
-              </div>
+              <img
+                src="/logo.jpeg"
+                alt="法律助手Logo"
+                className="h-12 w-auto rounded-lg object-contain"
+              />
               <div>
-                <h1 className="text-xl font-bold text-gray-900">AI劳动法助手</h1>
-                <p className="text-sm text-gray-500">专业的法律服务平台</p>
+                <h1 className="text-xl font-bold text-gray-900">冷静头脑</h1>
               </div>
             </div>
 
-            {/* 导航菜单 */}
-            <div className="hidden md:flex space-x-8">
-              {navItems.map(item => (
-                <Link
-                  key={item.id}
-                  href={item.href}
-                  className={`
-                    group relative py-2 px-4 transition-all duration-300 rounded-lg
-                    ${isActive(item.href)
-                  ? 'bg-law-red-50 text-law-red-600 font-semibold'
-                  : 'text-gray-700 hover:bg-gray-50 hover:text-law-red-500'
-                }
-                  `}
-                >
-                  <div className="flex items-center space-x-2">
-                    <span className="text-lg">{item.icon}</span>
-                    <span className="font-medium">{item.label}</span>
-                  </div>
-                  {isActive(item.href) && (
-                    <div className="absolute bottom-0 left-0 w-full h-0.5 bg-law-red-500 rounded-full"></div>
-                  )}
-                  <div className="absolute inset-0 bg-law-red-500 opacity-0 group-hover:opacity-5 transition-opacity rounded-lg"></div>
-                </Link>
-              ))}
-            </div>
+            {/* 中间区域 - 保持空 */}
+            <div className="flex-1"></div>
 
-            {/* 用户操作区域 */}
+            {/* 用户操作区域 - 置于最右边 */}
             <div className="flex items-center space-x-3">
               <Link href="/about" className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors font-medium">
                 关于

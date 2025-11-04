@@ -84,19 +84,26 @@ const Main: FC<IMainProps> = () => {
 
   const [conversationIdChangeBecauseOfNew, setConversationIdChangeBecauseOfNew, getConversationIdChangeBecauseOfNew] = useGetState(false)
   const [isChatStarted, { setTrue: setChatStarted, setFalse: setChatNotStarted }] = useBoolean(false)
+  const [hasSetInputs, setHasSetInputs] = useState(false)
+
   const handleStartChat = (inputs: Record<string, any>) => {
     createNewChat()
     setConversationIdChangeBecauseOfNew(true)
     setCurrInputs(inputs)
     setChatStarted()
+    setHasSetInputs(true)
     // parse variables in introduction
     setChatList(generateNewChatListWithOpenStatement('', inputs))
   }
-  const hasSetInputs = (() => {
-    if (!isNewConversation) { return true }
 
-    return isChatStarted
-  })()
+  // Update hasSetInputs based on conversation state
+  useEffect(() => {
+    if (!isNewConversation) {
+      setHasSetInputs(true)
+    } else if (isChatStarted) {
+      setHasSetInputs(true)
+    }
+  }, [isNewConversation, isChatStarted])
 
   const conversationName = currConversationInfo?.name || t('app.chat.newChatDefaultName') as string
   const conversationIntroduction = currConversationInfo?.introduction || ''
@@ -684,7 +691,7 @@ const Main: FC<IMainProps> = () => {
 
           {
             hasSetInputs && (
-              <div className='relative grow flex flex-col overflow-hidden' ref={chatListDomRef}>
+              <div className='relative grow flex flex-col h-full' ref={chatListDomRef}>
                 <Chat
                   chatList={chatList}
                   onSend={handleSend}
