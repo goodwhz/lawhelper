@@ -48,7 +48,7 @@ const HomePage: FC = () => {
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-law-red-50 via-law-orange-50 to-law-blue-50">
+    <div className="min-h-screen bg-white">
       <Header
         title="CoolBrain Labor Law"
         isMobile={false}
@@ -153,7 +153,7 @@ const HomePage: FC = () => {
       </div>
 
       {/* 统计数据 - 现代化设计 */}
-      <div className="bg-gradient-to-r from-law-red-50 via-law-orange-50 to-law-blue-50 py-16 w-full">
+      <div className="bg-white py-16 w-full">
         <div className="w-full max-w-7xl mx-auto px-4">
           <div className="grid md:grid-cols-4 gap-8 text-center">
             {[
@@ -174,7 +174,7 @@ const HomePage: FC = () => {
       </div>
 
       {/* 底部CTA - 现代化设计 */}
-      <div className="bg-gradient-to-r from-law-red-600 via-law-orange-600 to-law-blue-600 text-white py-20 w-full relative overflow-hidden">
+      <div className="bg-law-red-600 text-white py-20 w-full relative overflow-hidden">
         <div className="absolute inset-0 bg-black/10"></div>
         <div className="relative w-full max-w-5xl mx-auto text-center px-4">
           <h2 className="text-4xl font-bold mb-6">现在，诚邀您加入CoolBrain-Laborlawhelper体验</h2>

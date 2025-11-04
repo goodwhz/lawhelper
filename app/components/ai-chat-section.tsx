@@ -5,7 +5,7 @@ import Main from '@/app/components'
 
 const AIChatSection: FC = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-law-red-50 via-law-orange-50 to-law-blue-50">
+    <div className="min-h-screen bg-white">
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
           <div className="mb-6">
@@ -24,67 +24,67 @@ const AIChatSection: FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-law-red-50 p-6 rounded-lg border border-law-red-200">
-            <h3 className="font-semibold text-law-red-800 mb-3">💡 常见问题</h3>
-            <ul className="text-sm text-law-red-700 space-y-2">
+          <div className="bg-white p-6 rounded-lg border border-gray-200">
+            <h3 className="font-semibold text-gray-800 mb-3">💡 常见问题</h3>
+            <ul className="text-sm text-gray-700 space-y-2">
               <li className="flex items-center">
-                <span className="w-2 h-2 bg-law-red-500 rounded-full mr-3"></span>
+                <span className="w-2 h-2 bg-gray-500 rounded-full mr-3"></span>
                 试用期被辞退有补偿吗？
               </li>
               <li className="flex items-center">
-                <span className="w-2 h-2 bg-law-red-500 rounded-full mr-3"></span>
+                <span className="w-2 h-2 bg-gray-500 rounded-full mr-3"></span>
                 加班费如何计算？
               </li>
               <li className="flex items-center">
-                <span className="w-2 h-2 bg-law-red-500 rounded-full mr-3"></span>
+                <span className="w-2 h-2 bg-gray-500 rounded-full mr-3"></span>
                 年假天数怎么确定？
               </li>
               <li className="flex items-center">
-                <span className="w-2 h-2 bg-law-red-500 rounded-full mr-3"></span>
+                <span className="w-2 h-2 bg-gray-500 rounded-full mr-3"></span>
                 工伤认定流程是什么？
               </li>
             </ul>
           </div>
 
-          <div className="bg-law-orange-50 p-6 rounded-lg border border-law-orange-200">
-            <h3 className="font-semibold text-law-orange-800 mb-3">⚖️ 法律咨询</h3>
-            <ul className="text-sm text-law-orange-700 space-y-2">
+          <div className="bg-white p-6 rounded-lg border border-gray-200">
+            <h3 className="font-semibold text-gray-800 mb-3">⚖️ 法律咨询</h3>
+            <ul className="text-sm text-gray-700 space-y-2">
               <li className="flex items-center">
-                <span className="w-2 h-2 bg-law-orange-500 rounded-full mr-3"></span>
+                <span className="w-2 h-2 bg-gray-500 rounded-full mr-3"></span>
                 劳动合同纠纷
               </li>
               <li className="flex items-center">
-                <span className="w-2 h-2 bg-law-orange-500 rounded-full mr-3"></span>
+                <span className="w-2 h-2 bg-gray-500 rounded-full mr-3"></span>
                 工资支付争议
               </li>
               <li className="flex items-center">
-                <span className="w-2 h-2 bg-law-orange-500 rounded-full mr-3"></span>
+                <span className="w-2 h-2 bg-gray-500 rounded-full mr-3"></span>
                 社保缴纳问题
               </li>
               <li className="flex items-center">
-                <span className="w-2 h-2 bg-law-orange-500 rounded-full mr-3"></span>
+                <span className="w-2 h-2 bg-gray-500 rounded-full mr-3"></span>
                 劳动争议仲裁
               </li>
             </ul>
           </div>
 
-          <div className="bg-law-blue-50 p-6 rounded-lg border border-law-blue-200">
-            <h3 className="font-semibold text-law-blue-800 mb-3">📋 文书指导</h3>
-            <ul className="text-sm text-law-blue-700 space-y-2">
+          <div className="bg-white p-6 rounded-lg border border-gray-200">
+            <h3 className="font-semibold text-gray-800 mb-3">📋 文书指导</h3>
+            <ul className="text-sm text-gray-700 space-y-2">
               <li className="flex items-center">
-                <span className="w-2 h-2 bg-law-blue-500 rounded-full mr-3"></span>
+                <span className="w-2 h-2 bg-gray-500 rounded-full mr-3"></span>
                 劳动合同模板
               </li>
               <li className="flex items-center">
-                <span className="w-2 h-2 bg-law-blue-500 rounded-full mr-3"></span>
+                <span className="w-2 h-2 bg-gray-500 rounded-full mr-3"></span>
                 辞职信范本
               </li>
               <li className="flex items-center">
-                <span className="w-2 h-2 bg-law-blue-500 rounded-full mr-3"></span>
+                <span className="w-2 h-2 bg-gray-500 rounded-full mr-3"></span>
                 仲裁申请书
               </li>
               <li className="flex items-center">
-                <span className="w-2 h-2 bg-law-blue-500 rounded-full mr-3"></span>
+                <span className="w-2 h-2 bg-gray-500 rounded-full mr-3"></span>
                 解除通知模板
               </li>
             </ul>

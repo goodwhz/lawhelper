@@ -28,14 +28,14 @@ const KnowledgeBase: React.FC = () => {
     '国家法律/中华人民共和国劳动合同法实施条例_20080918.docx',
     '国家法律/中华人民共和国劳动争议调解仲裁法_20071229.docx',
     '国家法律/中华人民共和国民法典_20200528.docx',
-    
+
     // 国家新政法规文件夹中的文件
     '国家新政法规/使用有毒物品作业场所劳动保护条例_20241206.docx',
     '国家新政法规/劳动保障监察条例_20041101.docx',
     '国家新政法规/劳动就业服务企业管理规定_19901122.docx',
     '国家新政法规/工人考核条例_19900711.docx',
     '国家新政法规/工伤保险条例_20101220.docx',
-    
+
     // 地方性法规文件夹中的文件（前15个作为示例）
     '地方性法规/上海市劳动合同条例_20011115.docx',
     '地方性法规/云南省劳动就业条例_.docx',
@@ -51,7 +51,7 @@ const KnowledgeBase: React.FC = () => {
     '地方性法规/合肥市工会劳动法律监督条例_.docx',
     '地方性法规/吉林省劳动保障监察条例_20241127.docx',
     '地方性法规/吉林省劳动合同条例_20241127.docx',
-    '地方性法规/哈尔滨市劳动保障监察条例_20201023.doc'
+    '地方性法规/哈尔滨市劳动保障监察条例_20201023.doc',
   ]
 
   useEffect(() => {
@@ -61,10 +61,10 @@ const KnowledgeBase: React.FC = () => {
     setCategories(getAllCategories(documents))
   }, [])
 
-  const filteredDocuments = lawDocuments.filter(doc => {
+  const filteredDocuments = lawDocuments.filter((doc) => {
     const matchesCategory = selectedCategory === 'all' || doc.category === selectedCategory
-    const matchesSearch = doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         doc.description.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSearch = doc.title.toLowerCase().includes(searchTerm.toLowerCase())
+      || doc.description.toLowerCase().includes(searchTerm.toLowerCase())
     return matchesCategory && matchesSearch
   })
 
@@ -79,7 +79,7 @@ const KnowledgeBase: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-law-red-50 via-law-orange-50 to-law-blue-50 py-8">
+    <div className="min-h-screen bg-white py-8">
       <div className="max-w-6xl mx-auto px-4">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-law-red-800 mb-4">劳动法知识库</h1>
@@ -95,7 +95,7 @@ const KnowledgeBase: React.FC = () => {
                 placeholder="搜索法律法规..."
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-law-red-500"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={e => setSearchTerm(e.target.value)}
               />
             </div>
             <div className="flex gap-2 flex-wrap">

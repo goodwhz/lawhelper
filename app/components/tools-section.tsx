@@ -34,7 +34,7 @@ const ToolsSection: FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-law-red-50 via-law-orange-50 to-law-blue-50 py-8">
+    <div className="min-h-screen bg-white py-8">
       <div className="max-w-7xl mx-auto px-4">
         <div className="bg-white rounded-xl shadow-lg">
           <div className="p-6 border-b">
@@ -48,7 +48,7 @@ const ToolsSection: FC = () => {
 
           <div className="flex flex-col lg:flex-row">
             {/* 工具导航 */}
-            <div className="lg:w-64 bg-law-red-50 p-4">
+            <div className="lg:w-64 bg-white p-4 border-r border-gray-200">
               <div className="space-y-2">
                 {tools.map(tool => (
                   <button
@@ -57,8 +57,8 @@ const ToolsSection: FC = () => {
                     className={`
                       w-full text-left p-3 rounded-lg transition-all duration-200
                       ${activeTool === tool.id
-                    ? 'bg-law-red-100 text-law-red-700 border-l-4 border-law-red-600'
-                    : 'text-gray-600 hover:bg-law-red-100'
+                    ? 'bg-gray-100 text-gray-700 border-l-4 border-gray-400'
+                    : 'text-gray-600 hover:bg-gray-100'
                   }
                     `}
                   >
