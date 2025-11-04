@@ -20,83 +20,98 @@ const DocumentTemplates: React.FC = () => {
       title: '辞职信模板',
       description: '标准辞职信格式，包含离职原因、离职日期等必要信息',
       category: '离职文书',
-      downloadUrl: '/templates/resignation-letter.docx'
+      downloadUrl: '/api/template/辞职信模板.doc',
     },
     {
       id: '2',
       title: '被迫解除劳动合同通知书',
       description: '用于用人单位违法时，劳动者单方解除劳动合同的正式通知',
       category: '解除合同',
-      downloadUrl: '/templates/forced-termination-notice.docx'
+      downloadUrl: '/api/template/被迫解除劳动合同通知书.doc',
     },
     {
       id: '3',
       title: '劳动仲裁申请书',
       description: '劳动争议仲裁申请的标准格式文书',
       category: '仲裁诉讼',
-      downloadUrl: '/templates/labor-arbitration-application.docx'
+      downloadUrl: '/api/template/劳动仲裁申请书.doc',
     },
     {
       id: '4',
       title: '工伤认定申请表',
       description: '申请工伤认定的标准表格',
       category: '工伤保险',
-      downloadUrl: '/templates/work-injury-application.docx'
+      downloadUrl: '/api/template/工伤认定申请表.doc',
     },
     {
       id: '5',
       title: '加班申请单',
       description: '标准加班申请表格',
       category: '日常工作',
-      downloadUrl: '/templates/overtime-application.docx'
+      downloadUrl: '/api/template/加班申请单.doc',
     },
     {
       id: '6',
       title: '请假申请单',
       description: '各类请假申请的通用表格',
       category: '日常工作',
-      downloadUrl: '/templates/leave-application.docx'
+      downloadUrl: '/api/template/请假申请单.doc',
     },
     {
       id: '7',
       title: '工资异议申诉书',
       description: '对工资计算有异议时的申诉文书',
       category: '工资争议',
-      downloadUrl: '/templates/salary-dispute-appeal.docx'
+      downloadUrl: '/api/template/工资异议申诉书.doc',
     },
     {
       id: '8',
       title: '劳动合同续签申请书',
       description: '劳动合同到期续签申请的标准格式',
       category: '合同管理',
-      downloadUrl: '/templates/contract-renewal-application.docx'
-    }
+      downloadUrl: '/api/template/劳动合同续签申请书.doc',
+    },
   ]
 
   const categories = ['all', '离职文书', '解除合同', '仲裁诉讼', '工伤保险', '日常工作', '工资争议', '合同管理']
 
-  const filteredTemplates = templates.filter(template => {
+  const filteredTemplates = templates.filter((template) => {
     const matchesCategory = selectedCategory === 'all' || template.category === selectedCategory
-    const matchesSearch = template.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         template.description.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSearch = template.title.toLowerCase().includes(searchTerm.toLowerCase())
+      || template.description.toLowerCase().includes(searchTerm.toLowerCase())
     return matchesCategory && matchesSearch
   })
 
-  const handleDownload = (template: DocumentTemplate) => {
-    // 模拟下载功能
-    alert(`开始下载: ${template.title}`)
-    // 实际实现中这里应该调用文件下载API
+  const handleDownload = async (template: DocumentTemplate) => {
+    try {
+      // 创建下载链接
+      const link = document.createElement('a')
+      link.href = template.downloadUrl
+      link.download = `${template.title}.doc`
+      link.target = '_blank'
+
+      // 触发下载
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+      // 下载成功，浏览器会自动处理，不需要额外提示
+      console.log(`开始下载: ${template.title}`)
+    } catch (error) {
+      console.error('下载失败:', error)
+      // 可以在这里添加更优雅的错误处理，比如使用Toast通知
+    }
   }
 
   const getCategoryColor = (category: string) => {
     const colors = {
-      '离职文书': 'bg-red-100 text-red-800',
-      '解除合同': 'bg-orange-100 text-orange-800',
-      '仲裁诉讼': 'bg-purple-100 text-purple-800',
-      '工伤保险': 'bg-blue-100 text-blue-800',
-      '日常工作': 'bg-green-100 text-green-800',
-      '工资争议': 'bg-yellow-100 text-yellow-800',
-      '合同管理': 'bg-indigo-100 text-indigo-800'
+      离职文书: 'bg-red-100 text-red-800',
+      解除合同: 'bg-orange-100 text-orange-800',
+      仲裁诉讼: 'bg-purple-100 text-purple-800',
+      工伤保险: 'bg-blue-100 text-blue-800',
+      日常工作: 'bg-green-100 text-green-800',
+      工资争议: 'bg-yellow-100 text-yellow-800',
+      合同管理: 'bg-indigo-100 text-indigo-800',
     }
     return colors[category as keyof typeof colors] || 'bg-gray-100 text-gray-800'
   }
@@ -104,7 +119,7 @@ const DocumentTemplates: React.FC = () => {
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <h3 className="text-xl font-semibold mb-4">文书模板库</h3>
-      
+
       {/* 搜索和筛选 */}
       <div className="mb-6">
         <div className="flex flex-col md:flex-row gap-4 mb-4">
@@ -114,7 +129,7 @@ const DocumentTemplates: React.FC = () => {
               placeholder="搜索文书模板..."
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={e => setSearchTerm(e.target.value)}
             />
           </div>
           <div className="flex gap-2 overflow-x-auto">
