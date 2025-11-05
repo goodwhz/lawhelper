@@ -23,14 +23,20 @@ const LegalTextRenderer = ({ content }: { content: string }) => {
   // 处理书名号标记的法律文件名称（红色加粗，不换行）
   processedContent = processedContent.replace(/《([^》]+)》/g, '<span style="color: #e53e3e; font-weight: bold;">《$1》</span>')
 
-  // 处理双星号和-**标记，去掉标记并加深文字，同时自动换行
-  processedContent = processedContent.replace(/\*\*([^*]+)\*\*/g, '<span style="font-weight: bold; display: inline-block; width: 100%; margin: 0.2rem 0;">$1</span>')
-  processedContent = processedContent.replace(/-\*\* ([^*]+) \*\*/g, '<span style="font-weight: bold; display: inline-block; width: 100%; margin: 0.2rem 0;">$1</span>')
+  // 处理双星号标记，去掉标记并加深文字，同时自动换行
+  // 将数字后的**紧跟在数字后面，防止换行，并确保冒号在同一行
+  processedContent = processedContent.replace(/(\d+)\.\*\*([^*]+)\*\*：/g, '$1.**$2**：')
+  processedContent = processedContent.replace(/(\d+)\.\*\*([^*]+)\*\*/g, '$1.**$2**')
+
+  // 处理普通双星号标记，去掉标记并加深文字，不换行
+  processedContent = processedContent.replace(/\*\*([^*]+)\*\*/g, '<span style="font-weight: bold; margin: 0.2rem 0;">$1</span>')
+  processedContent = processedContent.replace(/-\*\* ([^*]+) \*\*/g, '<span style="font-weight: bold; margin: 0.2rem 0;">$1</span>')
 
   // 处理书名号标记（不换行）
   processedContent = processedContent.replace(/《([^》]+)》/g, '<span style="color: #e53e3e; font-weight: bold;">《$1》</span>')
 
-  // 处理列表项
+  // 处理列表项，在-前面添加换行
+  processedContent = processedContent.replace(/\n- /g, '\n<br>- ')
   processedContent = processedContent.replace(/^- \*\*([^*]+)\*\*/g, '<li style="margin: 0.3rem 0;"><strong>$1</strong></li>')
   processedContent = processedContent.replace(/^- (.+)/g, '<li style="margin: 0.3rem 0;">$1</li>')
 
