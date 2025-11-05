@@ -15,7 +15,7 @@ const HomePage: FC = () => {
   const features = [
     {
       title: '智能核心',
-      description: 'AI劳动法助手',
+      description: 'CoolBrain-LaborLawhelper',
       icon: '🤖',
       href: '/ai-chat',
       color: 'from-law-red-500 to-law-red-600',

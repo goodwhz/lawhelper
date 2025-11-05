@@ -10,7 +10,7 @@ const AIChatSection: FC = () => {
         <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
           <div className="mb-6">
             <h2 className="text-3xl font-bold text-law-red-800 mb-2">
-              🤖 AI劳动法助手
+              🤖 CoolBrain-LaborLawhelper
             </h2>
             <p className="text-law-blue-700">
               专业的劳动法智能咨询，24小时为您解答劳动法相关问题
