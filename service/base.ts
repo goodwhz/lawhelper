@@ -283,19 +283,25 @@ const baseFetch = (url: string, fetchOptions: any, { needAllResponseContent }: I
           // Error handler
           if (!/^(2|3)\d{2}$/.test(res.status)) {
             try {
-              const bodyJson = res.json()
-              switch (res.status) {
-                case 401: {
-                  Toast.notify({ type: 'error', message: 'Invalid token' })
-                  return
-                }
-                default:
-                  // eslint-disable-next-line no-new
-                  new Promise(() => {
-                    bodyJson.then((data: any) => {
-                      Toast.notify({ type: 'error', message: data.message })
-                    })
-                  })
+              // 检查响应体是否有内容
+              const contentLength = res.headers.get('Content-Length')
+              if (contentLength && parseInt(contentLength) > 0) {
+                res.json().then((data: any) => {
+                  switch (res.status) {
+                    case 401: {
+                      Toast.notify({ type: 'error', message: 'Invalid token' })
+                      return
+                    }
+                    default:
+                      Toast.notify({ type: 'error', message: data.message || 'Unknown error' })
+                  }
+                }).catch(() => {
+                  // 如果解析JSON失败，显示通用错误信息
+                  Toast.notify({ type: 'error', message: `HTTP Error ${res.status}: ${res.statusText}` })
+                })
+              } else {
+                // 没有响应体时显示状态码错误
+                Toast.notify({ type: 'error', message: `HTTP Error ${res.status}: ${res.statusText}` })
               }
             }
             catch (e) {

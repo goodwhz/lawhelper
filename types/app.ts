@@ -104,6 +104,8 @@ export interface ConversationItem {
   inputs: Record<string, any> | null
   introduction: string
   suggested_questions?: string[]
+  isPinned?: boolean
+  isDeleted?: boolean
 }
 
 export interface AppInfo {

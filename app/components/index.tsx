@@ -641,6 +641,60 @@ const Main: FC<IMainProps> = () => {
     notify({ type: 'success', message: t('common.api.success') })
   }
 
+  // 处理删除对话
+  const handleDeleteConversation = async (id: string) => {
+    if (id === '-1') {
+      // 删除新建的对话
+      setConversationList(conversationList.filter(item => item.id !== '-1'))
+      if (currConversationId === '-1') {
+        setCurrConversationId('', APP_ID)
+        setChatList([])
+        setChatNotStarted()
+        setHasSetInputs(false)
+      }
+    } else {
+      // 对于已存在的对话，这里可以添加API调用或其他逻辑
+      // 暂时先从前端移除
+      setConversationList(conversationList.filter(item => item.id !== id))
+      if (currConversationId === id) {
+        setCurrConversationId('', APP_ID)
+        setChatList([])
+        setChatNotStarted()
+        setHasSetInputs(false)
+      }
+    }
+  }
+
+  // 处理置顶对话
+  const handlePinConversation = (id: string, isPinned: boolean) => {
+    setConversationList(produce(conversationList, (draft) => {
+      const item = draft.find(item => item.id === id)
+      if (item) {
+        item.isPinned = isPinned
+      }
+    }))
+  }
+
+  // 处理重命名对话
+  const handleRenameConversation = (id: string, newName: string) => {
+    if (newName.trim()) {
+      setConversationList(produce(conversationList, (draft) => {
+        const item = draft.find(item => item.id === id)
+        if (item) {
+          item.name = newName.trim()
+        }
+      }))
+
+      // 如果是当前对话，也更新当前对话信息
+      if (id === currConversationId && currConversationInfo) {
+        setExistConversationInfo({
+          ...currConversationInfo,
+          name: newName.trim(),
+        })
+      }
+    }
+  }
+
   const renderSidebar = () => {
     if (!APP_ID || !APP_INFO || !promptConfig) { return null }
     return (
@@ -649,6 +703,9 @@ const Main: FC<IMainProps> = () => {
         onCurrentIdChange={handleConversationIdChange}
         currentId={currConversationId}
         copyRight={APP_INFO.copyright || APP_INFO.title}
+        onDeleteConversation={handleDeleteConversation}
+        onPinConversation={handlePinConversation}
+        onRenameConversation={handleRenameConversation}
       />
     )
   }
