@@ -112,6 +112,13 @@ const Main: FC<IMainProps> = () => {
   const handleConversationSwitch = () => {
     if (!inited) { return }
 
+    // 重置对话状态，确保新建对话是干净的
+    if (isNewConversation && currConversationId === '-1') {
+      setChatList([]) // 清空聊天列表
+      setChatNotStarted()
+      setHasSetInputs(false)
+    }
+
     // update inputs of current conversation
     let notSyncToStateIntroduction = ''
     let notSyncToStateInputs: Record<string, any> | undefined | null = {}
@@ -129,6 +136,10 @@ const Main: FC<IMainProps> = () => {
     else {
       notSyncToStateInputs = newConversationInputs
       setCurrInputs(notSyncToStateInputs)
+      // 重置新对话的聊天列表
+      if (!isResponding) {
+        setChatList([])
+      }
     }
 
     // update chat list of current conversation
@@ -158,7 +169,9 @@ const Main: FC<IMainProps> = () => {
       })
     }
 
-    if (isNewConversation && isChatStarted) { setChatList(generateNewChatListWithOpenStatement()) }
+    if (isNewConversation && isChatStarted && !isResponding) {
+      setChatList(generateNewChatListWithOpenStatement())
+    }
   }
   useEffect(handleConversationSwitch, [currConversationId, inited])
 
