@@ -21,6 +21,7 @@
     "@mdx-js/react": "^3.1.0",
     "@monaco-editor/react": "^4.6.0",
     "@remixicon/react": "^4.6.0",
+    "@supabase/supabase-js": "^2.81.1",
     "@types/node": "~18.19.0",
     "@types/react": "~18.3.23",
     "@types/react-dom": "~18.3.7",

@@ -2,122 +2,149 @@
 
 import React, { useState } from 'react'
 
+interface LawDocumentWithCategory {
+  id: string
+  title: string
+  content: string
+  category_id: string
+  category_name: string
+  created_at: string
+}
+
 interface DocumentPreviewProps {
   isOpen: boolean
   onClose: () => void
-  document: {
-    id: string
-    title: string
-    category: string
-    description: string
-    filePath: string
-  }
+  document: LawDocumentWithCategory
 }
 
 const DocumentPreview: React.FC<DocumentPreviewProps> = ({ isOpen, onClose, document: doc }) => {
   const [isLoading, setIsLoading] = useState(false)
+  const [viewMode, setViewMode] = useState<'preview' | 'full'>('preview')
 
   const handleDownload = () => {
-    // 实际下载功能
     if (typeof window !== 'undefined') {
-      // 从文件路径中提取文件名
-      const fileName = doc.filePath.startsWith('/') ? doc.filePath.substring(1) : doc.filePath
-      
-      // 使用API端点下载文件
-      const downloadUrl = `/api/law/${encodeURIComponent(fileName)}`
-      
+      // 创建文档内容为文本文件下载
+      const content = `# ${doc.title}\n\n分类: ${doc.category_name}\n\n${doc.content}`
+
+      // 创建Blob对象
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
+
       // 创建下载链接
       const link = document.createElement('a')
-      link.href = downloadUrl
-      link.download = doc.title + (doc.filePath.endsWith('.docx') ? '.docx' : '.doc')
-      
+      link.href = URL.createObjectURL(blob)
+      link.download = `${doc.title}.txt`
+
       // 触发下载
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
+
+      // 释放URL对象
+      URL.revokeObjectURL(link.href)
     }
   }
 
-  const handlePreview = async () => {
-    setIsLoading(true)
-    try {
-      // 从文件路径中提取文件名
-      const fileName = doc.filePath.startsWith('/') ? doc.filePath.substring(1) : doc.filePath
-      
-      // 创建预览页面URL，传递文件名作为参数
-      const previewUrl = `/preview?file=${encodeURIComponent(fileName)}&title=${encodeURIComponent(doc.title)}`
-      
-      // 在新窗口打开预览页面
-      const previewWindow = window.open(previewUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes')
-      
-      if (!previewWindow) {
-        // 如果弹窗被阻止，提示用户允许弹窗
-        alert('浏览器阻止了新窗口打开，请允许弹窗或手动点击下载按钮。')
-        handleDownload()
-      }
-      
-    } catch (error) {
-      console.error('预览错误:', error)
-      alert('预览功能暂时不可用，请下载后查看。')
-    } finally {
-      setIsLoading(false)
-    }
+  const handleFullView = () => {
+    setViewMode('full')
   }
 
-  if (!isOpen) return null
+  const handlePreview = () => {
+    setViewMode('preview')
+  }
 
+  if (!isOpen) { return null }
+
+  // 全屏视图
+  if (viewMode === 'full') {
+    return (
+      <div className="fixed inset-0 bg-white z-50 overflow-auto">
+        <div className="sticky top-0 bg-white border-b border-gray-200 z-10">
+          <div className="max-w-4xl mx-auto px-6 py-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">{doc.title}</h1>
+                <p className="text-gray-600 mt-1">分类: {doc.category_name}</p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleDownload}
+                  className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  下载
+                </button>
+                <button
+                  onClick={handlePreview}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  返回预览
+                </button>
+                <button
+                  onClick={onClose}
+                  className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors"
+                >
+                  关闭
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="max-w-4xl mx-auto px-6 py-8">
+          <div className="prose prose-lg max-w-none">
+            <pre className="whitespace-pre-wrap font-sans text-gray-800 leading-relaxed">
+              {doc.content}
+            </pre>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // 预览模式视图
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xl font-semibold text-gray-900">文档操作</h3>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 text-2xl"
-            >
-              ×
-            </button>
-          </div>
+      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="flex justify-between items-center p-6 border-b border-gray-200">
+          <h3 className="text-xl font-semibold text-gray-900">文档预览</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 text-2xl"
+          >
+            ×
+          </button>
+        </div>
 
-          <div className="mb-6">
+        <div className="flex-1 overflow-auto p-6">
+          <div className="mb-4">
             <h4 className="text-lg font-medium text-gray-900 mb-2">{doc.title}</h4>
-            <p className="text-gray-600">选择您想要的操作：</p>
+            <p className="text-gray-600 mb-4">分类: {doc.category_name}</p>
           </div>
 
-          <div className="space-y-4">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h5 className="font-medium text-blue-800 mb-2">📄 在线预览</h5>
-              <p className="text-blue-600 text-sm mb-3">
-                在新窗口中打开文档进行预览
+          <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-auto">
+            <pre className="whitespace-pre-wrap font-sans text-gray-800 text-sm leading-relaxed">
+              {doc.content.length > 1000 ? `${doc.content.substring(0, 1000)}...` : doc.content}
+            </pre>
+            {doc.content.length > 1000 && (
+              <p className="text-gray-500 text-sm mt-2">
+                （文档内容较长，只显示前1000个字符）
               </p>
-              <button
-                onClick={handlePreview}
-                disabled={isLoading}
-                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-              >
-                {isLoading ? '加载中...' : '开始预览'}
-              </button>
-            </div>
-            
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <h5 className="font-medium text-green-800 mb-2">⬇️ 下载文档</h5>
-              <p className="text-green-600 text-sm mb-3">
-                将文档保存到本地，使用 Word 或其他软件查看
-              </p>
-              <button
-                onClick={handleDownload}
-                className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors"
-              >
-                立即下载
-              </button>
-            </div>
+            )}
           </div>
+        </div>
 
-          <div className="mt-6 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p className="text-sm text-yellow-800">
-              💡 <strong>提示：</strong>如果浏览器阻止了新窗口打开，请允许弹窗或直接下载文档查看。
-            </p>
+        <div className="p-6 border-t border-gray-200 bg-gray-50">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              onClick={handleFullView}
+              className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              查看完整文档
+            </button>
+            <button
+              onClick={handleDownload}
+              className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors"
+            >
+              下载文档
+            </button>
           </div>
         </div>
       </div>
