@@ -10,7 +10,22 @@ export interface LawDocument {
   title: string
   content: string
   category_id: string
+  document_type: string
+  document_number: string | null
+  publish_date: string | null
+  effective_date: string | null
+  expire_date: string | null
+  file_path: string | null
+  file_size: number | null
+  file_type: string | null
+  download_count: number
+  view_count: number
+  is_published: boolean
+  is_featured: boolean
+  keywords: string[] | null
+  tags: string[] | null
   created_at: string
+  updated_at: string
 }
 
 export interface LawCategory {
