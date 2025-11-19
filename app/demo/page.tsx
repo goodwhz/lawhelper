@@ -7,20 +7,20 @@ const demoDocuments = [
     id: 1,
     title: '劳动保障监察条例',
     fileName: '地方性法规/劳动保障监察条例_20041101.docx',
-    description: '包含基本段落和标题格式的文档'
+    description: '包含基本段落和标题格式的文档',
   },
   {
     id: 2,
     title: '安徽省劳动保护条例',
     fileName: '地方性法规/安徽省劳动保护条例_.docx',
-    description: '包含表格和列表格式的文档'
+    description: '包含表格和列表格式的文档',
   },
   {
     id: 3,
     title: '江苏省劳动合同条例',
     fileName: '地方性法规/江苏省劳动合同条例_20130115.docx',
-    description: '包含复杂格式和章节结构的文档'
-  }
+    description: '包含复杂格式和章节结构的文档',
+  },
 ]
 
 export default function MammothDemoPage() {
@@ -49,12 +49,12 @@ export default function MammothDemoPage() {
           <div className="bg-white rounded-lg shadow-sm border p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">选择测试文档</h2>
             <div className="space-y-4">
-              {demoDocuments.map((doc) => (
-                <div 
+              {demoDocuments.map(doc => (
+                <div
                   key={doc.id}
                   className={`p-4 border rounded-lg cursor-pointer transition-all ${
-                    selectedDoc.id === doc.id 
-                      ? 'border-blue-500 bg-blue-50' 
+                    selectedDoc.id === doc.id
+                      ? 'border-blue-500 bg-blue-50'
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                   onClick={() => setSelectedDoc(doc)}
@@ -77,7 +77,7 @@ export default function MammothDemoPage() {
                         const downloadUrl = `/api/law/${encodeURIComponent(doc.fileName)}`
                         const link = document.createElement('a')
                         link.href = downloadUrl
-                        link.download = doc.title + '.docx'
+                        link.download = `${doc.title}.docx`
                         document.body.appendChild(link)
                         link.click()
                         document.body.removeChild(link)
@@ -95,7 +95,7 @@ export default function MammothDemoPage() {
           {/* 功能说明 */}
           <div className="bg-white rounded-lg shadow-sm border p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Mammoth.js 功能特点</h2>
-            
+
             <div className="space-y-4">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <h3 className="font-medium text-blue-800 mb-2">📄 浏览器端转换</h3>
@@ -103,21 +103,21 @@ export default function MammothDemoPage() {
                   直接在浏览器中将 Word 文档转换为 HTML，无需服务器处理
                 </p>
               </div>
-              
+
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                 <h3 className="font-medium text-green-800 mb-2">📊 格式支持</h3>
                 <p className="text-green-700 text-sm">
                   支持表格、列表、段落、标题、粗体、斜体等基本格式
                 </p>
               </div>
-              
+
               <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
                 <h3 className="font-medium text-purple-800 mb-2">⚡ 快速预览</h3>
                 <p className="text-purple-700 text-sm">
                   文档转换速度快，用户体验流畅，支持实时预览
                 </p>
               </div>
-              
+
               <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
                 <h3 className="font-medium text-orange-800 mb-2">🔧 技术特性</h3>
                 <p className="text-orange-700 text-sm">

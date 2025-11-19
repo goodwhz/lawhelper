@@ -14,7 +14,7 @@ const CompensationCalculator: React.FC = () => {
     joinDate: '',
     leaveDate: '',
     avgSalary: 5000,
-    terminationReason: 'voluntary'
+    terminationReason: 'voluntary',
   })
 
   const [result, setResult] = useState<{
@@ -27,13 +27,14 @@ const CompensationCalculator: React.FC = () => {
 
   const calculateCompensation = () => {
     if (!data.joinDate || !data.leaveDate) {
-      alert('请填写入职和离职日期')
+      // 使用更友好的提示方式替代 alert
+      console.warn('请填写入职和离职日期')
       return
     }
 
     const joinDate = new Date(data.joinDate)
     const leaveDate = new Date(data.leaveDate)
-    
+
     // 计算工作年限
     const diffTime = Math.abs(leaveDate.getTime() - joinDate.getTime())
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
@@ -63,14 +64,14 @@ const CompensationCalculator: React.FC = () => {
       amount: Number(amount.toFixed(2)),
       description,
       workYears,
-      workMonths
+      workMonths,
     })
   }
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <h3 className="text-xl font-semibold mb-4">赔偿计算器</h3>
-      
+
       <div className="space-y-4">
         <div className="grid md:grid-cols-2 gap-4">
           <div>
@@ -80,7 +81,7 @@ const CompensationCalculator: React.FC = () => {
             <input
               type="date"
               value={data.joinDate}
-              onChange={(e) => setData({...data, joinDate: e.target.value})}
+              onChange={e => setData({ ...data, joinDate: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -92,7 +93,7 @@ const CompensationCalculator: React.FC = () => {
             <input
               type="date"
               value={data.leaveDate}
-              onChange={(e) => setData({...data, leaveDate: e.target.value})}
+              onChange={e => setData({ ...data, leaveDate: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -105,7 +106,7 @@ const CompensationCalculator: React.FC = () => {
           <input
             type="number"
             value={data.avgSalary}
-            onChange={(e) => setData({...data, avgSalary: Number(e.target.value)})}
+            onChange={e => setData({ ...data, avgSalary: Number(e.target.value) })}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -116,7 +117,7 @@ const CompensationCalculator: React.FC = () => {
           </label>
           <select
             value={data.terminationReason}
-            onChange={(e) => setData({...data, terminationReason: e.target.value as any})}
+            onChange={e => setData({ ...data, terminationReason: e.target.value as any })}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="voluntary">员工自愿离职</option>

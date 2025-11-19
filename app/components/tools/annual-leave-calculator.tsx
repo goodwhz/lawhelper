@@ -10,7 +10,7 @@ interface AnnualLeaveData {
 const AnnualLeaveCalculator: React.FC = () => {
   const [data, setData] = useState<AnnualLeaveData>({
     totalWorkYears: 3,
-    currentCompanyYears: 2
+    currentCompanyYears: 2,
   })
 
   const [result, setResult] = useState<{
@@ -46,14 +46,14 @@ const AnnualLeaveCalculator: React.FC = () => {
 
     setResult({
       annualLeaveDays,
-      description
+      description,
     })
   }
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <h3 className="text-xl font-semibold mb-4">年假计算器</h3>
-      
+
       <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -64,7 +64,7 @@ const AnnualLeaveCalculator: React.FC = () => {
             step="0.5"
             min="0"
             value={data.totalWorkYears}
-            onChange={(e) => setData({...data, totalWorkYears: Number(e.target.value)})}
+            onChange={e => setData({ ...data, totalWorkYears: Number(e.target.value) })}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -78,7 +78,7 @@ const AnnualLeaveCalculator: React.FC = () => {
             step="0.1"
             min="0"
             value={data.currentCompanyYears}
-            onChange={(e) => setData({...data, currentCompanyYears: Number(e.target.value)})}
+            onChange={e => setData({ ...data, currentCompanyYears: Number(e.target.value) })}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>

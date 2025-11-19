@@ -50,27 +50,29 @@ const Navigation: FC = () => {
             </div>
           </div>
 
-          {/* 移动端导航 */}
-          <div className="md:hidden border-t border-gray-200 mt-2 pt-4">
-            <div className="grid grid-cols-2 gap-2">
-              {navItems.map(item => (
-                <Link
-                  key={item.id}
-                  href={item.href}
-                  className={`
-                    flex items-center justify-center py-3 px-4 rounded-lg transition-all duration-300
-                    ${isActive(item.href)
-                  ? 'bg-law-red-50 text-law-red-600 font-semibold'
-                  : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-                }
-                  `}
-                >
-                  <span className="text-lg mr-2">{item.icon}</span>
-                  <span className="font-medium">{item.label}</span>
-                </Link>
-              ))}
+          {/* 移动端导航 - 暂时隐藏，因为navItems为空 */}
+          {navItems.length > 0 && (
+            <div className="md:hidden border-t border-gray-200 mt-2 pt-4">
+              <div className="grid grid-cols-2 gap-2">
+                {navItems.map((item: any) => (
+                  <Link
+                    key={item.id}
+                    href={item.href}
+                    className={`
+                      flex items-center justify-center py-3 px-4 rounded-lg transition-all duration-300
+                      ${isActive(item.href)
+                    ? 'bg-law-red-50 text-law-red-600 font-semibold'
+                    : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                  }
+                    `}
+                  >
+                    <span className="text-lg mr-2">{item.icon}</span>
+                    <span className="font-medium">{item.label}</span>
+                  </Link>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </nav>
 

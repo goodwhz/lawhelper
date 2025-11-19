@@ -7,7 +7,7 @@ export const APP_INFO: AppInfo = {
   description: '专业的劳动法咨询与工具平台，提供智能问答、法律计算器和文书模板服务',
   copyright: '© 2024 CoolBrain-LaborLawhelper',
   privacy_policy: '',
-  default_language: 'zh-Hans',
+  default_language: 'zh-CN',
   disable_session_same_site: false, // set it to true if you want to embed the chatbot in an iframe
 }
 

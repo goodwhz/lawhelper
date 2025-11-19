@@ -12,7 +12,7 @@ const OvertimeCalculator: React.FC = () => {
   const [data, setData] = useState<OvertimeData>({
     baseSalary: 5000,
     overtimeHours: 10,
-    overtimeType: 'weekday'
+    overtimeType: 'weekday',
   })
 
   const [result, setResult] = useState<{
@@ -24,7 +24,7 @@ const OvertimeCalculator: React.FC = () => {
   const calculateOvertime = () => {
     const hourlyRate = data.baseSalary / 21.75 / 8 // 月薪 ÷ 21.75天 ÷ 8小时
     let multiplier = 1.5
-    
+
     switch (data.overtimeType) {
       case 'weekend':
         multiplier = 2
@@ -41,7 +41,7 @@ const OvertimeCalculator: React.FC = () => {
     setResult({
       hourlyRate: Number(hourlyRate.toFixed(2)),
       overtimePay: Number(overtimePay.toFixed(2)),
-      multiplier
+      multiplier,
     })
   }
 
@@ -61,7 +61,7 @@ const OvertimeCalculator: React.FC = () => {
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <h3 className="text-xl font-semibold mb-4">加班费计算器</h3>
-      
+
       <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -70,7 +70,7 @@ const OvertimeCalculator: React.FC = () => {
           <input
             type="number"
             value={data.baseSalary}
-            onChange={(e) => setData({...data, baseSalary: Number(e.target.value)})}
+            onChange={e => setData({ ...data, baseSalary: Number(e.target.value) })}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -82,7 +82,7 @@ const OvertimeCalculator: React.FC = () => {
           <input
             type="number"
             value={data.overtimeHours}
-            onChange={(e) => setData({...data, overtimeHours: Number(e.target.value)})}
+            onChange={e => setData({ ...data, overtimeHours: Number(e.target.value) })}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -93,7 +93,7 @@ const OvertimeCalculator: React.FC = () => {
           </label>
           <select
             value={data.overtimeType}
-            onChange={(e) => setData({...data, overtimeType: e.target.value as any})}
+            onChange={e => setData({ ...data, overtimeType: e.target.value as any })}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="weekday">工作日加班（1.5倍）</option>

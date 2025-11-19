@@ -7,7 +7,7 @@ export default function PreviewPage() {
   const searchParams = useSearchParams()
   const fileName = searchParams.get('file')
   const title = searchParams.get('title') || '文档预览'
-  
+
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [htmlContent, setHtmlContent] = useState<string>('')
@@ -26,25 +26,24 @@ export default function PreviewPage() {
     try {
       setIsLoading(true)
       setError(null)
-      
+
       // 获取文档内容
-      const response = await fetch(`/api/law/${encodeURIComponent(fileName)}`)
+      const response = await fetch(`/api/law/${encodeURIComponent(fileName || '')}`)
       if (!response.ok) {
         throw new Error('文档加载失败')
       }
-      
+
       const blob = await response.blob()
-      
+
       // 动态导入 mammoth.js
       const mammoth = await import('mammoth')
-      
+
       // 使用 mammoth 转换 Word 文档为 HTML
       const result = await mammoth.convertToHtml({ arrayBuffer: await blob.arrayBuffer() })
-      
+
       // 设置转换后的 HTML 内容
       setHtmlContent(result.value)
       setIsLoading(false)
-      
     } catch (error) {
       console.error('文档转换错误:', error)
       setError('文档预览功能暂时不可用，请下载后查看。')
@@ -144,19 +143,21 @@ export default function PreviewPage() {
               使用 Mammoth.js 转换的 HTML 预览（支持表格、列表、段落等格式）
             </p>
           </div>
-          
+
           <div className="p-8 prose prose-lg max-w-none">
-            {htmlContent ? (
-              <div 
-                className="document-content"
-                dangerouslySetInnerHTML={{ __html: htmlContent }}
-              />
-            ) : (
-              <div className="text-center py-12">
-                <div className="text-6xl mb-4">📄</div>
-                <p className="text-gray-600">文档内容为空</p>
-              </div>
-            )}
+            {htmlContent
+              ? (
+                <div
+                  className="document-content"
+                  dangerouslySetInnerHTML={{ __html: htmlContent }}
+                />
+              )
+              : (
+                <div className="text-center py-12">
+                  <div className="text-6xl mb-4">📄</div>
+                  <p className="text-gray-600">文档内容为空</p>
+                </div>
+              )}
           </div>
         </div>
 

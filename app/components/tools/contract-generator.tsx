@@ -22,7 +22,7 @@ const ContractGenerator: React.FC = () => {
     salary: 5000,
     contractStartDate: '',
     contractEndDate: '',
-    probationPeriod: 3
+    probationPeriod: 3,
   })
 
   const [generatedContract, setGeneratedContract] = useState<string>('')
@@ -98,7 +98,7 @@ const ContractGenerator: React.FC = () => {
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <h3 className="text-xl font-semibold mb-4">劳动合同生成器</h3>
-      
+
       <div className="space-y-4">
         <div className="grid md:grid-cols-2 gap-4">
           <div>
@@ -108,7 +108,7 @@ const ContractGenerator: React.FC = () => {
             <input
               type="text"
               value={data.employeeName}
-              onChange={(e) => setData({...data, employeeName: e.target.value})}
+              onChange={e => setData({ ...data, employeeName: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="请输入员工姓名"
             />
@@ -121,7 +121,7 @@ const ContractGenerator: React.FC = () => {
             <input
               type="text"
               value={data.employeeId}
-              onChange={(e) => setData({...data, employeeId: e.target.value})}
+              onChange={e => setData({ ...data, employeeId: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="请输入身份证号码"
             />
@@ -135,7 +135,7 @@ const ContractGenerator: React.FC = () => {
           <input
             type="text"
             value={data.companyName}
-            onChange={(e) => setData({...data, companyName: e.target.value})}
+            onChange={e => setData({ ...data, companyName: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="请输入公司名称"
           />
@@ -148,7 +148,7 @@ const ContractGenerator: React.FC = () => {
           <input
             type="text"
             value={data.position}
-            onChange={(e) => setData({...data, position: e.target.value})}
+            onChange={e => setData({ ...data, position: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="请输入职位"
           />
@@ -161,7 +161,7 @@ const ContractGenerator: React.FC = () => {
           <input
             type="number"
             value={data.salary}
-            onChange={(e) => setData({...data, salary: Number(e.target.value)})}
+            onChange={e => setData({ ...data, salary: Number(e.target.value) })}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -174,7 +174,7 @@ const ContractGenerator: React.FC = () => {
             <input
               type="date"
               value={data.contractStartDate}
-              onChange={(e) => setData({...data, contractStartDate: e.target.value})}
+              onChange={e => setData({ ...data, contractStartDate: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -186,7 +186,7 @@ const ContractGenerator: React.FC = () => {
             <input
               type="date"
               value={data.contractEndDate}
-              onChange={(e) => setData({...data, contractEndDate: e.target.value})}
+              onChange={e => setData({ ...data, contractEndDate: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -201,7 +201,7 @@ const ContractGenerator: React.FC = () => {
             min="1"
             max="6"
             value={data.probationPeriod}
-            onChange={(e) => setData({...data, probationPeriod: Number(e.target.value)})}
+            onChange={e => setData({ ...data, probationPeriod: Number(e.target.value) })}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>

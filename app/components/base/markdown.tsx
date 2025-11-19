@@ -13,7 +13,7 @@ export function Markdown(props: { content: string }) {
       <ReactMarkdown
         remarkPlugins={[RemarkMath, RemarkGfm, RemarkBreaks]}
         rehypePlugins={[
-          RehypeKatex,
+          [RehypeKatex, { strict: false }],
         ]}
         components={{
           code({ node, inline, className, children, ...props }) {
