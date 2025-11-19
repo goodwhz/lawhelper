@@ -88,7 +88,7 @@ async function simpleVerification() {
           .getPublicUrl(path)
         console.log(`✅ ${path}`)
         console.log(`    🔗 ${data.publicUrl}`)
-      } catch (err) {
+      } catch (_err) {
         console.log(`❌ ${path}: 访问失败`)
       }
     }

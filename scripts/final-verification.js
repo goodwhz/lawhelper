@@ -12,7 +12,7 @@ async function finalVerification() {
     console.log('='.repeat(60))
 
     // 按类别统计
-    const { data: stats, error: statsError } = await supabase
+    const { data: _stats, error: _statsError } = await supabase
       .from('law_documents')
       .select('category')
       .rpc('get_document_stats')

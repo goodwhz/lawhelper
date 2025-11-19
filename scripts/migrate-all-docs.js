@@ -33,7 +33,7 @@ async function uploadFile(localPath, supabasePath) {
     const fileBuffer = fs.readFileSync(fullPath)
     console.log(`📄 上传: ${localPath} -> ${supabasePath}`)
 
-    const { data, error } = await supabase.storage
+    const { data: _data, error } = await supabase.storage
       .from('law-documents')
       .upload(supabasePath, fileBuffer, {
         contentType: 'application/pdf',

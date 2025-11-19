@@ -85,7 +85,7 @@ async function importData() {
         }
 
         // 插入数据
-        const { data, error } = await supabase
+        const { data: _data, error } = await supabase
           .from('law_documents')
           .insert([record])
           .select()

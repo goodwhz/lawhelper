@@ -32,7 +32,7 @@ async function listFiles() {
       'national-administrative-regulations': '国家行政法规',
     }
 
-    const totalSize = 0
+    const _totalSize = 0
 
     Object.entries(categories).forEach(([categoryKey, categoryZh]) => {
       const categoryFiles = uploadedFiles.filter(file => file.startsWith(categoryKey))
@@ -48,7 +48,7 @@ async function listFiles() {
             const fileName = filePath.split('/')[1]
             console.log(`  📄 ${fileName}`)
             console.log(`    🔗 ${publicUrl}`)
-          } catch (error) {
+          } catch (_error) {
             console.log(`  📄 ${filePath.split('/')[1]} (链接获取失败)`)
           }
         })

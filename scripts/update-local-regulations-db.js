@@ -85,7 +85,7 @@ function generateUpdateSQL() {
 
   Object.entries(localRegulationsMapping).forEach(([originalFile, supabasePath]) => {
     // 清理原始文件名，去除路径前缀
-    const cleanFileName = originalFile.replace(/^.*[\\\\\/]/, '')
+    const cleanFileName = originalFile.replace(/^.*[\\\/]/, '')
     const title = cleanFileName.replace(/\.pdf$/i, '')
 
     // 生成更新语句
@@ -102,7 +102,7 @@ async function main() {
 
     const sqlStatements = generateUpdateSQL()
 
-    console.log(`\\n📋 生成了 ${sqlStatements.length} 条更新语句:`)
+    console.log(`\n📋 生成了 ${sqlStatements.length} 条更新语句:`)
     console.log('='.repeat(80))
 
     sqlStatements.forEach((sql, index) => {
@@ -110,7 +110,7 @@ async function main() {
       console.log(`${lineNumber}. ${sql}`)
     })
 
-    console.log('\\n✅ 执行SQL更新...')
+    console.log('\n✅ 执行SQL更新...')
     let successCount = 0
     let failCount = 0
 
@@ -130,15 +130,17 @@ async function main() {
             console.log(`✅ 已执行 ${i + 1}/${sqlStatements.length} 条语句`)
           }
         }
-      } catch (error) {
+      } catch {
         console.log(`⚠️  语句 ${i + 1} 需要手动执行`)
         failCount++
       }
     }
 
-    console.log('\\n🎉 生成完成!')
+    console.log('\n🎉 生成完成!')
+    console.log(`✅ 成功: ${successCount} 条`)
+    console.log(`❌ 失败: ${failCount} 条`)
     console.log('📝 请复制上述SQL语句到数据库管理工具中执行')
-    console.log('\\n💡 建议分批执行，每次10-15条语句，避免超时')
+    console.log('\n💡 建议分批执行，每次10-15条语句，避免超时')
   } catch (error) {
     console.error('❌ 生成失败:', error.message)
   }

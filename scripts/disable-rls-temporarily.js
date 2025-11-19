@@ -11,7 +11,7 @@ async function disableRls() {
     console.log('🔧 尝试临时禁用RLS策略...')
 
     // 尝试禁用RLS策略
-    const { data, error } = await supabase
+    const { data: _data, error } = await supabase
       .from('law_documents')
       .select('count')
       .limit(1)
