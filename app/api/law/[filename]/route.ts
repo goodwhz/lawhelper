@@ -29,7 +29,6 @@ export async function GET(
 
     let fileBuffer: Buffer
     let contentType = 'application/octet-stream'
-    const downloadFilename: string
 
     if (isSupabasePath) {
       // 从Supabase Storage获取文件
@@ -69,7 +68,7 @@ export async function GET(
     }
 
     // 提取文件名用于下载（不包含文件夹路径）
-    downloadFilename = decodedFilename.split('/').pop() || decodedFilename
+    const downloadFilename = decodedFilename.split('/').pop() || decodedFilename
 
     // 根据文件类型设置不同的Content-Disposition
     // 对于PDF文件，如果是预览请求则使用inline，否则使用attachment
