@@ -16,8 +16,6 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
-  },
-})
 
 export interface LawDocument {
   id: string
@@ -53,12 +51,13 @@ export interface LawCategory {
 export async function getLawCategories(): Promise<LawCategory[]> {
   try {
     console.log('=== 开始获取法律分类 ===')
-    console.log('Supabase URL:', supabase.supabaseUrl)
+    console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
 
     const { data, error, status } = await supabase
       .from('law_categories')
       .select('*')
-      .order('sort_order', { ascending: true })
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true, nullsFirst: false })
 
     console.log('分类查询结果:')
     console.log('- Status:', status)

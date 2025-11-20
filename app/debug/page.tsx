@@ -1,56 +1,54 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
-
-interface DiagnosticData {
-  environment: any
-  database: any
-  errors: string[]
-}
+import { useState, useEffect } from 'react'
 
 export default function DebugPage() {
-  const [diagnosticData, setDiagnosticData] = useState<DiagnosticData | null>(null)
+  const [healthStatus, setHealthStatus] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [_isInitializing, setIsInitializing] = useState(false)
 
   useEffect(() => {
-    runDiagnostics()
+    const checkHealth = async () => {
+      try {
+        const response = await fetch('/api/health-check')
+        const data = await response.json()
+        setHealthStatus(data)
+      } catch (error) {
+        console.error('Health check failed:', error)
+        setHealthStatus({ error: 'Failed to fetch health status' })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    checkHealth()
   }, [])
 
-  const runDiagnostics = async () => {
+  const _handleInitDatabase = async () => {
+    setIsInitializing(true)
     try {
-      setLoading(true)
-
-      // 运行所有诊断测试
-      const [
-        envResponse,
-        dbResponse,
-        healthResponse,
-        diagnoseResponse,
-      ] = await Promise.all([
-        fetch('/api/diagnose').then(r => r.json()),
-        fetch('/api/check-db').then(r => r.json()),
-        fetch('/api/health').then(r => r.json()),
-        fetch('/api/test-supabase').then(r => r.json()),
-      ])
-
-      setDiagnosticData({
-        environment: envResponse,
-        database: dbResponse,
-        errors: [
-          !envResponse.success ? `环境变量: ${envResponse.error}` : null,
-          !dbResponse.success ? `数据库: ${dbResponse.error}` : null,
-          !healthResponse.success ? `健康检查: ${healthResponse.error}` : null,
-          !diagnoseResponse.success ? `诊断: ${diagnoseResponse.error}` : null,
-        ].filter(Boolean) as string[],
+      const response = await fetch('/api/init-database', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       })
-    } catch (error: any) {
-      setDiagnosticData({
-        environment: null,
-        database: null,
-        errors: [`诊断失败: ${error.message}`],
-      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        console.log('数据库初始化成功！')
+        // 重新检查健康状态
+        const healthResponse = await fetch('/api/health-check')
+        const healthData = await healthResponse.json()
+        setHealthStatus(healthData)
+      } else {
+        console.error(`数据库初始化失败: ${data.error}`)
+      }
+    } catch (error) {
+      console.error('Database initialization failed:', error)
     } finally {
-      setLoading(false)
+      setIsInitializing(false)
     }
   }
 
@@ -58,8 +56,8 @@ export default function DebugPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-law-red-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">正在运行诊断测试...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p>正在检查系统状态...</p>
         </div>
       </div>
     )
@@ -68,77 +66,98 @@ export default function DebugPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4">
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">系统诊断报告</h1>
-            <p className="text-gray-600">诊断时间: {new Date().toLocaleString('zh-CN')}</p>
-          </div>
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">系统调试信息</h1>
 
-          {/* 错误概览 */}
-          {diagnosticData?.errors.length > 0 && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <h3 className="text-lg font-semibold text-red-800 mb-2">发现的问题</h3>
-              <ul className="list-disc list-inside text-red-700">
-                {diagnosticData.errors.map((error, index) => (
-                  <li key={index}>{error}</li>
-                ))}
-              </ul>
-            </div>
-          )}
+        {healthStatus
+          ? (
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h2 className="text-xl font-semibold mb-4">健康检查结果</h2>
 
-          {/* 环境变量诊断 */}
-          {diagnosticData?.environment && (
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">环境变量诊断</h3>
-              <div className={`p-4 rounded-lg ${diagnosticData.environment.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'} border`}>
-                <pre className="text-sm overflow-x-auto">
-                  {JSON.stringify(diagnosticData.environment, null, 2)}
-                </pre>
+              <div className={`p-4 rounded-lg mb-4 ${
+                healthStatus.status === 'healthy' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
+              }`}>
+                <p className={`font-semibold ${
+                  healthStatus.status === 'healthy' ? 'text-green-800' : 'text-red-800'
+                }`}>
+                  状态: {healthStatus.status}
+                </p>
+                <p className="text-sm text-gray-600 mt-1">
+                  检查时间: {healthStatus.timestamp}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-2">环境变量</h3>
+                  <div className="bg-gray-50 p-3 rounded text-sm">
+                    <p><strong>Supabase URL:</strong> {healthStatus.environment?.NEXT_PUBLIC_SUPABASE_URL || '未设置'}</p>
+                    <p><strong>Supabase Key:</strong> {healthStatus.environment?.NEXT_PUBLIC_SUPABASE_ANON_KEY_EXISTS ? '已设置' : '未设置'}</p>
+                    <p><strong>Key Length:</strong> {healthStatus.environment?.NEXT_PUBLIC_SUPABASE_ANON_KEY_LENGTH || 0}</p>
+                    <p><strong>Node Env:</strong> {healthStatus.environment?.NODE_ENV}</p>
+                    <p><strong>Vercel Env:</strong> {healthStatus.environment?.VERCEL_ENV}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-2">数据库连接</h3>
+                  <div className="bg-gray-50 p-3 rounded text-sm">
+                    <p><strong>连接状态:</strong> {healthStatus.supabase?.success ? '成功' : '失败'}</p>
+                    {healthStatus.supabase?.error && (
+                      <p className="text-red-600"><strong>错误:</strong> {healthStatus.supabase.error}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-2">数据库表</h3>
+                  <div className="bg-gray-50 p-3 rounded text-sm">
+                    <p><strong>law_categories:</strong> {healthStatus.database?.categories ? '存在' : '不存在或无法访问'}</p>
+                    <p><strong>law_documents:</strong> {healthStatus.database?.documents ? '存在' : '不存在或无法访问'}</p>
+                  </div>
+                </div>
+
+                {healthStatus.recommendations && healthStatus.recommendations.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-2">建议</h3>
+                    <div className="bg-yellow-50 p-3 rounded text-sm">
+                      {healthStatus.recommendations.map((rec: string, index: number) => (
+                        <p key={index} className="text-yellow-800 mb-1">• {rec}</p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <h3 className="font-semibold text-gray-900 mb-2">快速测试</h3>
+                <div className="flex flex-wrap gap-4">
+                  <button
+                    onClick={() => window.location.href = '/api/health-check'}
+                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                  >
+                    测试 API 端点
+                  </button>
+                  <button
+                    onClick={() => window.location.href = '/api/law-data'}
+                    className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                  >
+                    测试数据 API
+                  </button>
+                  <button
+                    onClick={() => window.location.href = '/api/test-db'}
+                    className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
+                  >
+                    测试数据库连接
+                  </button>
+                </div>
               </div>
             </div>
-          )}
-
-          {/* 数据库诊断 */}
-          {diagnosticData?.database && (
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">数据库结构诊断</h3>
-              <div className={`p-4 rounded-lg ${diagnosticData.database.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'} border`}>
-                <pre className="text-sm overflow-x-auto">
-                  {JSON.stringify(diagnosticData.database, null, 2)}
-                </pre>
-              </div>
+          )
+          : (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+              <p className="text-red-800">无法获取健康检查信息</p>
             </div>
           )}
-
-          {/* 操作按钮 */}
-          <div className="flex gap-4">
-            <button
-              onClick={runDiagnostics}
-              className="bg-law-red-600 text-white px-4 py-2 rounded-lg hover:bg-law-red-700 transition-colors"
-            >
-              重新运行诊断
-            </button>
-            <button
-              onClick={() => window.location.href = '/knowledge-base'}
-              className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
-            >
-              返回知识库
-            </button>
-          </div>
-
-          {/* 建议修复方案 */}
-          {diagnosticData?.errors.length > 0 && (
-            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <h3 className="text-lg font-semibold text-blue-800 mb-2">建议修复方案</h3>
-              <ul className="list-disc list-inside text-blue-700 space-y-2">
-                <li>检查 Vercel 环境变量是否正确设置</li>
-                <li>确认 Supabase 项目是否正常运行</li>
-                <li>检查数据库表是否存在且有正确的 RLS 策略</li>
-                <li>验证 API 密钥是否有效</li>
-              </ul>
-            </div>
-          )}
-        </div>
       </div>
     </div>
   )

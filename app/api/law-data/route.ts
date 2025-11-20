@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getLawCategories, getLawDocumentsByCategory } from '../../../lib/supabaseClient'
+import { getLawCategories, getLawDocumentsByCategory, searchLawDocuments } from '../../../lib/supabaseClient'
 
 export async function GET(request: Request) {
   try {
@@ -17,9 +17,18 @@ export async function GET(request: Request) {
     let documents: any[] = []
 
     if (searchTerm?.trim()) {
-      // 搜索模式 - 需要实现搜索功能
-      console.log('搜索模式暂未实现，返回空结果')
-      documents = []
+      // 搜索模式
+      console.log('搜索模式:', searchTerm)
+      const searchResults = await searchLawDocuments(searchTerm)
+
+      // 获取分类名称
+      documents = searchResults.map((doc) => {
+        const category = categories.find(cat => cat.id === doc.category_id)
+        return {
+          ...doc,
+          category_name: category?.name || '未知分类',
+        }
+      })
     } else if (categoryId === 'all' || !categoryId) {
       // 获取所有分类的文档
       for (const category of categories) {
@@ -56,10 +65,9 @@ export async function GET(request: Request) {
         'Cache-Control': 'public, max-age=300', // 5分钟缓存
       },
     })
-
   } catch (error: any) {
     console.error('API 获取法律数据失败:', error)
-    
+
     return NextResponse.json({
       success: false,
       error: error.message,
