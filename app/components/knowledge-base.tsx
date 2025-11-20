@@ -2,7 +2,36 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import DocumentPreview from './document-preview'
-import { getLawCategories, getLawDocumentsByCategory, searchLawDocuments, type LawCategory, type LawDocument } from '../../lib/supabaseClient'
+
+interface LawCategory {
+  id: string
+  name: string
+  sort_order: number
+  created_at: string
+}
+
+interface LawDocument {
+  id: string
+  title: string
+  content: string
+  category_id: string
+  document_type: string
+  document_number: string | null
+  publish_date: string | null
+  effective_date: string | null
+  expire_date: string | null
+  file_path: string | null
+  file_size: number | null
+  file_type: string | null
+  download_count: number
+  view_count: number
+  is_published: boolean
+  is_featured: boolean
+  keywords: string[] | null
+  tags: string[] | null
+  created_at: string
+  updated_at: string
+}
 
 interface LawDocumentWithCategory extends LawDocument {
   category_name: string
@@ -31,45 +60,41 @@ const KnowledgeBase: React.FC = () => {
       setLoading(true)
       setError(null)
 
-      // 加载分类
-      const lawCategories = await getLawCategories()
-      setCategories(lawCategories)
+      console.log('=== 开始加载法律数据 ===')
+      console.log('Selected category:', selectedCategory)
+      console.log('Search term:', searchTerm)
 
-      // 如果是搜索模式，加载搜索结果的文档
-      if (searchTerm.trim()) {
-        const searchResults = await searchLawDocuments(searchTerm)
-        const documentsWithCategory = searchResults.map(doc => ({
-          ...doc,
-          category_name: lawCategories.find(cat => cat.id === doc.category_id)?.name || '未知分类',
-        }))
-        setLawDocuments(documentsWithCategory)
-      } else if (selectedCategory === 'all') {
-        // 加载所有分类的文档
-        const allDocuments: LawDocumentWithCategory[] = []
-        for (const category of lawCategories) {
-          const categoryDocs = await getLawDocumentsByCategory(category.id)
-          const docsWithCategory = categoryDocs.map(doc => ({
-            ...doc,
-            category_name: category.name,
-          }))
-          allDocuments.push(...docsWithCategory)
-        }
-        setLawDocuments(allDocuments)
-      } else {
-        // 加载特定分类的文档
-        const category = lawCategories.find(cat => cat.id === selectedCategory)
-        if (category) {
-          const categoryDocs = await getLawDocumentsByCategory(category.id)
-          const docsWithCategory = categoryDocs.map(doc => ({
-            ...doc,
-            category_name: category.name,
-          }))
-          setLawDocuments(docsWithCategory)
-        }
+      // 使用 API 获取数据
+      const params = new URLSearchParams()
+      if (selectedCategory && selectedCategory !== 'all') {
+        params.append('categoryId', selectedCategory)
       }
+      if (searchTerm?.trim()) {
+        params.append('searchTerm', searchTerm)
+      }
+
+      const response = await fetch(`/api/law-data?${params.toString()}`)
+      
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('API 请求失败:', response.status, errorText)
+        throw new Error(`API 请求失败: ${response.status}`)
+      }
+
+      const result = await response.json()
+      console.log('API 响应:', result)
+
+      if (!result.success) {
+        throw new Error(result.error || '数据加载失败')
+      }
+
+      setCategories(result.data.categories)
+      setLawDocuments(result.data.documents)
 
       // 重置重试计数
       setRetryCount(0)
+      
+      console.log(`成功加载 ${result.data.categories.length} 个分类, ${result.data.documents.length} 个文档`)
     } catch (err: any) {
       console.error('Error loading data:', err)
 
@@ -81,7 +106,7 @@ const KnowledgeBase: React.FC = () => {
       } else if (err.message?.includes('RLS')) {
         setError('数据库访问权限问题，请联系管理员')
       } else {
-        setError('数据加载失败，请稍后重试')
+        setError(`数据加载失败: ${err.message}`)
       }
 
       // 增加重试计数

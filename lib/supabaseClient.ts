@@ -15,19 +15,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Supabase 配置不完整：URL 和密钥都必须设置')
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: false,
-    autoRefreshToken: false,
-  },
-  db: {
-    schema: 'public',
-  },
-  global: {
-    headers: {
-      apikey: supabaseAnonKey,
-      Authorization: `Bearer ${supabaseAnonKey}`,
-    },
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
   },
 })
 
