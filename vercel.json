@@ -3,8 +3,8 @@
   "outputDirectory": ".next",
   "framework": "nextjs",
   "env": {
-    "NEXT_PUBLIC_SUPABASE_URL": "@supabase_url",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "@supabase_anon_key"
+    "NEXT_PUBLIC_SUPABASE_URL": "https://duyfvvbgadrwaonvlrun.supabase.co",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_iFuGawfaXjf4aGic61EgIg_FPEMcqed"
   },
   "functions": {
     "app/api/law/[filename]/route.ts": {
