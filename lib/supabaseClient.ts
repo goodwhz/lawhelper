@@ -1,9 +1,35 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://duyfvvbgadrwaonvlrun.supabase.co'
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_iFuGawfaXjf4aGic61EgIg_FPEMcqed'
+console.log('=== Supabase Client 初始化 ===')
+console.log('NEXT_PUBLIC_SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
+console.log('NEXT_PUBLIC_SUPABASE_ANON_KEY exists:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+console.log('NEXT_PUBLIC_SUPABASE_ANON_KEY length:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.length)
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('=== Supabase 配置错误 ===')
+  console.error('URL missing:', !supabaseUrl)
+  console.error('Key missing:', !supabaseAnonKey)
+  throw new Error('Supabase 配置不完整：URL 和密钥都必须设置')
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+  },
+  db: {
+    schema: 'public',
+  },
+  global: {
+    headers: {
+      apikey: supabaseAnonKey,
+      Authorization: `Bearer ${supabaseAnonKey}`,
+    },
+  },
+})
 
 export interface LawDocument {
   id: string
@@ -38,21 +64,49 @@ export interface LawCategory {
 // 获取所有法律分类
 export async function getLawCategories(): Promise<LawCategory[]> {
   try {
-    console.log('Fetching law categories...')
-    const { data, error } = await supabase
+    console.log('=== 开始获取法律分类 ===')
+    console.log('Supabase URL:', supabase.supabaseUrl)
+
+    const { data, error, status } = await supabase
       .from('law_categories')
       .select('*')
       .order('sort_order', { ascending: true })
 
+    console.log('分类查询结果:')
+    console.log('- Status:', status)
+    console.log('- Error:', error)
+    console.log('- Data length:', data?.length || 0)
+
     if (error) {
-      console.error('Error fetching categories:', error)
-      throw new Error(`获取分类失败: ${error.message}`)
+      console.error('=== 获取分类失败 ===')
+      console.error('Error code:', error.code)
+      console.error('Error message:', error.message)
+      console.error('Error details:', error.details)
+      console.error('Error hint:', error.hint)
+
+      // 根据错误类型提供更具体的错误信息
+      if (error.code === 'PGRST116') {
+        throw new Error('表 law_categories 不存在，请检查数据库结构')
+      } else if (error.code === '42501') {
+        throw new Error('没有访问 law_categories 表的权限，请检查 RLS 策略')
+      } else if (error.code === 'JWT') {
+        throw new Error('JWT token 无效或已过期，请检查 Supabase 密钥配置')
+      } else {
+        throw new Error(`获取分类失败: ${error.message} (代码: ${error.code})`)
+      }
     }
 
-    console.log(`Successfully fetched ${data?.length || 0} categories`)
+    console.log(`=== 成功获取 ${data?.length || 0} 个分类 ===`)
     return data || []
-  } catch (err) {
-    console.error('getLawCategories error:', err)
+  } catch (err: any) {
+    console.error('=== getLawCategories 异常 ===')
+    console.error('Error type:', err.constructor.name)
+    console.error('Error message:', err.message)
+    console.error('Stack:', err.stack)
+
+    if (err.message.includes('fetch')) {
+      throw new Error('网络连接失败，无法连接到 Supabase 数据库')
+    }
     throw err
   }
 }
@@ -60,23 +114,44 @@ export async function getLawCategories(): Promise<LawCategory[]> {
 // 根据分类ID获取法律文档
 export async function getLawDocumentsByCategory(categoryId: string): Promise<LawDocument[]> {
   try {
-    console.log(`Fetching documents for category: ${categoryId}`)
-    const { data, error } = await supabase
+    console.log(`=== 获取分类 ${categoryId} 的文档 ===`)
+
+    const { data, error, status } = await supabase
       .from('law_documents')
       .select('*')
       .eq('category_id', categoryId)
       .eq('is_published', true) // 只获取已发布的文档
       .order('created_at', { ascending: false })
 
+    console.log('文档查询结果:')
+    console.log('- Status:', status)
+    console.log('- Error:', error)
+    console.log('- Data length:', data?.length || 0)
+
     if (error) {
-      console.error('Error fetching documents by category:', error)
-      throw new Error(`获取文档失败: ${error.message}`)
+      console.error('=== 获取文档失败 ===')
+      console.error('Error code:', error.code)
+      console.error('Error message:', error.message)
+
+      if (error.code === 'PGRST116') {
+        throw new Error('表 law_documents 不存在，请检查数据库结构')
+      } else if (error.code === '42501') {
+        throw new Error('没有访问 law_documents 表的权限，请检查 RLS 策略')
+      } else {
+        throw new Error(`获取文档失败: ${error.message} (代码: ${error.code})`)
+      }
     }
 
-    console.log(`Successfully fetched ${data?.length || 0} documents for category ${categoryId}`)
+    console.log(`=== 成功获取 ${data?.length || 0} 个文档 ===`)
     return data || []
-  } catch (err) {
-    console.error('getLawDocumentsByCategory error:', err)
+  } catch (err: any) {
+    console.error('=== getLawDocumentsByCategory 异常 ===')
+    console.error('Error type:', err.constructor.name)
+    console.error('Error message:', err.message)
+
+    if (err.message.includes('fetch')) {
+      throw new Error('网络连接失败，无法连接到 Supabase 数据库')
+    }
     throw err
   }
 }
