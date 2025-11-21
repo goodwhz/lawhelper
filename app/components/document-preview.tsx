@@ -96,14 +96,10 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ isOpen, onClose, docu
               <div className="flex gap-2">
                 {doc.file_path && doc.file_path.endsWith('.pdf') && (
                   <button
-                    onClick={() => {
-                      if (typeof window !== 'undefined') {
-                        window.open(`/api/law/${encodeURIComponent(doc.file_path || '')}`, '_blank')
-                      }
-                    }}
+                    onClick={() => setViewMode('pdf')}
                     className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                   >
-                    打开PDF
+                    PDF预览
                   </button>
                 )}
                 <button
