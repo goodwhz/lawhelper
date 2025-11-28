@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>法律助手 - 登录测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        .link {
+            display: block;
+            padding: 10px;
+            background-color: #f0f0f0;
+            margin: 10px 0;
+            text-decoration: none;
+            color: #333;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        .link:hover {
+            background-color: #e0e0e0;
+        }
+        .info {
+            background-color: #e6f7ff;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #1890ff;
+            margin: 20px 0;
+        }
+        .warning {
+            background-color: #fffbe6;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #faad14;
+            margin: 20px 0;
+        }
+        .success {
+            background-color: #f6ffed;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #52c41a;
+            margin: 20px 0;
+        }
+        .error {
+            background-color: #fff2f0;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #ff4d4f;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>法律助手 - 登录系统修复状态</h1>
+        
+        <div class="info">
+            <h3>已修复的问题</h3>
+            <p>已修复 upsertUserProfile 函数中的空对象错误，增强了错误处理逻辑。</p>
+        </div>
+
+        <div class="success">
+            <h3>修复内容</h3>
+            <ol>
+                <li>在 upsertUserProfile 函数中添加了空对象检查</li>
+                <li>确保 authUser 和 authUser.id 存在</li>
+                <li>改进了错误处理逻辑</li>
+            </ol>
+        </div>
+
+        <h3>测试链接</h3>
+        <a href="http://localhost:3005/register" target="_blank" class="link">
+            注册页面 - 创建新账户
+        </a>
+        <a href="http://localhost:3005/login" target="_blank" class="link">
+            登录页面 - 使用已有账户登录
+        </a>
+        <a href="http://localhost:3005/test-simple" target="_blank" class="link">
+            测试页面 - 验证登录状态
+        </a>
+
+        <div class="warning">
+            <h3>测试建议</h3>
+            <ul>
+                <li>如果登录仍有问题，请清除浏览器缓存和 cookies</li>
+                <li>确保 Supabase 数据库连接正常</li>
+                <li>检查控制台是否有新的错误信息</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

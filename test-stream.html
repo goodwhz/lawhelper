@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>流式响应测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        .container { display: flex; gap: 20px; }
+        .input-section { flex: 1; }
+        .output-section { flex: 1; }
+        textarea { width: 100%; height: 100px; margin-bottom: 10px; }
+        .output { border: 1px solid #ccc; padding: 10px; height: 400px; overflow-y: auto; }
+        .raw-output { border: 1px solid #ddd; padding: 10px; height: 200px; overflow-y: auto; background: #f5f5f5; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .log { font-family: monospace; font-size: 12px; margin-bottom: 5px; }
+        .error { color: red; }
+        .success { color: green; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>Dify API 流式响应测试</h1>
+    
+    <div class="container">
+        <div class="input-section">
+            <h3>输入</h3>
+            <textarea id="messageInput" placeholder="输入测试消息...">你好，请简单介绍一下劳动法</textarea>
+            <button id="sendBtn" onclick="sendMessage()">发送消息</button>
+            <button onclick="clearOutput()">清空输出</button>
+        </div>
+        
+        <div class="output-section">
+            <h3>处理后的消息</h3>
+            <div id="output" class="output"></div>
+            <h3>原始数据</h3>
+            <div id="rawOutput" class="raw-output"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3000/api/chat-messages';
+        let fullMessage = '';
+        let processedMessageIds = new Set();
+        let lastProcessedAnswer = '';
+
+        function addLog(message, type = 'info') {
+            const rawOutput = document.getElementById('rawOutput');
+            const log = document.createElement('div');
+            log.className = `log ${type}`;
+            log.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            rawOutput.appendChild(log);
+            rawOutput.scrollTop = rawOutput.scrollHeight;
+        }
+
+        function updateDisplay(content) {
+            const output = document.getElementById('output');
+            output.textContent = content;
+        }
+
+        function unicodeToChar(text) {
+            if (!text) return text;
+            return text.replace(/\\u([0-9a-fA-F]{4})/g, (_match, p1) => {
+                try {
+                    return String.fromCharCode(parseInt(p1, 16));
+                } catch (e) {
+                    return _match;
+                }
+            });
+        }
+
+        async function sendMessage() {
+            const message = document.getElementById('messageInput').value.trim();
+            if (!message) return;
+
+            const sendBtn = document.getElementById('sendBtn');
+            sendBtn.disabled = true;
+            sendBtn.textContent = '发送中...';
+
+            // 重置状态
+            fullMessage = '';
+            processedMessageIds.clear();
+            lastProcessedAnswer = '';
+            updateDisplay('');
+            document.getElementById('rawOutput').innerHTML = '';
+
+            addLog(`开始发送消息: "${message}"`, 'info');
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        inputs: {},
+                        query: message,
+                        response_mode: 'streaming',
+                        conversation_id: undefined,
+                        user: 'test_user',
+                        auto_generate_name: true,
+                    })
+                });
+
+                addLog(`API响应状态: ${response.status}`, response.ok ? 'success' : 'error');
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    addLog(`API错误: ${errorText}`, 'error');
+                    return;
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    
+                    if (done) {
+                        addLog('流式响应结束', 'info');
+                        break;
+                    }
+                    
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const dataStr = line.substring(6).trim();
+                            if (!dataStr || dataStr === '[DONE]') {
+                                continue;
+                            }
+
+                            try {
+                                const data = JSON.parse(dataStr);
+                                addLog(`收到事件: ${data.event}`, 'info');
+
+                                if (data.event === 'message' || data.event === 'agent_message') {
+                                    // 避免重复处理同一条消息
+                                    const messageId = data.id;
+                                    if (messageId && processedMessageIds.has(messageId)) {
+                                        addLog(`跳过重复消息ID: ${messageId}`, 'info');
+                                        continue;
+                                    }
+                                    if (messageId) {
+                                        processedMessageIds.add(messageId);
+                                    }
+
+                                    // 处理回答内容，避免重复
+                                    let answer = data.answer || '';
+                                    if (answer) {
+                                        answer = unicodeToChar(answer);
+                                        addLog(`原始答案: "${answer}"`, 'info');
+
+                                        // 检查是否为重复内容
+                                        if (!lastProcessedAnswer.endsWith(answer)) {
+                                            const newContent = answer.startsWith(lastProcessedAnswer) 
+                                                ? answer.substring(lastProcessedAnswer.length)
+                                                : answer;
+
+                                            if (newContent) {
+                                                fullMessage += newContent;
+                                                updateDisplay(fullMessage);
+                                                addLog(`添加新内容: "${newContent}"`, 'success');
+                                                lastProcessedAnswer = answer;
+                                            } else {
+                                                addLog('无新内容需要添加', 'info');
+                                            }
+                                        } else {
+                                            addLog('检测到重复内容，跳过', 'info');
+                                        }
+                                    }
+                                } else if (data.event === 'error') {
+                                    addLog(`错误事件: ${JSON.stringify(data)}`, 'error');
+                                } else {
+                                    addLog(`其他事件 ${data.event}: ${JSON.stringify(data).substring(0, 100)}...`, 'info');
+                                }
+                            } catch (e) {
+                                addLog(`JSON解析失败: ${dataStr}`, 'error');
+                            }
+                        }
+                    }
+                }
+
+                addLog(`最终消息长度: ${fullMessage.length} 字符`, 'success');
+
+            } catch (error) {
+                addLog(`请求失败: ${error.message}`, 'error');
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.textContent = '发送消息';
+            }
+        }
+
+        function clearOutput() {
+            document.getElementById('output').textContent = '';
+            document.getElementById('rawOutput').innerHTML = '';
+            fullMessage = '';
+            processedMessageIds.clear();
+            lastProcessedAnswer = '';
+        }
+    </script>
+</body>
+</html>

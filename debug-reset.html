@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>密码重置调试工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .log-entry {
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <h1 class="text-3xl font-bold text-gray-900 mb-8 text-center">密码重置调试工具</h1>
+        
+        <!-- 配置区域 -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Supabase 配置</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Supabase URL</label>
+                    <input type="text" id="supabaseUrl" value="https://duyfvvbgadrwaonvlrun.supabase.co" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg" readonly>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Anon Key</label>
+                    <input type="password" id="supabaseKey" value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1eWZ2dmJnYWRyd2FvbnZscnVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyODM2MjAsImV4cCI6MjA3NTg1OTYyMH0.3wExEYQ0PcdEqcML9WsvM36A74gBBXjfmmtbilwsUZ0" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg" readonly>
+                </div>
+                <button onclick="initializeSupabase()" class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded">
+                    初始化客户端
+                </button>
+            </div>
+        </div>
+
+        <!-- URL 分析 -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">重置链接分析</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">重置链接URL</label>
+                    <textarea id="resetUrl" rows="3" placeholder="粘贴邮件中的重置链接..." 
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg"></textarea>
+                </div>
+                <button onclick="analyzeUrl()" class="bg-green-500 hover:bg-green-600 text-white font-medium py-2 px-4 rounded">
+                    分析URL参数
+                </button>
+                <div id="urlAnalysis" class="mt-4 p-4 bg-gray-50 rounded-lg hidden"></div>
+            </div>
+        </div>
+
+        <!-- 令牌测试 -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">令牌验证测试</h2>
+            <div class="space-y-4">
+                <button onclick="testToken()" class="bg-purple-500 hover:bg-purple-600 text-white font-medium py-2 px-4 rounded">
+                    测试当前URL令牌
+                </button>
+                <div id="tokenTest" class="mt-4 p-4 bg-gray-50 rounded-lg hidden"></div>
+            </div>
+        </div>
+
+        <!-- 密码重置测试 -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">密码重置测试</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">新密码</label>
+                    <input type="password" id="newPassword" placeholder="输入新密码（至少6位）" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">确认密码</label>
+                    <input type="password" id="confirmPassword" placeholder="再次输入新密码" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                </div>
+                <button onclick="testPasswordReset()" class="bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded">
+                    测试密码重置
+                </button>
+                <div id="passwordTest" class="mt-4 p-4 bg-gray-50 rounded-lg hidden"></div>
+            </div>
+        </div>
+
+        <!-- 调试日志 -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">调试日志</h2>
+            <div class="space-y-2">
+                <button onclick="clearLogs()" class="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded">
+                    清空日志
+                </button>
+                <div id="debugLogs" class="mt-4 h-64 overflow-y-auto bg-black text-green-400 p-4 rounded-lg log-entry"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let supabase = null;
+
+        // 日志函数
+        function log(message, data = null) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}\n`;
+            const logsDiv = document.getElementById('debugLogs');
+            
+            if (data) {
+                logsDiv.textContent += logEntry + JSON.stringify(data, null, 2) + '\n';
+            } else {
+                logsDiv.textContent += logEntry;
+            }
+            
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+
+        // 初始化Supabase客户端
+        function initializeSupabase() {
+            try {
+                const url = document.getElementById('supabaseUrl').value;
+                const key = document.getElementById('supabaseKey').value;
+                
+                supabase = createClient(url, key, {
+                    auth: {
+                        persistSession: true,
+                        storageKey: 'supabase.auth.token',
+                        detectSessionInUrl: true,
+                        flowType: 'pkce',
+                        autoRefreshToken: true,
+                        debug: true
+                    }
+                });
+                
+                log('✅ Supabase客户端初始化成功');
+                return true;
+            } catch (error) {
+                log('❌ Supabase客户端初始化失败', error.message);
+                return false;
+            }
+        }
+
+        // 分析URL
+        function analyzeUrl() {
+            const url = document.getElementById('resetUrl').value;
+            const analysis = document.getElementById('urlAnalysis');
+            
+            try {
+                const urlObj = new URL(url);
+                const params = new URLSearchParams(urlObj.search);
+                
+                let analysisText = '🔍 URL分析结果:\n\n';
+                analysisText += `完整URL: ${url}\n\n`;
+                analysisText += `主机: ${urlObj.hostname}\n`;
+                analysisText += `路径: ${urlObj.pathname}\n\n`;
+                analysisText += `参数:\n`;
+                
+                for (const [key, value] of params.entries()) {
+                    analysisText += `  ${key}: ${value ? '✅ 存在' : '❌ 空'}\n`;
+                    if (key.includes('token') || key.includes('code')) {
+                        analysisText += `    值: ${value.substring(0, 20)}...\n`;
+                    }
+                }
+                
+                analysis.textContent = analysisText;
+                analysis.classList.remove('hidden');
+                log('URL分析完成', urlObj.search);
+                
+            } catch (error) {
+                log('URL分析失败', error.message);
+            }
+        }
+
+        // 测试令牌
+        async function testToken() {
+            if (!supabase) {
+                log('❌ 请先初始化Supabase客户端');
+                return;
+            }
+            
+            const testDiv = document.getElementById('tokenTest');
+            let result = '🔐 令牌测试结果:\n\n';
+            
+            try {
+                // 获取URL参数
+                const params = new URLSearchParams(window.location.search);
+                const accessToken = params.get('access_token');
+                const refreshToken = params.get('refresh_token');
+                const code = params.get('code');
+                const type = params.get('type');
+                
+                result += `access_token: ${accessToken ? '✅' : '❌'}\n`;
+                result += `refresh_token: ${refreshToken ? '✅' : '❌'}\n`;
+                result += `code: ${code ? '✅' : '❌'}\n`;
+                result += `type: ${type || 'null'}\n\n`;
+                
+                // 尝试设置会话
+                if (accessToken && refreshToken) {
+                    const { data, error } = await supabase.auth.setSession({
+                        access_token: accessToken,
+                        refresh_token: refreshToken
+                    });
+                    
+                    if (error) {
+                        result += `设置会话失败: ${error.message}\n`;
+                    } else {
+                        result += `✅ 会话设置成功\n`;
+                        result += `用户: ${data.user?.email}\n`;
+                    }
+                } else if (code) {
+                    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+                    
+                    if (error) {
+                        result += `代码交换失败: ${error.message}\n`;
+                    } else {
+                        result += `✅ 代码交换成功\n`;
+                        result += `用户: ${data.user?.email}\n`;
+                    }
+                }
+                
+                // 获取当前用户
+                const { data: userData, error: userError } = await supabase.auth.getUser();
+                result += `\n当前用户: ${userData.user?.email || 'null'}\n`;
+                if (userError) {
+                    result += `获取用户错误: ${userError.message}\n`;
+                }
+                
+            } catch (error) {
+                result += `异常: ${error.message}\n`;
+            }
+            
+            testDiv.textContent = result;
+            testDiv.classList.remove('hidden');
+            log('令牌测试完成');
+        }
+
+        // 测试密码重置
+        async function testPasswordReset() {
+            if (!supabase) {
+                log('❌ 请先初始化Supabase客户端');
+                return;
+            }
+            
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const testDiv = document.getElementById('passwordTest');
+            
+            let result = '🔒 密码重置测试结果:\n\n';
+            
+            try {
+                if (!newPassword || newPassword.length < 6) {
+                    throw new Error('密码长度至少6位');
+                }
+                
+                if (newPassword !== confirmPassword) {
+                    throw new Error('两次输入的密码不一致');
+                }
+                
+                result += `新密码: ${newPassword.substring(0, 3)}***\n`;
+                result += `密码长度: ${newPassword.length}\n\n`;
+                
+                // 尝试更新密码
+                const { data, error } = await supabase.auth.updateUser({
+                    password: newPassword
+                });
+                
+                if (error) {
+                    result += `❌ 密码更新失败: ${error.message}\n`;
+                    result += `错误代码: ${error.status}\n`;
+                } else {
+                    result += `✅ 密码更新成功\n`;
+                    result += `用户: ${data.user?.email}\n`;
+                }
+                
+            } catch (error) {
+                result += `❌ 测试失败: ${error.message}\n`;
+            }
+            
+            testDiv.textContent = result;
+            testDiv.classList.remove('hidden');
+            log('密码重置测试完成');
+        }
+
+        // 清空日志
+        function clearLogs() {
+            document.getElementById('debugLogs').textContent = '';
+            log('日志已清空');
+        }
+
+        // 页面加载时自动初始化
+        window.addEventListener('load', () => {
+            log('🚀 密码重置调试工具已加载');
+            
+            // 分析当前URL
+            const currentUrl = window.location.href;
+            if (currentUrl.includes('reset-password') || currentUrl.includes('access_token')) {
+                document.getElementById('resetUrl').value = currentUrl;
+                log('检测到重置链接，已自动填充');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人资料修改功能测试</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .log-entry {
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <h1 class="text-3xl font-bold text-gray-900 mb-8 text-center">个人资料修改功能测试</h1>
+        
+        <!-- 功能说明 -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">功能改进</h2>
+            <div class="space-y-3">
+                <div class="p-3 bg-green-50 border-l-4 border-green-400">
+                    <h3 class="font-medium text-green-800">✅ 简化更新逻辑</h3>
+                    <p class="text-green-700 text-sm mt-1">使用新的updateUserProfile函数，支持多种更新策略</p>
+                </div>
+                
+                <div class="p-3 bg-green-50 border-l-4 border-green-400">
+                    <h3 class="font-medium text-green-800">✅ 改进错误处理</h3>
+                    <p class="text-green-700 text-sm mt-1">详细的错误日志和多重备用方案</p>
+                </div>
+                
+                <div class="p-3 bg-green-50 border-l-4 border-green-400">
+                    <h3 class="font-medium text-green-800">✅ 增强数据库同步</h3>
+                    <p class="text-green-700 text-sm mt-1">创建专用的RPC函数，确保数据一致性</p>
+                </div>
+                
+                <div class="p-3 bg-green-50 border-l-4 border-green-400">
+                    <h3 class="font-medium text-green-800">✅ 实时反馈机制</h3>
+                    <p class="text-green-700 text-sm mt-1">修改后立即更新界面和AuthContext</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 测试步骤 -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">测试步骤</h2>
+            <div class="space-y-4">
+                <div class="flex items-start">
+                    <span class="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-medium mr-3">1</span>
+                    <div>
+                        <h3 class="font-medium text-gray-900">访问个人资料页面</h3>
+                        <p class="text-gray-600 text-sm mt-1">登录后点击个人资料页面，查看当前信息</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-start">
+                    <span class="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-medium mr-3">2</span>
+                    <div>
+                        <h3 class="font-medium text-gray-900">点击编辑资料</h3>
+                        <p class="text-gray-600 text-sm mt-1">点击页面上的"编辑资料"按钮</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-start">
+                    <span class="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-medium mr-3">3</span>
+                    <div>
+                        <h3 class="font-medium text-gray-900">修改姓名</h3>
+                        <p class="text-gray-600 text-sm mt-1">在姓名输入框中输入新的姓名</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-start">
+                    <span class="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-medium mr-3">4</span>
+                    <div>
+                        <h3 class="font-medium text-gray-900">保存修改</h3>
+                        <p class="text-gray-600 text-sm mt-1">点击"保存"按钮提交修改</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-start">
+                    <span class="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-medium mr-3">5</span>
+                    <div>
+                        <h3 class="font-medium text-gray-900">验证结果</h3>
+                        <p class="text-gray-600 text-sm mt-1">检查保存是否成功，数据是否同步到数据库</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-start">
+                    <span class="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-medium mr-3">6</span>
+                    <div>
+                        <h3 class="font-medium text-gray-900">重新验证</h3>
+                        <p class="text-gray-600 text-sm mt-1">刷新页面或重新登录，验证姓名已更新</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 快速测试按钮 -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">快速测试</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <button onclick="openProfilePage()" class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-4 rounded transition-colors">
+                    打开个人资料页面
+                </button>
+                <button onclick="testDirectUpdate()" class="bg-green-500 hover:bg-green-600 text-white font-medium py-3 px-4 rounded transition-colors">
+                    测试直接更新API
+                </button>
+                <button onclick="testRpcFunction()" class="bg-purple-500 hover:bg-purple-600 text-white font-medium py-3 px-4 rounded transition-colors">
+                    测试RPC函数
+                </button>
+                <button onclick="checkDatabaseState()" class="bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-3 px-4 rounded transition-colors">
+                    检查数据库状态
+                </button>
+            </div>
+        </div>
+
+        <!-- 技术实现细节 -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">技术实现</h2>
+            <div class="space-y-4 text-sm text-gray-700">
+                <div>
+                    <h3 class="font-medium text-gray-900 mb-2">1. 数据库结构</h3>
+                    <p class="font-mono bg-gray-100 p-2 rounded">
+                        public.user_profiles (id, email, name, role, created_at, updated_at)
+                    </p>
+                </div>
+                
+                <div>
+                    <h3 class="font-medium text-gray-900 mb-2">2. RPC函数</h3>
+                    <ul class="list-disc list-inside space-y-1">
+                        <li><strong>get_user_profile</strong>: 获取用户资料</li>
+                        <li><strong>upsert_user_profile</strong>: 创建或更新用户资料</li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h3 class="font-medium text-gray-900 mb-2">3. 更新策略</h3>
+                    <ol class="list-decimal list-inside space-y-1">
+                        <li><strong>RPC调用</strong>: 使用专用函数更新</li>
+                        <li><strong>直接表更新</strong>: 绕过RLS限制</li>
+                        <li><strong>用户元数据</strong>: 更新Supabase用户信息</li>
+                    </ol>
+                </div>
+                
+                <div>
+                    <h3 class="font-medium text-gray-900 mb-2">4. 实时同步</h3>
+                    <p>修改成功后自动刷新AuthContext和页面数据</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 调试日志 -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">调试信息</h2>
+            <div class="space-y-4">
+                <button onclick="clearLogs()" class="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded text-sm">
+                    清空日志
+                </button>
+                <div id="debugLogs" class="h-64 overflow-y-auto bg-black text-green-400 p-4 rounded-lg log-entry"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const supabaseUrl = 'https://duyfvvbgadrwaonvlrun.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1eWZ2dmJnYWRyd2FvbnZscnVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyODM2MjAsImV4cCI6MjA3NTg1OTYyMH0.3wExEYQ0PcdEqcML9WsvM36A74gBBXjfmmtbilwsUZ0';
+        
+        const supabase = createClient(supabaseUrl, supabaseKey, {
+            auth: {
+                persistSession: true,
+                detectSessionInUrl: true,
+                flowType: 'implicit',
+                autoRefreshToken: true,
+                debug: true
+            }
+        });
+
+        function log(message, data = null) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}\n`;
+            const logsDiv = document.getElementById('debugLogs');
+            
+            if (data) {
+                logsDiv.textContent += logEntry + JSON.stringify(data, null, 2) + '\n';
+            } else {
+                logsDiv.textContent += logEntry;
+            }
+            
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+
+        function clearLogs() {
+            document.getElementById('debugLogs').textContent = '';
+            log('日志已清空');
+        }
+
+        function openProfilePage() {
+            window.open('http://localhost:3000/profile', '_blank');
+            log('打开个人资料页面');
+        }
+
+        async function testDirectUpdate() {
+            try {
+                log('=== 测试直接更新API ===');
+                
+                // 获取当前用户
+                const { data: { user }, error: userError } = await supabase.auth.getUser();
+                if (userError) {
+                    throw userError;
+                }
+
+                log('获取到用户:', user.email);
+
+                // 测试直接更新
+                const { data, error } = await supabase
+                    .from('user_profiles')
+                    .update({
+                        name: '测试姓名_' + Date.now(),
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', user.id)
+                    .select();
+
+                if (error) {
+                    log('直接更新失败', error);
+                } else {
+                    log('直接更新成功', data);
+                }
+
+            } catch (error) {
+                log('测试异常', error.message);
+            }
+        }
+
+        async function testRpcFunction() {
+            try {
+                log('=== 测试RPC函数 ===');
+                
+                // 获取当前用户
+                const { data: { user }, error: userError } = await supabase.auth.getUser();
+                if (userError) {
+                    throw userError;
+                }
+
+                log('获取到用户:', user.email);
+
+                // 测试RPC调用
+                const { data, error } = await supabase.rpc('upsert_user_profile', {
+                    user_id: user.id,
+                    user_email: user.email,
+                    user_name: 'RPC测试姓名_' + Date.now(),
+                    user_role: 'user'
+                });
+
+                if (error) {
+                    log('RPC调用失败', error);
+                } else {
+                    log('RPC调用成功', data);
+                }
+
+            } catch (error) {
+                log('测试异常', error.message);
+            }
+        }
+
+        async function checkDatabaseState() {
+            try {
+                log('=== 检查数据库状态 ===');
+                
+                // 检查user_profiles表
+                const { data, error } = await supabase
+                    .from('user_profiles')
+                    .select('*')
+                    .limit(5);
+
+                if (error) {
+                    log('查询失败', error);
+                } else {
+                    log('user_profiles表数据', data);
+                }
+
+                // 检查RPC函数
+                const { rows: functions } = await supabase
+                    .rpc('get_user_profile', { user_id: '00000000-0000-0000-0000-000000000000' });
+
+                log('RPC函数可用性', functions);
+
+            } catch (error) {
+                log('检查异常', error.message);
+            }
+        }
+
+        // 页面加载时的初始化
+        window.addEventListener('load', () => {
+            log('个人资料修改功能测试页面已加载');
+        });
+    </script>
+</body>
+</html>
