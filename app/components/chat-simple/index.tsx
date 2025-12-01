@@ -1,8 +1,5 @@
 'use client'
 import React, { useState, useCallback, useRef, useEffect } from 'react'
-import { sendChatMessage } from '@/service'
-import { useSupabaseChat } from './hooks/useSupabaseChat'
-import { useAuth } from '@/contexts/AuthContext'
 
 interface SimpleMessage {
   id: string
@@ -10,22 +7,11 @@ interface SimpleMessage {
   isAnswer: boolean
 }
 
-const ChatComponent: React.FC = () => {
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth()
-  const {
-    messages,
-    currentConversation,
-    isLoading,
-    isStreaming,
-    error,
-    sendMessage: supabaseSendMessage,
-    loadConversation,
-    createNewConversation,
-    stopStreaming
-  } = useSupabaseChat()
-  
+const SimpleChatComponent: React.FC = () => {
+  const [messages, setMessages] = useState<SimpleMessage[]>([])
   const [isResponding, setIsResponding] = useState(false)
   const [showQuickResponse, setShowQuickResponse] = useState(true)
+  const [error, setError] = useState('')
   const abortControllerRef = useRef<AbortController | null>(null)
 
   const handleStop = useCallback(() => {
@@ -33,82 +19,175 @@ const ChatComponent: React.FC = () => {
       abortControllerRef.current.abort()
     }
     setIsResponding(false)
-    stopStreaming()
-  }, [stopStreaming])
+  }, [])
 
   const handleSend = useCallback(async (content: string) => {
     if (isResponding || !content.trim()) return
 
-    // 检查用户是否已登录
-    if (!isAuthenticated) {
-      alert('请先登录后再使用聊天功能')
-      return
-    }
-
     setIsResponding(true)
     setShowQuickResponse(false)
+    setError('')
 
     const controller = new AbortController()
     abortControllerRef.current = controller
 
     try {
-      // 使用Supabase发送消息
-      await supabaseSendMessage(content.trim())
+      // 创建用户消息
+      const userMessage: SimpleMessage = {
+        id: `user_${Date.now()}`,
+        content: content.trim(),
+        isAnswer: false,
+      }
       
-      setIsResponding(false)
-    } catch (error) {
+      setMessages(prev => [...prev, userMessage])
+
+      // 创建空的AI消息
+      const aiMessage: SimpleMessage = {
+        id: `ai_${Date.now()}`,
+        content: '',
+        isAnswer: true,
+      }
+      
+      setMessages(prev => [...prev, aiMessage])
+      setIsResponding(true)
+
+      // 发送消息到API
+      const response = await fetch('/api/chat-messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          inputs: {},
+          query: content.trim(),
+          response_mode: 'streaming',
+          conversation_id: undefined,
+          user: 'user_simple',
+          auto_generate_name: true,
+        }),
+        signal: controller.signal,
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      // 处理流式响应
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let currentContent = ''
+      let isWorkflowMode = false
+      let lastProcessedAnswer = ''
+
+      if (!reader) {
+        throw new Error('无法获取响应流')
+      }
+
+      while (true) {
+        const { done, value } = await reader.read()
+        
+        if (done) {
+          console.log('流式响应结束')
+          break
+        }
+        
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6).trim()
+            if (!data || data === '[DONE]') {
+              continue
+            }
+
+            try {
+              const parsed = JSON.parse(data)
+              
+              // 处理不同类型的事件
+              if (parsed.event === 'message' || parsed.event === 'agent_message') {
+                // 在workflow模式下跳过普通消息事件
+                if (isWorkflowMode) {
+                  console.log('跳过workflow模式下的message事件')
+                  continue
+                }
+                
+                if (parsed.answer) {
+                  currentContent += parsed.answer
+                  setMessages(prev => {
+                    const newList = [...prev]
+                    const lastMessage = newList[newList.length - 1]
+                    if (lastMessage && lastMessage.isAnswer) {
+                      lastMessage.content = currentContent
+                    }
+                    return newList
+                  })
+                }
+              }
+              else if (parsed.event === 'workflow_started') {
+                isWorkflowMode = true
+                console.log('进入workflow模式')
+              }
+              else if (parsed.event === 'workflow_finished' && parsed.data?.outputs?.answer) {
+                let answer = parsed.data.outputs.answer || ''
+                if (answer) {
+                  // 检查是否是新的答案内容
+                  if (!lastProcessedAnswer) {
+                    currentContent = answer
+                    setMessages(prev => {
+                      const newList = [...prev]
+                      const lastMessage = newList[newList.length - 1]
+                      if (lastMessage && lastMessage.isAnswer) {
+                        lastMessage.content = currentContent
+                      }
+                      return newList
+                    })
+                  } else if (answer.length > lastProcessedAnswer.length) {
+                    // 只添加增量内容
+                    const incrementalContent = answer.substring(lastProcessedAnswer.length)
+                    currentContent += incrementalContent
+                    setMessages(prev => {
+                      const newList = [...prev]
+                      const lastMessage = newList[newList.length - 1]
+                      if (lastMessage && lastMessage.isAnswer) {
+                        lastMessage.content = currentContent
+                      }
+                      return newList
+                    })
+                  }
+                  lastProcessedAnswer = answer
+                }
+              }
+              else if (parsed.event === 'message_end') {
+                console.log('消息结束')
+              }
+            } catch (e) {
+              console.warn('解析数据失败:', e)
+            }
+          }
+        }
+      }
+
+    } catch (error: any) {
       console.error('发送消息失败:', error)
+      if (error.name === 'AbortError') {
+        console.log('请求被取消')
+      } else {
+        setError(error.message || '发送消息失败，请重试')
+      }
+    } finally {
       setIsResponding(false)
-      alert('发送消息失败，请重试')
     }
-  }, [isResponding, isAuthenticated, supabaseSendMessage])
-
-  // 显示加载状态
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">正在加载用户信息...</p>
-        </div>
-      </div>
-    )
-  }
-
-  // 显示未登录状态
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto p-8 bg-white rounded-lg shadow-lg">
-          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <span className="text-2xl">🤖</span>
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">
-            专业劳动法AI助手
-          </h1>
-          <p className="text-gray-600 mb-6">
-            请先登录后使用AI助手功能
-          </p>
-          <button
-            onClick={() => {
-              // 触发登录模态框的逻辑
-              window.location.reload()
-            }}
-            className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            请登录
-          </button>
-        </div>
-      </div>
-    )
-  }
+  }, [isResponding])
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50">
       {/* 聊天主区域 */}
-      <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full min-h-screen">
+      <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full">
         {/* 聊天消息区域 */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-32">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {showQuickResponse && messages.length === 0 && (
             <div className="text-center">
               <div className="mb-8">
@@ -118,9 +197,6 @@ const ChatComponent: React.FC = () => {
                 <p className="text-gray-600">
                   我是您的专业劳动法助手，可以为您提供劳动法相关的咨询和帮助
                 </p>
-                <div className="mt-4 text-sm text-gray-500">
-                  欢迎回来，{user?.name || user?.email}
-                </div>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -152,13 +228,13 @@ const ChatComponent: React.FC = () => {
           )}
           
           {messages.map((message, index) => (
-            <div key={message.id} className={`flex ${message.role === 'assistant' ? 'justify-start' : 'justify-end'}`}>
+            <div key={message.id} className={`flex ${message.isAnswer ? 'justify-start' : 'justify-end'}`}>
               <div className={`max-w-2xl px-4 py-2 rounded-lg ${
-                message.role === 'assistant' 
+                message.isAnswer 
                   ? 'bg-white border border-gray-200 text-gray-900' 
                   : 'bg-blue-600 text-white'
               }`}>
-                {message.role === 'assistant' && (
+                {message.isAnswer && (
                   <div className="flex items-center mb-2">
                     <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2">
                       <span className="text-xs">🤖</span>
@@ -167,14 +243,9 @@ const ChatComponent: React.FC = () => {
                   </div>
                 )}
                 <div className="whitespace-pre-wrap">
-                  {message.content}
-                  {message.loading && (
-                    <span className="inline-flex items-center ml-2">
-                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
-                    </span>
-                  )}
+                  {message.content || (message.isAnswer && isResponding && '正在思考中...')}
                 </div>
-                {message.role === 'user' && (
+                {!message.isAnswer && (
                   <div className="flex items-center mt-2 justify-end">
                     <span className="text-xs text-blue-100">用户</span>
                   </div>
@@ -183,7 +254,7 @@ const ChatComponent: React.FC = () => {
             </div>
           ))}
           
-          {(isResponding || isStreaming) && (
+          {isResponding && (
             <div className="flex justify-start">
               <div className="max-w-2xl px-4 py-2 rounded-lg bg-white border border-gray-200">
                 <div className="flex items-center">
@@ -192,7 +263,7 @@ const ChatComponent: React.FC = () => {
                   </div>
                   <div className="flex items-center space-x-2 text-gray-500">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                    <span>{isStreaming ? 'AI正在回复中...' : 'AI正在思考中...'}</span>
+                    <span>AI正在思考中...</span>
                     <button
                       onClick={handleStop}
                       className="ml-4 px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded-full transition-colors"
@@ -206,8 +277,15 @@ const ChatComponent: React.FC = () => {
           )}
         </div>
 
+        {/* 错误信息 */}
+        {error && (
+          <div className="mx-4 mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+            {error}
+          </div>
+        )}
+
         {/* 输入区域 */}
-        <div className="fixed bottom-0 left-0 right-0 border-t border-gray-200 bg-white p-4">
+        <div className="border-t border-gray-200 bg-white p-4">
           <form
             onSubmit={(e) => {
               e.preventDefault()
@@ -224,8 +302,8 @@ const ChatComponent: React.FC = () => {
               <textarea
                 name="message"
                 placeholder="请输入您的问题..."
-                disabled={isResponding || isStreaming}
-                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[48px] max-h-32"
+                disabled={isResponding}
+                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 rows={1}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
@@ -244,10 +322,10 @@ const ChatComponent: React.FC = () => {
               />
               <button
                 type="submit"
-                disabled={isResponding || isStreaming}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors min-h-[48px]"
+                disabled={isResponding}
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
               >
-                {isResponding || isStreaming ? '发送中...' : '发送'}
+                {isResponding ? '发送中...' : '发送'}
               </button>
             </div>
           </form>
@@ -257,4 +335,4 @@ const ChatComponent: React.FC = () => {
   )
 }
 
-export default ChatComponent
+export default SimpleChatComponent

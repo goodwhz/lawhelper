@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase 聊天测试</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .message-bubble {
+            max-width: 70%;
+            word-wrap: break-word;
+        }
+        .message-content {
+            white-space: pre-wrap;
+        }
+        .loading-dots::after {
+            content: '';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+        @keyframes dots {
+            0%, 20% { content: ''; }
+            40% { content: '.'; }
+            60% { content: '..'; }
+            80%, 100% { content: '...'; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="flex h-screen">
+        <!-- 侧边栏 -->
+        <div class="w-64 bg-white border-r border-gray-200 flex flex-col">
+            <div class="p-4 border-b border-gray-200">
+                <h2 class="text-lg font-semibold">对话列表</h2>
+                <button onclick="createNewConversation()" class="mt-2 w-full px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
+                    新建对话
+                </button>
+            </div>
+            <div id="conversationList" class="flex-1 overflow-y-auto p-4 space-y-2">
+                <!-- 对话列表将在这里显示 -->
+            </div>
+        </div>
+
+        <!-- 主聊天区域 -->
+        <div class="flex-1 flex flex-col">
+            <!-- 头部 -->
+            <div class="bg-white border-b border-gray-200 p-4">
+                <div class="flex items-center justify-between">
+                    <h1 class="text-xl font-bold">AI 助手</h1>
+                    <div id="userInfo" class="text-sm text-gray-600">
+                        <!-- 用户信息将在这里显示 -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 消息区域 -->
+            <div id="messageArea" class="flex-1 overflow-y-auto p-4 space-y-4">
+                <!-- 消息将在这里显示 -->
+            </div>
+
+            <!-- 输入区域 -->
+            <div class="bg-white border-t border-gray-200 p-4">
+                <form id="messageForm" class="flex space-x-2">
+                    <input 
+                        type="text" 
+                        id="messageInput" 
+                        placeholder="输入您的消息..."
+                        class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                    >
+                    <button 
+                        type="submit" 
+                        id="sendButton"
+                        class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+                    >
+                        发送
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Supabase 配置
+        const SUPABASE_URL = 'https://duyfvvbgadrwaonvlrun.supabase.co'
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1eWZ2dmJnYWRyd2FvbnZscnVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyODM2MjAsImV4cCI6MjA3NTg1OTYyMH0.3wExEYQ0PcdEqcML9WsvM36A74gBBXjfmmtbilwsUZ0'
+
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+        let currentUser = null
+        let currentConversation = null
+        let conversations = []
+
+        // 初始化
+        async function init() {
+            // 检查用户登录状态
+            const { data: { session } } = await supabase.auth.getSession()
+            
+            if (session?.user) {
+                currentUser = session.user
+                updateUserInfo()
+                await loadConversations()
+            } else {
+                showLoginPrompt()
+            }
+
+            // 监听认证状态变化
+            supabase.auth.onAuthStateChange((event, session) => {
+                if (event === 'SIGNED_IN' && session?.user) {
+                    currentUser = session.user
+                    updateUserInfo()
+                    loadConversations()
+                } else if (event === 'SIGNED_OUT') {
+                    currentUser = null
+                    currentConversation = null
+                    conversations = []
+                    showLoginPrompt()
+                }
+            })
+        }
+
+        // 显示登录提示
+        function showLoginPrompt() {
+            document.getElementById('messageArea').innerHTML = `
+                <div class="text-center mt-20">
+                    <div class="bg-white p-8 rounded-lg shadow-lg max-w-md mx-auto">
+                        <h2 class="text-2xl font-bold mb-4">请先登录</h2>
+                        <p class="text-gray-600 mb-6">登录后即可使用AI助手功能</p>
+                        <button onclick="login()" class="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                            登录
+                        </button>
+                    </div>
+                </div>
+            `
+            document.getElementById('messageForm').style.display = 'none'
+        }
+
+        // 更新用户信息显示
+        function updateUserInfo() {
+            const userInfo = document.getElementById('userInfo')
+            if (currentUser) {
+                userInfo.innerHTML = `
+                    <span>👤 ${currentUser.email}</span>
+                    <button onclick="logout()" class="ml-2 text-sm text-red-600 hover:text-red-800">
+                        退出
+                    </button>
+                `
+            }
+            document.getElementById('messageForm').style.display = 'flex'
+        }
+
+        // 登录函数（简化版）
+        async function login() {
+            const email = prompt('请输入邮箱:')
+            const password = prompt('请输入密码:')
+            
+            if (email && password) {
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email,
+                    password
+                })
+                
+                if (error) {
+                    alert('登录失败: ' + error.message)
+                }
+            }
+        }
+
+        // 退出登录
+        async function logout() {
+            await supabase.auth.signOut()
+        }
+
+        // 加载对话列表
+        async function loadConversations() {
+            if (!currentUser) return
+
+            const { data, error } = await supabase
+                .from('conversations')
+                .select('*')
+                .eq('user_id', currentUser.id)
+                .eq('status', 'active')
+                .order('updated_at', { ascending: false })
+
+            if (error) {
+                console.error('加载对话失败:', error)
+                return
+            }
+
+            conversations = data || []
+            renderConversationList()
+
+            // 如果没有对话，创建一个新对话
+            if (conversations.length === 0) {
+                await createNewConversation()
+            } else {
+                // 加载第一个对话
+                await loadConversation(conversations[0].id)
+            }
+        }
+
+        // 渲染对话列表
+        function renderConversationList() {
+            const list = document.getElementById('conversationList')
+            
+            if (conversations.length === 0) {
+                list.innerHTML = '<p class="text-gray-500 text-sm">暂无对话</p>'
+                return
+            }
+
+            list.innerHTML = conversations.map(conv => `
+                <div 
+                    onclick="loadConversation('${conv.id}')"
+                    class="p-3 rounded-lg cursor-pointer hover:bg-gray-100 ${currentConversation?.id === conv.id ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50'}"
+                >
+                    <div class="font-medium text-sm truncate">${conv.title}</div>
+                    <div class="text-xs text-gray-500 mt-1">
+                        ${new Date(conv.updated_at).toLocaleString()}
+                    </div>
+                </div>
+            `).join('')
+        }
+
+        // 创建新对话
+        async function createNewConversation() {
+            if (!currentUser) return
+
+            const { data, error } = await supabase
+                .from('conversations')
+                .insert({
+                    user_id: currentUser.id,
+                    title: '新对话',
+                    status: 'active'
+                })
+                .select()
+                .single()
+
+            if (error) {
+                console.error('创建对话失败:', error)
+                alert('创建对话失败')
+                return
+            }
+
+            await loadConversations()
+        }
+
+        // 加载特定对话
+        async function loadConversation(conversationId) {
+            if (!currentUser) return
+
+            const { data: conversation, error: convError } = await supabase
+                .from('conversations')
+                .select('*')
+                .eq('id', conversationId)
+                .eq('user_id', currentUser.id)
+                .single()
+
+            if (convError) {
+                console.error('加载对话失败:', convError)
+                return
+            }
+
+            const { data: messages, error: msgError } = await supabase
+                .from('messages')
+                .select('*')
+                .eq('conversation_id', conversationId)
+                .eq('user_id', currentUser.id)
+                .order('created_at', { ascending: true })
+
+            if (msgError) {
+                console.error('加载消息失败:', msgError)
+                return
+            }
+
+            currentConversation = conversation
+            renderConversationList()
+            renderMessages(messages || [])
+        }
+
+        // 渲染消息
+        function renderMessages(messages) {
+            const messageArea = document.getElementById('messageArea')
+            
+            if (messages.length === 0) {
+                messageArea.innerHTML = `
+                    <div class="text-center text-gray-500 mt-10">
+                        <p>👋 你好！我是你的AI助手</p>
+                        <p class="mt-2">有什么可以帮助你的吗？</p>
+                    </div>
+                `
+                return
+            }
+
+            messageArea.innerHTML = messages.map(msg => `
+                <div class="flex ${msg.role === 'assistant' ? 'justify-start' : 'justify-end'}">
+                    <div class="message-bubble px-4 py-2 rounded-lg ${
+                        msg.role === 'assistant' 
+                            ? 'bg-white border border-gray-200 text-gray-900' 
+                            : 'bg-blue-600 text-white'
+                    }">
+                        ${msg.role === 'assistant' ? `
+                            <div class="flex items-center mb-2">
+                                <div class="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2">
+                                    <span class="text-xs">🤖</span>
+                                </div>
+                                <span class="text-sm text-gray-600">AI助手</span>
+                            </div>
+                        ` : ''}
+                        <div class="message-content">${msg.content}</div>
+                        ${msg.role === 'user' ? `
+                            <div class="text-xs text-blue-100 mt-2 text-right">用户</div>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('')
+
+            // 滚动到底部
+            messageArea.scrollTop = messageArea.scrollHeight
+        }
+
+        // 发送消息
+        async function sendMessage(content) {
+            if (!currentUser || !currentConversation) {
+                alert('请先选择对话')
+                return
+            }
+
+            const sendButton = document.getElementById('sendButton')
+            const messageInput = document.getElementById('messageInput')
+            
+            sendButton.disabled = true
+            sendButton.textContent = '发送中...'
+
+            // 创建用户消息
+            const userMessage = {
+                conversation_id: currentConversation.id,
+                user_id: currentUser.id,
+                content: content.trim(),
+                role: 'user'
+            }
+
+            const { data: savedUserMessage, error: userError } = await supabase
+                .from('messages')
+                .insert(userMessage)
+                .select()
+                .single()
+
+            if (userError) {
+                console.error('保存用户消息失败:', userError)
+                alert('发送失败')
+                sendButton.disabled = false
+                sendButton.textContent = '发送'
+                return
+            }
+
+            // 创建AI回复（模拟）
+            const aiMessage = {
+                conversation_id: currentConversation.id,
+                user_id: currentUser.id,
+                content: '这是一个测试回复。您的消息已成功保存到 Supabase 数据库！',
+                role: 'assistant'
+            }
+
+            const { data: savedAiMessage, error: aiError } = await supabase
+                .from('messages')
+                .insert(aiMessage)
+                .select()
+                .single()
+
+            if (aiError) {
+                console.error('保存AI消息失败:', aiError)
+            }
+
+            // 重新加载当前对话的消息
+            await loadConversation(currentConversation.id)
+
+            sendButton.disabled = false
+            sendButton.textContent = '发送'
+            messageInput.value = ''
+        }
+
+        // 表单提交处理
+        document.getElementById('messageForm').addEventListener('submit', async (e) => {
+            e.preventDefault()
+            const input = document.getElementById('messageInput')
+            const content = input.value.trim()
+            
+            if (content) {
+                await sendMessage(content)
+            }
+        })
+
+        // 初始化应用
+        init()
+    </script>
+</body>
+</html>

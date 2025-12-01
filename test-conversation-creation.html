@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>对话创建测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background-color: #0056b3; }
+        textarea {
+            width: 100%;
+            height: 100px;
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>对话创建功能测试</h1>
+        
+        <div class="test-section">
+            <h2>测试目标</h2>
+            <p>验证与AI对话时只创建一个对话历史，标题为用户提问内容，内容正常。</p>
+            
+            <div class="status info">
+                <strong>修复前问题：</strong>
+                <ul>
+                    <li>创建两个对话历史</li>
+                    <li>一个标题是用户问题，但内容为空</li>
+                    <li>另一个标题是"新对话"，内容正常</li>
+                </ul>
+            </div>
+            
+            <div class="status success">
+                <strong>预期修复后效果：</strong>
+                <ul>
+                    <li>只创建一个对话历史</li>
+                    <li>标题是用户提问的内容</li>
+                    <li>内容正常显示用户和AI的对话</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>手动测试步骤</h2>
+            <ol>
+                <li>访问主应用：<a href="/" target="_blank">打开聊天页面</a></li>
+                <li>清空所有现有对话（如果有）</li>
+                <li>发送一条测试消息，比如："什么是劳动法？"</li>
+                <li>观察左侧对话列表，应该只有一个对话</li>
+                <li>对话标题应该是："什么是劳动法？"</li>
+                <li>点击该对话查看内容，应该包含用户问题和AI回复</li>
+            </ol>
+        </div>
+
+        <div class="test-section">
+            <h2>快速测试</h2>
+            <button onclick="window.open('/', '_blank')">打开聊天页面进行测试</button>
+            
+            <div id="test-result" class="status" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>技术验证</h2>
+            <p>修复内容：</p>
+            <ul>
+                <li><strong>IntegratedChat.tsx：</strong>修改sendMessage函数，在首次发送消息时创建带用户问题标题的对话</li>
+                <li><strong>Dify API route.ts：</strong>移除重复创建对话的逻辑，只处理消息流</li>
+                <li><strong>新增函数：</strong>createNewConversationWithTitle用于创建带自定义标题的对话</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // 显示测试指导
+        function showTestGuide() {
+            const result = document.getElementById('test-result');
+            result.className = 'status info';
+            result.style.display = 'block';
+            result.innerHTML = `
+                <strong>测试指导：</strong><br>
+                1. 在新打开的聊天页面中<br>
+                2. 确保左侧没有现有对话（或清空所有对话）<br>
+                3. 发送任何问题，比如"今天天气如何？"<br>
+                4. 检查左侧对话列表应该只有<strong>一个</strong>对话<br>
+                5. 对话标题应该是你的问题内容<br>
+                6. 如果符合上述条件，则修复成功！
+            `;
+        }
+
+        // 页面加载时显示指导
+        setTimeout(showTestGuide, 1000);
+    </script>
+</body>
+</html>

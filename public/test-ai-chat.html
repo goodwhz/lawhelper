@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI助手测试</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .message { margin-bottom: 1rem; }
+        .user { text-align: right; }
+        .ai { text-align: left; }
+        .message-bubble { 
+            display: inline-block; 
+            max-width: 70%; 
+            padding: 0.5rem 1rem; 
+            border-radius: 1rem; 
+            word-wrap: break-word;
+        }
+        .user .message-bubble { 
+            background-color: #3b82f6; 
+            color: white; 
+        }
+        .ai .message-bubble { 
+            background-color: #f3f4f6; 
+            color: #1f2937; 
+        }
+        .loading { 
+            color: #6b7280; 
+            font-style: italic; 
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen p-4">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-2xl font-bold text-center mb-6">AI助手测试</h1>
+        
+        <div id="chat-container" class="bg-white rounded-lg shadow-md p-4 mb-4 h-96 overflow-y-auto">
+            <div class="text-center text-gray-500 text-sm mb-4">
+                输入消息开始测试 AI 助手...
+            </div>
+        </div>
+        
+        <div class="flex gap-2">
+            <input 
+                type="text" 
+                id="message-input" 
+                placeholder="输入您的消息..." 
+                class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                onkeypress="if(event.key === 'Enter') sendMessage()"
+            />
+            <button 
+                onclick="sendMessage()" 
+                id="send-button"
+                class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-400 transition-colors"
+            >
+                发送
+            </button>
+        </div>
+        
+        <div class="mt-4 text-center">
+            <button 
+                onclick="testDirectAPI()" 
+                class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors mr-2"
+            >
+                直接测试Dify API
+            </button>
+            <button 
+                onclick="clearChat()" 
+                class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+            >
+                清空聊天
+            </button>
+        </div>
+        
+        <div id="status" class="mt-4 text-center text-sm text-gray-600"></div>
+    </div>
+
+    <script>
+        const DIFY_API_URL = 'https://dify.aipfuture.com/v1';
+        const DIFY_APP_KEY = 'app-eNk3GtruKTh2pHmcBk7g6gs4';
+        
+        let isResponding = false;
+        let conversationId = null;
+
+        function updateStatus(message, isError = false) {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `mt-4 text-center text-sm ${isError ? 'text-red-600' : 'text-gray-600'}`;
+        }
+
+        function addMessage(content, isUser = false, isLoading = false) {
+            const container = document.getElementById('chat-container');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'ai'}`;
+            
+            if (isLoading) {
+                messageDiv.innerHTML = `
+                    <div class="message-bubble loading">
+                        <span class="inline-block animate-pulse">AI正在思考中...</span>
+                    </div>
+                `;
+            } else {
+                messageDiv.innerHTML = `
+                    <div class="message-bubble">${content}</div>
+                `;
+            }
+            
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+            return messageDiv;
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('message-input');
+            const message = input.value.trim();
+            
+            if (!message || isResponding) return;
+            
+            // 添加用户消息
+            addMessage(message, true);
+            input.value = '';
+            
+            // 添加加载消息
+            const loadingDiv = addMessage('', false, true);
+            isResponding = true;
+            document.getElementById('send-button').disabled = true;
+            
+            try {
+                updateStatus('正在发送消息到AI助手...');
+                
+                const response = await fetch('/api/chat-messages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        inputs: {},
+                        query: message,
+                        response_mode: 'streaming',
+                        conversation_id: conversationId,
+                        user: 'test_user',
+                        auto_generate_name: true,
+                    }),
+                });
+
+                updateStatus('正在接收AI响应...');
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                // 移除加载消息
+                loadingDiv.remove();
+
+                // 创建AI消息div
+                const aiMessageDiv = document.createElement('div');
+                aiMessageDiv.className = 'message ai';
+                aiMessageDiv.innerHTML = '<div class="message-bubble"></div>';
+                document.getElementById('chat-container').appendChild(aiMessageDiv);
+                
+                const aiBubble = aiMessageDiv.querySelector('.message-bubble');
+                let currentContent = '';
+
+                // 处理流式响应
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    
+                    if (done) {
+                        updateStatus('对话完成');
+                        break;
+                    }
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6).trim();
+                            if (data === '[DONE]') {
+                                updateStatus('对话完成');
+                                return;
+                            }
+
+                            try {
+                                const parsed = JSON.parse(data);
+                                
+                                if (parsed.event === 'message' || parsed.event === 'agent_message') {
+                                    if (parsed.answer) {
+                                        currentContent += parsed.answer;
+                                        aiBubble.textContent = currentContent;
+                                        document.getElementById('chat-container').scrollTop = document.getElementById('chat-container').scrollHeight;
+                                    }
+                                } else if (parsed.event === 'workflow_finished' && parsed.data?.outputs?.answer) {
+                                    currentContent += parsed.data.outputs.answer;
+                                    aiBubble.textContent = currentContent;
+                                    document.getElementById('chat-container').scrollTop = document.getElementById('chat-container').scrollHeight;
+                                } else if (parsed.conversation_id) {
+                                    conversationId = parsed.conversation_id;
+                                }
+                            } catch (e) {
+                                console.warn('解析数据失败:', e);
+                            }
+                        }
+                    }
+                }
+
+            } catch (error) {
+                console.error('发送消息失败:', error);
+                updateStatus(`错误: ${error.message}`, true);
+                
+                // 移除加载消息，添加错误消息
+                loadingDiv.remove();
+                addMessage(`抱歉，出现了错误：${error.message}`, false);
+            } finally {
+                isResponding = false;
+                document.getElementById('send-button').disabled = false;
+            }
+        }
+
+        async function testDirectAPI() {
+            updateStatus('正在直接测试Dify API...');
+            
+            try {
+                const response = await fetch(`${DIFY_API_URL}/chat-messages`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${DIFY_APP_KEY}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        inputs: {},
+                        query: '你好，请介绍一下你自己',
+                        response_mode: 'streaming',
+                        user: 'test_user',
+                        auto_generate_name: true,
+                    }),
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                updateStatus('Dify API连接成功！响应状态：' + response.status);
+                
+                // 读取部分响应来验证
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                let hasResponse = false;
+
+                for (let i = 0; i < 10; i++) { // 只读取前10次数据
+                    const { done, value } = await reader.read();
+                    
+                    if (done) break;
+                    
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6).trim();
+                            if (data === '[DONE]') {
+                                hasResponse = true;
+                                updateStatus('Dify API测试成功！收到完整响应');
+                                return;
+                            }
+
+                            try {
+                                const parsed = JSON.parse(data);
+                                if (parsed.answer) {
+                                    hasResponse = true;
+                                    updateStatus(`Dify API测试成功！响应: ${parsed.answer.substring(0, 50)}...`);
+                                    return;
+                                }
+                            } catch (e) {
+                                // 忽略解析错误，继续尝试
+                            }
+                        }
+                    }
+                }
+
+                if (hasResponse) {
+                    updateStatus('Dify API连接成功，但响应格式可能需要调整');
+                } else {
+                    updateStatus('Dify API连接成功，但没有收到预期的响应格式');
+                }
+
+            } catch (error) {
+                console.error('直接API测试失败:', error);
+                updateStatus(`Dify API测试失败: ${error.message}`, true);
+            }
+        }
+
+        function clearChat() {
+            const container = document.getElementById('chat-container');
+            container.innerHTML = '<div class="text-center text-gray-500 text-sm mb-4">输入消息开始测试 AI 助手...</div>';
+            conversationId = null;
+            updateStatus('聊天已清空');
+        }
+
+        // 页面加载时测试API连接
+        document.addEventListener('DOMContentLoaded', () => {
+            updateStatus('页面已加载，准备测试AI助手');
+        });
+    </script>
+</body>
+</html>

@@ -68,5 +68,6 @@ export interface ChatActions {
   rateMessage: (messageId: string, rating: 'like' | 'dislike', reason?: string) => Promise<void>
   createNewConversation: (title?: string) => Promise<void>
   updateConversation: (conversationId: string, updates: Partial<Conversation>) => Promise<void>
-  deleteConversation: (conversationId: string) => Promise<void>
+  deleteConversation: (conversationId: string) => Promise<any>
+  deleteMultipleConversations: (conversationIds: string[]) => Promise<any>
 }

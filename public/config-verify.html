@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>配置验证</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen p-4">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-2xl font-bold text-center mb-6">Dify 配置验证</h1>
+        
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-lg font-semibold mb-4">当前配置</h2>
+            <div class="space-y-3 text-sm">
+                <div class="flex justify-between p-3 bg-gray-50 rounded">
+                    <span class="font-medium">APP_ID:</span>
+                    <code class="bg-white px-2 py-1 rounded">5e18f32a-f037-4eb6-92fc-4fd1bb1b0923</code>
+                </div>
+                <div class="flex justify-between p-3 bg-gray-50 rounded">
+                    <span class="font-medium">APP_KEY:</span>
+                    <code class="bg-white px-2 py-1 rounded">app-eNk3GtruKTh2pHmcBk7g6gs4</code>
+                </div>
+                <div class="flex justify-between p-3 bg-gray-50 rounded">
+                    <span class="font-medium">API_URL:</span>
+                    <code class="bg-white px-2 py-1 rounded">https://dify.aipfuture.com/v1</code>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-lg font-semibold mb-4">配置验证结果</h2>
+            <div id="verification-results" class="space-y-4">
+                <!-- 验证结果将在这里显示 -->
+            </div>
+            
+            <div class="mt-6 flex gap-4">
+                <button 
+                    onclick="verifyConfiguration()" 
+                    class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                >
+                    验证配置
+                </button>
+                
+                <button 
+                    onclick="testAPIConnection()" 
+                    class="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                >
+                    测试API连接
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const CONFIG = {
+            APP_ID: '5e18f32a-f037-4eb6-92fc-4fd1bb1b0923',
+            APP_KEY: 'app-eNk3GtruKTh2pHmcBk7g6gs4',
+            API_URL: 'https://dify.aipfuture.com/v1'
+        };
+
+        function addVerificationResult(title, status, details = '') {
+            const resultsDiv = document.getElementById('verification-results');
+            const resultDiv = document.createElement('div');
+            
+            const statusClass = status === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 
+                               status === 'warning' ? 'bg-yellow-50 border-yellow-200 text-yellow-800' : 
+                               'bg-red-50 border-red-200 text-red-800';
+            
+            const icon = status === 'success' ? '✅' : 
+                         status === 'warning' ? '⚠️' : 
+                         '❌';
+            
+            resultDiv.className = `p-4 rounded-lg border ${statusClass}`;
+            resultDiv.innerHTML = `
+                <div class="flex items-start">
+                    <span class="text-xl mr-3">${icon}</span>
+                    <div>
+                        <h3 class="font-semibold">${title}</h3>
+                        ${details ? `<p class="text-sm mt-1">${details}</p>` : ''}
+                    </div>
+                </div>
+            `;
+            
+            resultsDiv.appendChild(resultDiv);
+        }
+
+        function verifyConfiguration() {
+            const resultsDiv = document.getElementById('verification-results');
+            resultsDiv.innerHTML = '';
+            
+            // 验证APP_ID格式
+            if (CONFIG.APP_ID && CONFIG.APP_ID.length === 36) {
+                addVerificationResult('APP_ID 格式验证', 'success', 'APP_ID 格式正确，长度为36字符');
+            } else {
+                addVerificationResult('APP_ID 格式验证', 'error', `APP_ID 格式不正确，当前长度: ${CONFIG.APP_ID?.length || 0}`);
+            }
+            
+            // 验证APP_KEY格式
+            if (CONFIG.APP_KEY && CONFIG.APP_KEY.startsWith('app-') && CONFIG.APP_KEY.length > 10) {
+                addVerificationResult('APP_KEY 格式验证', 'success', 'APP_KEY 格式正确，以"app-"开头');
+            } else {
+                addVerificationResult('APP_KEY 格式验证', 'error', 'APP_KEY 格式不正确，应该以"app-"开头');
+            }
+            
+            // 验证API_URL格式
+            if (CONFIG.API_URL && CONFIG.API_URL.startsWith('https://')) {
+                addVerificationResult('API_URL 格式验证', 'success', 'API_URL 使用HTTPS协议');
+            } else {
+                addVerificationResult('API_URL 格式验证', 'error', 'API_URL 应该使用HTTPS协议');
+            }
+            
+            // 验证配置完整性
+            if (CONFIG.APP_ID && CONFIG.APP_KEY && CONFIG.API_URL) {
+                addVerificationResult('配置完整性', 'success', '所有必需的配置项都已设置');
+            } else {
+                addVerificationResult('配置完整性', 'error', '缺少必要的配置项');
+            }
+        }
+
+        async function testAPIConnection() {
+            const resultsDiv = document.getElementById('verification-results');
+            resultsDiv.innerHTML = '';
+            
+            addVerificationResult('API连接测试', 'warning', '正在测试连接...');
+            
+            try {
+                const response = await fetch(`${CONFIG.API_URL}/chat-messages`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${CONFIG.APP_KEY}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        inputs: {},
+                        query: '配置验证测试',
+                        response_mode: 'blocking',
+                        user: 'config_verification',
+                    }),
+                    signal: AbortSignal.timeout(15000),
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    addVerificationResult('API连接测试', 'success', `连接成功！响应状态: ${response.status}`);
+                    
+                    if (data.answer) {
+                        addVerificationResult('API响应验证', 'success', `收到有效回答，长度: ${data.answer.length} 字符`);
+                    } else {
+                        addVerificationResult('API响应验证', 'warning', '连接成功但未收到预期回答格式');
+                    }
+                } else {
+                    const errorText = await response.text();
+                    addVerificationResult('API连接测试', 'error', `连接失败: ${response.status} - ${errorText}`);
+                }
+            } catch (error) {
+                addVerificationResult('API连接测试', 'error', `连接异常: ${error.message}`);
+            }
+        }
+
+        // 页面加载时自动验证配置
+        document.addEventListener('DOMContentLoaded', () => {
+            verifyConfiguration();
+        });
+    </script>
+</body>
+</html>

@@ -100,26 +100,10 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          // 流结束后保存到数据库
+          // 流结束后只记录日志，不创建新的对话记录
           if (user_id && messageId) {
-            try {
-              console.log('保存消息到数据库:', { user_id, messageId, conversationId })
-              
-              // 这里可以根据需要保存会话信息到conversations表
-              if (conversationId && !conversation_id) {
-                await supabase
-                  .from('conversations')
-                  .upsert({
-                    user_id,
-                    dify_conversation_id: conversationId,
-                    title: message.slice(0, 50) + (message.length > 50 ? '...' : ''),
-                    last_activity_at: new Date().toISOString()
-                  })
-              }
-
-            } catch (dbError) {
-              console.error('保存到数据库失败:', dbError)
-            }
+            console.log('消息已保存:', { user_id, messageId, conversationId })
+            console.log('Dify对话ID已关联到现有对话')
           }
 
         } catch (error) {

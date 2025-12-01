@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>对话改名功能测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        .warning { background-color: #fff3cd; color: #856404; }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background-color: #0056b3; }
+        .feature-list {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .feature-list li {
+            margin: 5px 0;
+        }
+        .step {
+            background-color: #e9ecef;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>对话改名功能测试</h1>
+        
+        <div class="test-section">
+            <h2>🎯 功能概述</h2>
+            <div class="feature-list">
+                <strong>新增功能：</strong>
+                <ul>
+                    <li>✅ 对话历史可以手动改名</li>
+                    <li>✅ 新对话会根据用户提问自动改名</li>
+                    <li>✅ 支持快捷键操作（Enter保存，Esc取消）</li>
+                    <li>✅ 标题长度限制（最多50字符）</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🧪 手动改名测试</h2>
+            <div class="status info">
+                <strong>测试步骤：</strong>
+                <div class="step">1. 点击"打开聊天页面进行测试"</div>
+                <div class="step">2. 在左侧对话列表中，找到任意一个已有对话</div>
+                <div class="step">3. 点击对话标题旁边的编辑按钮（铅笔图标）</div>
+                <div class="step">4. 修改标题内容</div>
+                <div class="step">5. 点击保存按钮（✓）或按Enter键保存</div>
+                <div class="step">6. 验证标题是否更新成功</div>
+            </div>
+            
+            <div class="status warning">
+                <strong>预期效果：</strong>
+                <ul>
+                    <li>编辑时显示输入框</li>
+                    <li>可以实时编辑标题</li>
+                    <li>保存后标题立即更新</li>
+                    <li>取消编辑恢复原标题</li>
+                </ul>
+            </div>
+            
+            <button onclick="window.open('/', '_blank')">打开聊天页面进行测试</button>
+        </div>
+
+        <div class="test-section">
+            <h2>🤖 自动改名测试</h2>
+            <div class="status info">
+                <strong>测试步骤：</strong>
+                <div class="step">1. 清空所有现有对话</div>
+                <div class="step">2. 点击"新建对话"按钮</div>
+                <div class="step">3. 发送任意消息，比如："什么是劳动合同？"</div>
+                <div class="step">4. 观察对话标题是否自动从"新对话"改为"什么是劳动合同？"</div>
+            </div>
+            
+            <div class="status success">
+                <strong>自动改名逻辑：</strong>
+                <ul>
+                    <li>用户发送第一条消息时检查对话标题</li>
+                    <li>如果标题是默认的"新对话"，自动更新为用户问题</li>
+                    <li>标题会自动截断超过50字符的部分</li>
+                </ul>
+            </div>
+            
+            <button onclick="window.open('/', '_blank')">测试自动改名功能</button>
+        </div>
+
+        <div class="test-section">
+            <h2>⌨️ 快捷键测试</h2>
+            <div class="feature-list">
+                <strong>支持的快捷键：</strong>
+                <ul>
+                    <li><kbd>Enter</kbd> - 保存编辑</li>
+                    <li><kbd>Esc</kbd> - 取消编辑</li>
+                </ul>
+            </div>
+            
+            <div class="status info">
+                <strong>测试方法：</strong>
+                <ol>
+                    <li>开始编辑对话标题</li>
+                    <li>按下 Enter 键，应该保存更改</li>
+                    <li>重新开始编辑</li>
+                    <li>按下 Esc 键，应该取消更改</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🛡️ 安全性测试</h2>
+            <div class="feature-list">
+                <strong>安全特性：</strong>
+                <ul>
+                    <li>✅ 只能修改自己的对话</li>
+                    <li>✅ 需要用户认证</li>
+                    <li>✅ 输入验证和长度限制</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🔧 技术实现</h2>
+            <div class="status info">
+                <strong>主要修改：</strong>
+                <ul>
+                    <li><strong>API层：</strong>增强PUT方法，添加用户认证验证</li>
+                    <li><strong>UI层：</strong>添加编辑状态管理和交互逻辑</li>
+                    <li><strong>自动改名：</strong>在sendMessage中检测并更新默认标题</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>📋 测试清单</h2>
+            <div class="feature-list">
+                <input type="checkbox" id="test1"> <label for="test1">手动编辑对话标题成功</label><br>
+                <input type="checkbox" id="test2"> <label for="test2">保存后标题立即更新</label><br>
+                <input type="checkbox" id="test3"> <label for="test3">取消编辑恢复原标题</label><br>
+                <input type="checkbox" id="test4"> <label for="test4">Enter键保存功能正常</label><br>
+                <input type="checkbox" id="test5"> <label for="test5">Esc键取消功能正常</label><br>
+                <input type="checkbox" id="test6"> <label for="test6">新对话自动改名成功</label><br>
+                <input type="checkbox" id="test7"> <label for="test7">标题长度限制正常（最多50字符）</label><br>
+                <input type="checkbox" id="test8"> <label for="test8">只能修改自己的对话</label><br>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>❗ 故障排除</h2>
+            <div class="status error">
+                <strong>常见问题：</strong>
+                <ul>
+                    <li>如果编辑按钮不显示，检查是否已登录</li>
+                    <li>如果保存失败，检查网络连接</li>
+                    <li>如果自动改名不生效，确认对话标题最初是"新对话"</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 可以添加一些自动化测试逻辑
+        function runTests() {
+            console.log('开始对话改名功能测试...');
+            // 这里可以添加更多自动化测试代码
+        }
+
+        // 页面加载完成后的初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('对话改名功能测试页面已加载');
+        });
+    </script>
+</body>
+</html>

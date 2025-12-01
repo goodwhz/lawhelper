@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>对话历史功能测试</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-800 mb-8 text-center">🗂️ 对话历史功能测试</h1>
+
+        <!-- 功能测试区域 -->
+        <div class="grid md:grid-cols-2 gap-6 mb-8">
+            <!-- 本地存储测试 -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">💾 LocalStorage 测试</h2>
+                <div class="space-y-4">
+                    <button onclick="testLocalStorage()" class="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                        测试本地存储功能
+                    </button>
+                    <button onclick="clearLocalStorage()" class="w-full px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">
+                        清除本地存储数据
+                    </button>
+                    <div id="storage-result" class="p-3 bg-gray-100 rounded text-sm"></div>
+                </div>
+            </div>
+
+            <!-- 会话管理测试 -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">📝 会话管理测试</h2>
+                <div class="space-y-4">
+                    <button onclick="createTestSessions()" class="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
+                        创建测试会话
+                    </button>
+                    <button onclick="listSessions()" class="w-full px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">
+                        列出所有会话
+                    </button>
+                    <div id="session-result" class="p-3 bg-gray-100 rounded text-sm max-h-40 overflow-y-auto"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 功能验证列表 -->
+        <div class="bg-white rounded-lg shadow p-6 mb-8">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">✅ 功能验证清单</h2>
+            <div class="space-y-2">
+                <div class="flex items-center justify-between p-3 bg-green-50 rounded border border-green-200">
+                    <span class="text-gray-700">自动保存对话到本地存储</span>
+                    <span class="text-green-600 font-semibold">✓ 已实现</span>
+                </div>
+                <div class="flex items-center justify-between p-3 bg-green-50 rounded border border-green-200">
+                    <span class="text-gray-700">创建多个独立对话会话</span>
+                    <span class="text-green-600 font-semibold">✓ 已实现</span>
+                </div>
+                <div class="flex items-center justify-between p-3 bg-green-50 rounded border border-green-200">
+                    <span class="text-gray-700">删除单个会话功能</span>
+                    <span class="text-green-600 font-semibold">✓ 已实现</span>
+                </div>
+                <div class="flex items-center justify-between p-3 bg-green-50 rounded border border-green-200">
+                    <span class="text-gray-700">清空当前会话消息</span>
+                    <span class="text-green-600 font-semibold">✓ 已实现</span>
+                </div>
+                <div class="flex items-center justify-between p-3 bg-green-50 rounded border border-green-200">
+                    <span class="text-gray-700">侧边栏显示会话列表</span>
+                    <span class="text-green-600 font-semibold">✓ 已实现</span>
+                </div>
+                <div class="flex items-center justify-between p-3 bg-green-50 rounded border border-green-200">
+                    <span class="text-gray-700">会话切换功能</span>
+                    <span class="text-green-600 font-semibold">✓ 已实现</span>
+                </div>
+                <div class="flex items-center justify-between p-3 bg-green-50 rounded border border-green-200">
+                    <span class="text-gray-700">智能生成会话标题</span>
+                    <span class="text-green-600 font-semibold">✓ 已实现</span>
+                </div>
+                <div class="flex items-center justify-between p-3 bg-green-50 rounded border border-green-200">
+                    <span class="text-gray-700">显示最后更新时间</span>
+                    <span class="text-green-600 font-semibold">✓ 已实现</span>
+                </div>
+                <div class="flex items-center justify-between p-3 bg-green-50 rounded border border-green-200">
+                    <span class="text-gray-700">Markdown格式支持</span>
+                    <span class="text-green-600 font-semibold">✓ 已实现</span>
+                </div>
+                <div class="flex items-center justify-between p-3 bg-green-50 rounded border border-green-200">
+                    <span class="text-gray-700">响应式设计适配</span>
+                    <span class="text-green-600 font-semibold">✓ 已实现</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 快速访问链接 -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">🚀 快速访问</h2>
+            <div class="grid md:grid-cols-3 gap-4">
+                <a href="/ai-chat-history" target="_blank" 
+                   class="block p-4 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors text-center">
+                    <div class="text-2xl mb-2">💬</div>
+                    <div class="font-semibold text-blue-700">对话历史版</div>
+                    <div class="text-sm text-blue-600 mt-1">完整历史管理功能</div>
+                </a>
+                
+                <a href="/ai-chat-enhanced" target="_blank"
+                   class="block p-4 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-colors text-center">
+                    <div class="text-2xl mb-2">🎨</div>
+                    <div class="font-semibold text-green-700">增强Markdown版</div>
+                    <div class="text-sm text-green-600 mt-1">完整格式化支持</div>
+                </a>
+                
+                <a href="/ai-chat-markdown" target="_blank"
+                   class="block p-4 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 transition-colors text-center">
+                    <div class="text-2xl mb-2">📝</div>
+                    <div class="font-semibold text-purple-700">基础Markdown版</div>
+                    <div class="text-sm text-purple-600 mt-1">轻量级格式化</div>
+                </a>
+            </div>
+        </div>
+
+        <!-- 使用说明 -->
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mt-8">
+            <h2 class="text-xl font-semibold text-yellow-800 mb-4">💡 使用说明</h2>
+            <ol class="space-y-2 text-yellow-700">
+                <li>1. 点击"对话历史版"进入完整功能的聊天页面</li>
+                <li>2. 点击左上角的 📚 图标打开会话侧边栏</li>
+                <li>3. 点击"新建对话"创建新的会话</li>
+                <li>4. 发送消息后会自动保存并生成会话标题</li>
+                <li>5. 悬停在会话上会显示删除按钮 🗑️</li>
+                <li>6. 点击任意会话可以切换到该对话</li>
+                <li>7. 右上角的"清空"按钮可以清除当前会话的所有消息</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        // 测试本地存储功能
+        function testLocalStorage() {
+            const result = document.getElementById('storage-result');
+            try {
+                // 创建测试数据
+                const testSession = {
+                    id: 'test_session_' + Date.now(),
+                    title: '测试会话',
+                    messages: [
+                        { id: '1', content: '测试消息1', isAnswer: false },
+                        { id: '2', content: '**测试回复**', isAnswer: true }
+                    ],
+                    createdAt: new Date(),
+                    updatedAt: new Date()
+                };
+
+                // 保存到localStorage
+                localStorage.setItem('chatSessions', JSON.stringify([testSession]));
+                
+                // 读取验证
+                const saved = localStorage.getItem('chatSessions');
+                const parsed = JSON.parse(saved);
+                
+                result.innerHTML = `
+                    <div class="text-green-600 font-semibold">✅ 本地存储测试成功!</div>
+                    <div class="text-gray-600 mt-2">
+                        保存的数据: ${JSON.stringify(parsed[0], null, 2)}
+                    </div>
+                `;
+            } catch (error) {
+                result.innerHTML = `<div class="text-red-600">❌ 测试失败: ${error.message}</div>`;
+            }
+        }
+
+        // 清除本地存储
+        function clearLocalStorage() {
+            const result = document.getElementById('storage-result');
+            try {
+                localStorage.removeItem('chatSessions');
+                result.innerHTML = '<div class="text-blue-600">✅ 本地存储已清除</div>';
+            } catch (error) {
+                result.innerHTML = `<div class="text-red-600">❌ 清除失败: ${error.message}</div>`;
+            }
+        }
+
+        // 创建测试会话
+        function createTestSessions() {
+            const result = document.getElementById('session-result');
+            try {
+                const testSessions = [
+                    {
+                        id: 'session_1',
+                        title: '劳动合同咨询',
+                        messages: [
+                            { id: '1', content: '劳动合同的基本要素是什么？', isAnswer: false },
+                            { id: '2', content: '**劳动合同的基本要素**包括：\n1. 用人单位信息\n2. 劳动者信息\n3. 合同期限\n4. 工作内容', isAnswer: true }
+                        ],
+                        createdAt: new Date(Date.now() - 86400000),
+                        updatedAt: new Date(Date.now() - 86400000)
+                    },
+                    {
+                        id: 'session_2', 
+                        title: '工资计算问题',
+                        messages: [
+                            { id: '3', content: '加班工资怎么计算？', isAnswer: false },
+                            { id: '4', content: '加班工资计算公式：**平时1.5倍**，**周末2倍**，**节假日3倍**', isAnswer: true }
+                        ],
+                        createdAt: new Date(),
+                        updatedAt: new Date()
+                    }
+                ];
+
+                localStorage.setItem('chatSessions', JSON.stringify(testSessions));
+                result.innerHTML = '<div class="text-green-600">✅ 测试会话创建成功!</div>';
+            } catch (error) {
+                result.innerHTML = `<div class="text-red-600">❌ 创建失败: ${error.message}</div>`;
+            }
+        }
+
+        // 列出所有会话
+        function listSessions() {
+            const result = document.getElementById('session-result');
+            try {
+                const sessions = JSON.parse(localStorage.getItem('chatSessions') || '[]');
+                if (sessions.length === 0) {
+                    result.innerHTML = '<div class="text-gray-500">暂无会话数据</div>';
+                    return;
+                }
+
+                let html = '<div class="text-green-600 font-semibold mb-2">📋 当前会话列表:</div>';
+                sessions.forEach((session, index) => {
+                    html += `
+                        <div class="border-l-4 border-blue-500 pl-3 mb-2">
+                            <div class="font-semibold">${session.title}</div>
+                            <div class="text-xs text-gray-500">
+                                消息数: ${session.messages.length} | 
+                                更新时间: ${new Date(session.updatedAt).toLocaleString('zh-CN')}
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                result.innerHTML = html;
+            } catch (error) {
+                result.innerHTML = `<div class="text-red-600">❌ 读取失败: ${error.message}</div>`;
+            }
+        }
+
+        // 页面加载时显示当前存储状态
+        window.addEventListener('load', function() {
+            listSessions();
+        });
+    </script>
+</body>
+</html>

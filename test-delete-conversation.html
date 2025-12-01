@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试删除对话功能</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+        }
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+        .input-group {
+            margin: 10px 0;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .result {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .conversation-list {
+            margin: 10px 0;
+        }
+        .conversation-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid #ddd;
+            margin: 5px 0;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+        .checkbox-group {
+            margin: 10px 0;
+        }
+        .checkbox-item {
+            display: block;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>测试删除对话功能</h1>
+    
+    <div class="container">
+        <h2>1. 获取对话列表</h2>
+        <button class="btn" onclick="loadConversations()">获取对话列表</button>
+        <div id="conversationList" class="conversation-list"></div>
+    </div>
+
+    <div class="container">
+        <h2>2. 删除单个对话</h2>
+        <div class="input-group">
+            <label for="conversationId">对话ID:</label>
+            <input type="text" id="conversationId" placeholder="输入要删除的对话ID">
+        </div>
+        <button class="btn btn-danger" onclick="deleteConversation()">删除对话</button>
+        <div id="deleteResult" class="result"></div>
+    </div>
+
+    <div class="container">
+        <h2>3. 批量删除对话</h2>
+        <div class="checkbox-group" id="batchDeleteCheckboxes"></div>
+        <button class="btn btn-danger" onclick="batchDeleteConversations()">批量删除选中对话</button>
+        <div id="batchDeleteResult" class="result"></div>
+    </div>
+
+    <div class="container">
+        <h2>4. 测试API直接调用</h2>
+        <div class="input-group">
+            <label for="apiConversationId">API测试对话ID:</label>
+            <input type="text" id="apiConversationId" placeholder="输入要测试的对话ID">
+        </div>
+        <button class="btn btn-danger" onclick="testAPIDelete()">通过API删除</button>
+        <button class="btn" onclick="testBatchAPI()">测试批量API</button>
+        <div id="apiResult" class="result"></div>
+    </div>
+
+    <script>
+        let conversations = [];
+
+        async function loadConversations() {
+            try {
+                const response = await fetch('/api/conversations');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    conversations = data.data || [];
+                    displayConversations();
+                    displayBatchDeleteCheckboxes();
+                    updateResult('conversationList', JSON.stringify(data, null, 2), 'success');
+                } else {
+                    updateResult('conversationList', `加载失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                updateResult('conversationList', `加载失败: ${error.message}`, 'error');
+            }
+        }
+
+        function displayConversations() {
+            const listDiv = document.getElementById('conversationList');
+            if (conversations.length === 0) {
+                listDiv.innerHTML = '<p>暂无对话</p>';
+                return;
+            }
+
+            const html = conversations.map(conv => `
+                <div class="conversation-item">
+                    <div>
+                        <strong>ID:</strong> ${conv.id}<br>
+                        <strong>标题:</strong> ${conv.title}<br>
+                        <strong>创建时间:</strong> ${new Date(conv.created_at).toLocaleString()}
+                    </div>
+                    <button class="btn btn-danger" onclick="quickDelete('${conv.id}')">删除</button>
+                </div>
+            `).join('');
+            
+            listDiv.innerHTML = html;
+        }
+
+        function displayBatchDeleteCheckboxes() {
+            const checkboxDiv = document.getElementById('batchDeleteCheckboxes');
+            if (conversations.length === 0) {
+                checkboxDiv.innerHTML = '<p>暂无对话</p>';
+                return;
+            }
+
+            const html = conversations.map(conv => `
+                <div class="checkbox-item">
+                    <input type="checkbox" id="conv_${conv.id}" value="${conv.id}">
+                    <label for="conv_${conv.id}">
+                        ${conv.title} (${conv.id.substring(0, 8)}...)
+                    </label>
+                </div>
+            `).join('');
+            
+            checkboxDiv.innerHTML = html;
+        }
+
+        async function deleteConversation() {
+            const conversationId = document.getElementById('conversationId').value;
+            if (!conversationId) {
+                updateResult('deleteResult', '请输入对话ID', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/conversations/${conversationId}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    updateResult('deleteResult', JSON.stringify(data, null, 2), 'success');
+                    // 重新加载对话列表
+                    loadConversations();
+                } else {
+                    updateResult('deleteResult', `删除失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                updateResult('deleteResult', `删除失败: ${error.message}`, 'error');
+            }
+        }
+
+        async function quickDelete(conversationId) {
+            if (!confirm('确定要删除这个对话吗？此操作不可撤销！')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/conversations/${conversationId}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert('删除成功！');
+                    loadConversations();
+                } else {
+                    alert(`删除失败: ${data.error}`);
+                }
+            } catch (error) {
+                alert(`删除失败: ${error.message}`);
+            }
+        }
+
+        async function batchDeleteConversations() {
+            const checkboxes = document.querySelectorAll('#batchDeleteCheckboxes input:checked');
+            const conversationIds = Array.from(checkboxes).map(cb => cb.value);
+            
+            if (conversationIds.length === 0) {
+                updateResult('batchDeleteResult', '请选择要删除的对话', 'error');
+                return;
+            }
+
+            if (!confirm(`确定要删除选中的 ${conversationIds.length} 个对话吗？此操作不可撤销！`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/conversations/batch-delete', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        conversation_ids: conversationIds
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    updateResult('batchDeleteResult', JSON.stringify(data, null, 2), 'success');
+                    loadConversations();
+                } else {
+                    updateResult('batchDeleteResult', `批量删除失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                updateResult('batchDeleteResult', `批量删除失败: ${error.message}`, 'error');
+            }
+        }
+
+        async function testAPIDelete() {
+            const conversationId = document.getElementById('apiConversationId').value;
+            if (!conversationId) {
+                updateResult('apiResult', '请输入对话ID', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/conversations/${conversationId}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                updateResult('apiResult', JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
+                
+                if (response.ok) {
+                    loadConversations();
+                }
+            } catch (error) {
+                updateResult('apiResult', `API测试失败: ${error.message}`, 'error');
+            }
+        }
+
+        async function testBatchAPI() {
+            const checkboxes = document.querySelectorAll('#batchDeleteCheckboxes input:checked');
+            const conversationIds = Array.from(checkboxes).map(cb => cb.value);
+            
+            if (conversationIds.length === 0) {
+                updateResult('apiResult', '请先加载对话列表并选择对话', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/conversations/batch-delete', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        conversation_ids: conversationIds
+                    })
+                });
+                
+                const data = await response.json();
+                updateResult('apiResult', JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
+                
+                if (response.ok) {
+                    loadConversations();
+                }
+            } catch (error) {
+                updateResult('apiResult', `批量API测试失败: ${error.message}`, 'error');
+            }
+        }
+
+        function updateResult(elementId, message, type = '') {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = 'result ' + type;
+        }
+
+        // 页面加载时自动获取对话列表
+        window.onload = function() {
+            loadConversations();
+        };
+    </script>
+</body>
+</html>

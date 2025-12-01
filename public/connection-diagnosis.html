@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>前后端连接诊断</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen p-4">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-2xl font-bold text-center mb-6">前后端连接诊断</h1>
+        
+        <!-- 连接状态概览 -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-lg font-semibold mb-4">连接状态概览</h2>
+            <div id="statusOverview" class="grid grid-cols-3 gap-4">
+                <!-- 动态生成状态卡片 -->
+            </div>
+        </div>
+
+        <!-- 详细测试 -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-lg font-semibold mb-4">详细连接测试</h2>
+            
+            <div class="space-y-4">
+                <!-- 基础连接测试 -->
+                <div class="border-l-4 border-blue-500 pl-4">
+                    <h3 class="font-semibold mb-2">1. 基础连接测试</h3>
+                    <div class="space-y-2">
+                        <button onclick="testBasicConnection()" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                            测试基础连接
+                        </button>
+                        <div id="basicResult" class="text-sm text-gray-600"></div>
+                    </div>
+                </div>
+
+                <!-- API路由测试 -->
+                <div class="border-l-4 border-green-500 pl-4">
+                    <h3 class="font-semibold mb-2">2. API路由测试</h3>
+                    <div class="space-y-2">
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="testAPI('/api/health')" class="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600">
+                                /api/health
+                            </button>
+                            <button onclick="testAPI('/api/check-db')" class="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600">
+                                /api/check-db
+                            </button>
+                            <button onclick="testAPI('/api/dify/chat-mock')" class="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600">
+                                /api/dify/chat-mock
+                            </button>
+                            <button onclick="testAPI('/api/dify/chat-stream')" class="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600">
+                                /api/dify/chat-stream
+                            </button>
+                            <button onclick="testAPI('/api/conversations')" class="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600">
+                                /api/conversations
+                            </button>
+                            <button onclick="testAPI('/api/messages')" class="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600">
+                                /api/messages
+                            </button>
+                        </div>
+                        <div id="apiResult" class="text-sm text-gray-600"></div>
+                    </div>
+                </div>
+
+                <!-- 数据库连接测试 -->
+                <div class="border-l-4 border-purple-500 pl-4">
+                    <h3 class="font-semibold mb-2">3. 数据库连接测试</h3>
+                    <div class="space-y-2">
+                        <button onclick="testDatabaseConnection()" class="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600">
+                            测试Supabase连接
+                        </button>
+                        <div id="dbResult" class="text-sm text-gray-600"></div>
+                    </div>
+                </div>
+
+                <!-- Dify服务测试 -->
+                <div class="border-l-4 border-orange-500 pl-4">
+                    <h3 class="font-semibold mb-2">4. Dify服务测试</h3>
+                    <div class="space-y-2">
+                        <button onclick="testDifyService()" class="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600">
+                            测试Dify API
+                        </button>
+                        <div id="difyResult" class="text-sm text-gray-600"></div>
+                    </div>
+                </div>
+
+                <!-- 完整流程测试 -->
+                <div class="border-l-4 border-red-500 pl-4">
+                    <h3 class="font-semibold mb-2">5. 完整流程测试</h3>
+                    <div class="space-y-2">
+                        <button onclick="testCompleteFlow()" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">
+                            测试聊天完整流程
+                        </button>
+                        <div id="flowResult" class="text-sm text-gray-600"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 日志输出 -->
+        <div class="bg-white rounded-lg shadow-md p-6 mt-6">
+            <h2 class="text-lg font-semibold mb-4">诊断日志</h2>
+            <div id="diagnosticLog" class="bg-gray-50 rounded p-4 h-64 overflow-y-auto font-mono text-xs whitespace-pre-wrap">
+                等待开始诊断...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://duyfvvbgadrwaonvlrun.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1eWZ2dmJnYWRyd2FvbnZscnVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyODM2MjAsImV4cCI6MjA3NTg1OTYyMH0.3wExEYQ0PcdEqcML9WsvM36A74gBBXjfmmtbilwsUZ0';
+        const DIFY_API_URL = 'https://dify.aipfuture.com/v1';
+        const DIFY_APP_KEY = 'app-eNk3GtruKTh2pHmcBk7g6gs4';
+
+        let diagnosticData = {
+            frontend: { status: 'unknown', details: '' },
+            backend: { status: 'unknown', details: '' },
+            database: { status: 'unknown', details: '' },
+            dify: { status: 'unknown', details: '' }
+        };
+
+        function log(message, type = 'info') {
+            const logEl = document.getElementById('diagnosticLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'text-red-600' : type === 'success' ? 'text-green-600' : 'text-gray-800';
+            logEl.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function updateStatusOverview() {
+            const overviewEl = document.getElementById('statusOverview');
+            overviewEl.innerHTML = `
+                <div class="p-4 rounded ${diagnosticData.frontend.status === 'ok' ? 'bg-green-100' : 'bg-red-100'}">
+                    <div class="font-semibold">前端</div>
+                    <div class="text-sm">${diagnosticData.frontend.status === 'ok' ? '✅ 正常' : '❌ 异常'}</div>
+                    <div class="text-xs text-gray-600">${diagnosticData.frontend.details}</div>
+                </div>
+                <div class="p-4 rounded ${diagnosticData.backend.status === 'ok' ? 'bg-green-100' : 'bg-red-100'}">
+                    <div class="font-semibold">后端</div>
+                    <div class="text-sm">${diagnosticData.backend.status === 'ok' ? '✅ 正常' : '❌ 异常'}</div>
+                    <div class="text-xs text-gray-600">${diagnosticData.backend.details}</div>
+                </div>
+                <div class="p-4 rounded ${diagnosticData.database.status === 'ok' ? 'bg-green-100' : 'bg-red-100'}">
+                    <div class="font-semibold">数据库</div>
+                    <div class="text-sm">${diagnosticData.database.status === 'ok' ? '✅ 正常' : '❌ 异常'}</div>
+                    <div class="text-xs text-gray-600">${diagnosticData.database.details}</div>
+                </div>
+            `;
+        }
+
+        async function testBasicConnection() {
+            log('=== 开始基础连接测试 ===');
+            const resultEl = document.getElementById('basicResult');
+            
+            try {
+                // 测试本地服务器连接
+                const response = await fetch('/');
+                if (response.ok) {
+                    resultEl.innerHTML = '<span class="text-green-600">✅ 前端连接正常</span>';
+                    diagnosticData.frontend = { status: 'ok', details: '本地服务器响应正常' };
+                    log('✅ 前端连接正常', 'success');
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                resultEl.innerHTML = `<span class="text-red-600">❌ 前端连接失败: ${error.message}</span>`;
+                diagnosticData.frontend = { status: 'error', details: error.message };
+                log(`❌ 前端连接失败: ${error.message}`, 'error');
+            }
+            
+            updateStatusOverview();
+        }
+
+        async function testAPI(endpoint) {
+            log(`测试API端点: ${endpoint}`);
+            const resultEl = document.getElementById('apiResult');
+            
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ test: true })
+                });
+                
+                if (response.ok || response.status === 405 || response.status === 400) {
+                    log(`✅ ${endpoint} 响应正常 (${response.status})`, 'success');
+                    diagnosticData.backend.status = 'ok';
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                log(`❌ ${endpoint} 连接失败: ${error.message}`, 'error');
+                diagnosticData.backend.status = 'error';
+                diagnosticData.backend.details = error.message;
+            }
+            
+            updateStatusOverview();
+        }
+
+        async function testDatabaseConnection() {
+            log('=== 开始数据库连接测试 ===');
+            const resultEl = document.getElementById('dbResult');
+            
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/conversations?limit=1`, {
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    resultEl.innerHTML = '<span class="text-green-600">✅ Supabase连接正常</span>';
+                    diagnosticData.database = { status: 'ok', details: `找到 ${data.length} 条记录` };
+                    log('✅ Supabase连接正常', 'success');
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                resultEl.innerHTML = `<span class="text-red-600">❌ Supabase连接失败: ${error.message}</span>`;
+                diagnosticData.database = { status: 'error', details: error.message };
+                log(`❌ Supabase连接失败: ${error.message}`, 'error');
+            }
+            
+            updateStatusOverview();
+        }
+
+        async function testDifyService() {
+            log('=== 开始Dify服务测试 ===');
+            const resultEl = document.getElementById('difyResult');
+            
+            try {
+                const response = await fetch(`${DIFY_API_URL}/chat-messages`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${DIFY_APP_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        inputs: {},
+                        query: '测试连接',
+                        response_mode: 'blocking',
+                        user: `test_${Date.now()}`
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    resultEl.innerHTML = '<span class="text-green-600">✅ Dify API连接正常</span>';
+                    diagnosticData.dify = { status: 'ok', details: '响应正常' };
+                    log('✅ Dify API连接正常', 'success');
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                resultEl.innerHTML = `<span class="text-red-600">❌ Dify API连接失败: ${error.message}</span>`;
+                diagnosticData.dify = { status: 'error', details: error.message };
+                log(`❌ Dify API连接失败: ${error.message}`, 'error');
+            }
+        }
+
+        async function testCompleteFlow() {
+            log('=== 开始完整流程测试 ===');
+            const resultEl = document.getElementById('flowResult');
+            
+            try {
+                // 1. 创建对话
+                log('步骤1: 创建对话');
+                const convResponse = await fetch('/api/conversations', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        title: '诊断测试对话',
+                        user_id: `test_${Date.now()}`
+                    })
+                });
+                
+                if (!convResponse.ok) throw new Error('创建对话失败');
+                const convData = await convResponse.json();
+                log(`✅ 对话创建成功: ${convData.id}`);
+                
+                // 2. 发送消息
+                log('步骤2: 发送测试消息');
+                const msgResponse = await fetch('/api/dify/chat-mock', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: '这是诊断测试消息',
+                        conversation_id: convData.id,
+                        user_id: `test_${Date.now()}`
+                    })
+                });
+                
+                if (!msgResponse.ok) throw new Error('发送消息失败');
+                const msgData = await msgResponse.json();
+                log(`✅ 消息发送成功: ${msgData.answer?.substring(0, 50)}...`);
+                
+                // 3. 验证数据持久化
+                log('步骤3: 验证数据持久化');
+                const verifyResponse = await fetch(`/api/conversations?id=${convData.id}`);
+                if (!verifyResponse.ok) throw new Error('数据验证失败');
+                
+                resultEl.innerHTML = '<span class="text-green-600">✅ 完整流程测试通过</span>';
+                log('✅ 完整流程测试通过', 'success');
+                
+            } catch (error) {
+                resultEl.innerHTML = `<span class="text-red-600">❌ 完整流程测试失败: ${error.message}</span>`;
+                log(`❌ 完整流程测试失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 自动开始基础测试
+        window.onload = function() {
+            log('诊断工具已加载，开始自动检测...');
+            updateStatusOverview();
+            
+            // 延迟自动运行测试，确保页面完全加载
+            setTimeout(() => {
+                testBasicConnection();
+                testDatabaseConnection();
+            }, 1000);
+        };
+    </script>
+</body>
+</html>

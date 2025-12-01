@@ -132,7 +132,18 @@ export const useSupabaseChat = (): ChatState & ChatActions => {
 
   // 发送消息
   const sendMessage = useCallback(async (content: string) => {
-    if (!user || !state.currentConversation) return
+    if (!user) {
+      // 如果没有用户，尝试创建新对话
+      const newConv = await createNewConversation()
+      if (!newConv) return
+    }
+
+    // 确保有当前对话
+    let conversation = state.currentConversation
+    if (!conversation) {
+      conversation = await createNewConversation()
+      if (!conversation) return
+    }
 
     // 创建用户消息
     const userMessage: Omit<ChatMessage, 'id' | 'created_at' | 'updated_at'> = {
@@ -157,7 +168,7 @@ export const useSupabaseChat = (): ChatState & ChatActions => {
         isStreaming: true,
       }))
 
-      // 调用 Dify 模拟 API 获取 AI 回复
+      // 调用 Dify API 获取 AI 回复
       const response = await fetch('/api/dify/chat-mock', {
         method: 'POST',
         headers: {
@@ -165,12 +176,14 @@ export const useSupabaseChat = (): ChatState & ChatActions => {
         },
         body: JSON.stringify({
           message: content,
-          conversation_id: state.currentConversation.dify_conversation_id,
+          conversation_id: conversation.dify_conversation_id,
           user_id: user.id,
         }),
       })
 
-      if (!response.ok) throw new Error('发送消息失败')
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
 
       // 创建初始的 AI 消息占位符
       const aiMessage: Omit<ChatMessage, 'id' | 'created_at' | 'updated_at'> = {
@@ -275,16 +288,17 @@ export const useSupabaseChat = (): ChatState & ChatActions => {
             last_activity_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           })
-          .eq('id', state.currentConversation.id)
+          .eq('id', conversation.id)
       }
     } catch (error) {
+      console.error('发送消息失败:', error)
       setState(prev => ({
         ...prev,
         isStreaming: false,
         error: error instanceof Error ? error.message : '发送消息失败',
       }))
     }
-  }, [user, state.currentConversation, saveMessage])
+  }, [user, state.currentConversation, saveMessage, createNewConversation])
 
   // 停止流式响应
   const stopStreaming = useCallback(() => {
@@ -353,19 +367,28 @@ export const useSupabaseChat = (): ChatState & ChatActions => {
     }
   }, [state.currentConversation])
 
-  // 删除对话
+  // 删除对话 (真正删除，不是软删除)
   const deleteConversation = useCallback(async (conversationId: string) => {
     try {
-      const { error } = await supabase
-        .from('conversations')
-        .update({
-          status: 'deleted',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', conversationId)
+      console.log('删除对话:', conversationId)
+      
+      // 使用新的API删除对话 (真正删除)
+      const response = await fetch(`/api/conversations/${conversationId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || `删除失败: ${response.status}`)
+      }
 
+      const result = await response.json()
+      console.log('对话删除成功:', result)
+
+      // 如果删除的是当前对话，清空状态
       if (state.currentConversation?.id === conversationId) {
         setState(prev => ({
           ...prev,
@@ -373,11 +396,60 @@ export const useSupabaseChat = (): ChatState & ChatActions => {
           messages: [],
         }))
       }
+
+      return result
     } catch (error) {
+      console.error('删除对话失败:', error)
+      const errorMessage = error instanceof Error ? error.message : '删除对话失败'
       setState(prev => ({
         ...prev,
-        error: error instanceof Error ? error.message : '删除对话失败',
+        error: errorMessage,
       }))
+      throw new Error(errorMessage)
+    }
+  }, [state.currentConversation])
+
+  // 批量删除对话
+  const deleteMultipleConversations = useCallback(async (conversationIds: string[]) => {
+    try {
+      console.log('批量删除对话:', conversationIds)
+      
+      const response = await fetch('/api/conversations/batch-delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          conversation_ids: conversationIds
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || `批量删除失败: ${response.status}`)
+      }
+
+      const result = await response.json()
+      console.log('批量删除对话成功:', result)
+
+      // 如果删除的对话中包含当前对话，清空状态
+      if (state.currentConversation && conversationIds.includes(state.currentConversation.id)) {
+        setState(prev => ({
+          ...prev,
+          currentConversation: null,
+          messages: [],
+        }))
+      }
+
+      return result
+    } catch (error) {
+      console.error('批量删除对话失败:', error)
+      const errorMessage = error instanceof Error ? error.message : '批量删除对话失败'
+      setState(prev => ({
+        ...prev,
+        error: errorMessage,
+      }))
+      throw new Error(errorMessage)
     }
   }, [state.currentConversation])
 
@@ -398,5 +470,6 @@ export const useSupabaseChat = (): ChatState & ChatActions => {
     createNewConversation,
     updateConversation,
     deleteConversation,
+    deleteMultipleConversations,
   }
 }

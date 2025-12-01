@@ -10,6 +10,10 @@ export async function GET(_request: NextRequest) {
       NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
       NEXT_PUBLIC_SUPABASE_ANON_KEY_EXISTS: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
       NEXT_PUBLIC_SUPABASE_ANON_KEY_LENGTH: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.length,
+      NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+      NEXT_PUBLIC_APP_KEY_EXISTS: !!process.env.NEXT_PUBLIC_APP_KEY,
+      NEXT_PUBLIC_APP_KEY_LENGTH: process.env.NEXT_PUBLIC_APP_KEY?.length,
+      NEXT_PUBLIC_APP_ID: process.env.NEXT_PUBLIC_APP_ID,
       NODE_ENV: process.env.NODE_ENV,
       VERCEL_ENV: process.env.VERCEL_ENV,
       VERCEL_URL: process.env.VERCEL_URL,
@@ -77,12 +81,57 @@ export async function GET(_request: NextRequest) {
       console.error('表结构检查失败:', error)
     }
 
+    // 检查Dify API连接
+    let difyTest = { success: false, error: null, response: null }
+    try {
+      if (!process.env.NEXT_PUBLIC_API_URL || !process.env.NEXT_PUBLIC_APP_KEY) {
+        throw new Error('Dify API 环境变量缺失')
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat-messages`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_APP_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          inputs: {},
+          query: '健康检查测试',
+          response_mode: 'blocking',
+          user: 'health_check',
+        }),
+        signal: AbortSignal.timeout(10000), // 10秒超时
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        difyTest = { 
+          success: true, 
+          error: null, 
+          response: {
+            status: response.status,
+            hasAnswer: !!data.answer,
+            answerLength: data.answer?.length || 0,
+          }
+        }
+      } else {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+    } catch (error: any) {
+      difyTest = {
+        success: false,
+        error: error.message || 'Unknown error',
+        response: null,
+      }
+    }
+
     const healthStatus = {
-      status: envVars.NEXT_PUBLIC_SUPABASE_URL && supabaseTest.success ? 'healthy' : 'unhealthy',
+      status: (envVars.NEXT_PUBLIC_SUPABASE_URL && supabaseTest.success && difyTest.success) ? 'healthy' : 'unhealthy',
       timestamp: new Date().toISOString(),
       environment: envVars,
       supabase: supabaseTest,
       database: tableCheck,
+      dify: difyTest,
       recommendations: [],
     }
 
@@ -105,6 +154,18 @@ export async function GET(_request: NextRequest) {
 
     if (!tableCheck.documents) {
       healthStatus.recommendations.push('law_documents 表不存在或无法访问')
+    }
+
+    if (!envVars.NEXT_PUBLIC_API_URL) {
+      healthStatus.recommendations.push('NEXT_PUBLIC_API_URL 环境变量未设置')
+    }
+
+    if (!envVars.NEXT_PUBLIC_APP_KEY_EXISTS) {
+      healthStatus.recommendations.push('NEXT_PUBLIC_APP_KEY 环境变量未设置')
+    }
+
+    if (!difyTest.success) {
+      healthStatus.recommendations.push(`Dify API 连接失败: ${difyTest.error}`)
     }
 
     return NextResponse.json(healthStatus, {
@@ -133,12 +194,16 @@ export async function GET(_request: NextRequest) {
   }
 }
 
+export async function POST(request: NextRequest) {
+  return GET(request)
+}
+
 export async function OPTIONS() {
   return new Response(null, {
     status: 200,
     headers: {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
     },
   })
