@@ -4,6 +4,8 @@ import { createClient } from '@supabase/supabase-js'
 import { sendChatMessage } from '@/service'
 import type { ChatMessage, Conversation } from './types'
 import { useAuth } from '@/contexts/AuthContext'
+import ConfirmDialog from '@/app/components/ui/ConfirmDialog'
+import WelcomeScreen from '@/app/components/ui/WelcomeScreen'
 
 // Supabase 客户端
 const supabase = createClient(
@@ -42,6 +44,23 @@ const IntegratedChat: React.FC = () => {
   const [editingTitle, setEditingTitle] = useState('')
   const abortControllerRef = useRef<AbortController | null>(null)
   const messageAreaRef = useRef<HTMLDivElement>(null)
+  const [presetQuestion, setPresetQuestion] = useState<string | null>(null)
+  
+  // 确认对话框状态
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean
+    title?: string
+    message: string
+    onConfirm: () => void
+    type?: 'danger' | 'warning' | 'info'
+  }>({
+    isOpen: false,
+    message: '',
+    onConfirm: () => {}
+  })
+
+  // 欢迎界面状态
+  const [showWelcome, setShowWelcome] = useState(false)
 
   // 初始化
   useEffect(() => {
@@ -83,13 +102,13 @@ const IntegratedChat: React.FC = () => {
       setConversations(convs)
 
       if (convs.length === 0) {
-        console.log('没有现有对话，创建新对话...')
-        const newConv = await createNewConversation()
-        if (!newConv) {
-          console.error('创建新对话失败')
-        }
+        console.log('没有现有对话，显示欢迎界面')
+        setShowWelcome(true)
+        setCurrentConversation(null)
+        setMessages([])
       } else {
         console.log('加载第一个对话:', convs[0].id)
+        setShowWelcome(false)
         await loadConversation(convs[0].id)
       }
     } catch (error) {
@@ -110,7 +129,15 @@ const IntegratedChat: React.FC = () => {
   }
 
   // 创建带标题的新对话
-  const createNewConversationWithTitle = async (title: string) => {
+  const createNewConversationWithPreset = async (presetQuestion?: string) => {
+    const title = presetQuestion && typeof presetQuestion === 'string' 
+      ? presetQuestion.substring(0, 50) + (presetQuestion.length > 50 ? '...' : '') 
+      : '新对话'
+    return await createNewConversationWithTitle(title, presetQuestion)
+  }
+
+  // 创建带标题的新对话
+  const createNewConversationWithTitle = async (title: string, presetQuestion?: string) => {
     if (!user) {
       console.error('创建对话失败: 用户不存在')
       return null
@@ -145,12 +172,25 @@ const IntegratedChat: React.FC = () => {
 
       console.log('对话创建成功:', data)
       
+      // 隐藏欢迎界面
+      setShowWelcome(false)
+      
       // 设置为当前对话
       setCurrentConversation(data)
       setMessages([])
       
-      // 重新加载对话列表
-      await loadConversations()
+      // 更新本地对话列表，添加新对话到顶部
+      setConversations(prev => [data, ...prev])
+      
+      // 后台重新加载对话列表（不阻塞当前操作）
+      loadConversations().catch(console.error)
+      
+      // 如果有预设问题，发送消息
+      if (presetQuestion) {
+        setTimeout(() => {
+          sendMessage(presetQuestion)
+        }, 500)
+      }
       
       return data
     } catch (error) {
@@ -229,7 +269,7 @@ const IntegratedChat: React.FC = () => {
       setEditingTitle('')
     } catch (error) {
       console.error('更新对话标题失败:', error)
-      alert('更新对话标题失败，请重试')
+      // 移除错误弹窗，只在控制台记录错误
     }
   }
 
@@ -469,120 +509,129 @@ const IntegratedChat: React.FC = () => {
     } catch (error) {
       console.error('删除对话失败:', error)
       const errorMessage = error instanceof Error ? error.message : '删除对话失败'
-      alert(errorMessage)
-      return false
+      throw new Error(errorMessage)
     }
   }, [user, currentConversation, conversations, loadConversations, loadConversation])
 
   // 批量删除所有对话
   const deleteAllConversations = useCallback(async () => {
     if (!user || conversations.length === 0) {
-      alert('没有可删除的对话')
       return
     }
 
-    if (!confirm(`确定要删除所有 ${conversations.length} 个对话吗？此操作不可撤销！`)) {
-      return
-    }
-
-    try {
-      console.log('正在批量删除对话:', conversations.map(c => c.id))
-      console.log('当前用户:', user)
-      
-      // 尝试多种方法获取认证信息
-      let session = null
-      
-      // 方法1: 使用 supabase.auth.getSession()
-      try {
-        const result = await supabase.auth.getSession()
-        session = result.data.session
-        console.log('方法1获取session:', session ? '成功' : '失败')
-      } catch (err) {
-        console.log('方法1获取session失败:', err)
-      }
-      
-      // 方法2: 如果方法1失败，尝试 getCurrentUser
-      if (!session) {
+    // 显示确认对话框
+    setConfirmDialog({
+      isOpen: true,
+      title: '批量删除确认',
+      message: `确定要删除所有 ${conversations.length} 个对话吗？此操作不可撤销！`,
+      onConfirm: async () => {
         try {
-          const { getCurrentUser } = await import('@/lib/auth')
-          const userResult = await getCurrentUser()
-          if (userResult && userResult.session) {
-            session = userResult.session
-            console.log('方法2获取session成功')
+          console.log('正在批量删除对话:', conversations.map(c => c.id))
+          console.log('当前用户:', user)
+          
+          // 尝试多种方法获取认证信息
+          let session = null
+          
+          // 方法1: 使用 supabase.auth.getSession()
+          try {
+            const result = await supabase.auth.getSession()
+            session = result.data.session
+            console.log('方法1获取session:', session ? '成功' : '失败')
+          } catch (err) {
+            console.log('方法1获取session失败:', err)
           }
-        } catch (err) {
-          console.log('方法2获取session失败:', err)
-        }
-      }
-      
-      // 使用获取到的session或用户ID进行认证
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      }
-      
-      if (session?.access_token) {
-        headers['Authorization'] = `Bearer ${session.access_token}`
-        console.log('使用Bearer token认证')
-      } else {
-        headers['X-User-ID'] = user.id
-        headers['X-User-Email'] = user.email || ''
-        console.log('使用X-User-ID认证')
-      }
-      
-      const response = await fetch('/api/conversations/batch-delete', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          conversation_ids: conversations.map(c => c.id)
-        }),
-      })
-
-      if (!response.ok) {
-        let errorMessage = `批量删除失败: ${response.status}`
-        try {
-          const errorText = await response.text()
-          console.error('错误响应内容:', errorText)
-          if (errorText) {
-            const errorData = JSON.parse(errorText)
-            errorMessage = errorData.error || errorMessage
+          
+          // 方法2: 如果方法1失败，尝试 getCurrentUser
+          if (!session) {
+            try {
+              const { getCurrentUser } = await import('@/lib/auth')
+              const userResult = await getCurrentUser()
+              if (userResult && userResult.session) {
+                session = userResult.session
+                console.log('方法2获取session成功')
+              }
+            } catch (err) {
+              console.log('方法2获取session失败:', err)
+            }
           }
-        } catch (parseError) {
-          console.error('解析错误响应失败:', parseError)
+          
+          // 使用获取到的session或用户ID进行认证
+          const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+          }
+          
+          if (session?.access_token) {
+            headers['Authorization'] = `Bearer ${session.access_token}`
+            console.log('使用Bearer token认证')
+          } else {
+            headers['X-User-ID'] = user.id
+            headers['X-User-Email'] = user.email || ''
+            console.log('使用X-User-ID认证')
+          }
+          
+          const response = await fetch('/api/conversations/batch-delete', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              conversation_ids: conversations.map(c => c.id)
+            }),
+          })
+
+          if (!response.ok) {
+            let errorMessage = `批量删除失败: ${response.status}`
+            try {
+              const errorText = await response.text()
+              console.error('错误响应内容:', errorText)
+              if (errorText) {
+                const errorData = JSON.parse(errorText)
+                errorMessage = errorData.error || errorMessage
+              }
+            } catch (parseError) {
+              console.error('解析错误响应失败:', parseError)
+            }
+            throw new Error(errorMessage)
+          }
+
+          // 安全解析成功响应
+          let result
+          try {
+            const responseText = await response.text()
+            console.log('成功响应内容:', responseText)
+            result = responseText ? JSON.parse(responseText) : { deleted_count: 0 }
+          } catch (parseError) {
+            console.error('解析成功响应失败:', parseError)
+            result = { deleted_count: conversations.length, message: '删除成功' }
+          }
+          
+          console.log('批量删除对话成功:', result)
+
+          // 清空当前状态
+          setCurrentConversation(null)
+          setMessages([])
+
+          // 重新加载对话列表
+          await loadConversations()
+
+          // 删除成功后自动关闭弹窗，不再显示alert
+          setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} })
+        } catch (error) {
+          console.error('批量删除对话失败:', error)
+          // 删除失败时也直接关闭弹窗，不显示错误信息
+          setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} })
         }
-        throw new Error(errorMessage)
-      }
-
-      // 安全解析成功响应
-      let result
-      try {
-        const responseText = await response.text()
-        console.log('成功响应内容:', responseText)
-        result = responseText ? JSON.parse(responseText) : { deleted_count: 0 }
-      } catch (parseError) {
-        console.error('解析成功响应失败:', parseError)
-        result = { deleted_count: conversations.length, message: '删除成功' }
-      }
-      
-      console.log('批量删除对话成功:', result)
-
-      // 清空当前状态
-      setCurrentConversation(null)
-      setMessages([])
-
-      // 重新加载对话列表
-      await loadConversations()
-
-      alert(`成功删除 ${result.deleted_count || conversations.length} 个对话`)
-    } catch (error) {
-      console.error('批量删除对话失败:', error)
-      const errorMessage = error instanceof Error ? error.message : '批量删除对话失败'
-      alert(errorMessage)
-    }
+      },
+      type: 'danger'
+    })
   }, [user, conversations, loadConversations])
+
+  // 安全获取字符串内容
+  const safeTrim = (content: any): string => {
+    return typeof content === 'string' ? content.trim() : String(content || '').trim()
+  }
 
   // 发送消息
   const sendMessage = useCallback(async (content: string) => {
-    if (!content.trim() || isLoading || !user) {
+    if (!content || typeof content !== 'string' || !content.trim() || isLoading || !user) {
       alert('请先登录')
       return
     }
@@ -590,7 +639,7 @@ const IntegratedChat: React.FC = () => {
     // 如果没有当前对话，创建一个新对话
     let targetConversation = currentConversation
     if (!targetConversation) {
-      targetConversation = await createNewConversationWithTitle(content.trim())
+      targetConversation = await createNewConversationWithTitle(safeTrim(content))
       if (!targetConversation) {
         alert('创建对话失败')
         return
@@ -599,9 +648,16 @@ const IntegratedChat: React.FC = () => {
 
     // 如果当前对话标题是默认的"新对话"，自动更新为用户的问题
     if (targetConversation.title === '新对话') {
-      await updateConversationTitle(targetConversation.id, content.trim())
-      // 重新加载对话列表以更新标题
-      await loadConversations()
+      await updateConversationTitle(targetConversation.id, safeTrim(content))
+      // 本地更新对话标题，不重新加载整个列表
+      const trimmedContent = safeTrim(content)
+      const newTitle = trimmedContent.length > 50 ? trimmedContent.substring(0, 50) + '...' : trimmedContent
+      setCurrentConversation(prev => prev ? { ...prev, title: newTitle } : null)
+      setConversations(prev => prev.map(conv => 
+        conv.id === targetConversation.id 
+          ? { ...conv, title: newTitle, updated_at: new Date().toISOString() }
+          : conv
+      ))
     }
 
     setIsLoading(true)
@@ -610,7 +666,7 @@ const IntegratedChat: React.FC = () => {
     try {
       // 保存用户消息
       const userMessage: Omit<ChatMessage, 'id' | 'created_at'> = {
-        content: content.trim(),
+        content: safeTrim(content),
         role: 'user'
       }
 
@@ -637,7 +693,7 @@ const IntegratedChat: React.FC = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: content.trim(),
+          message: safeTrim(content),
           conversation_id: targetConversation.dify_conversation_id,
           user_id: user.id
         }),
@@ -736,8 +792,20 @@ const IntegratedChat: React.FC = () => {
         } : null)
       }
 
-      // 重新加载对话列表以更新时间
-      await loadConversations()
+      // 只更新当前对话的时间戳，不重新加载整个对话列表
+      if (currentConversation) {
+        setCurrentConversation(prev => prev ? {
+          ...prev,
+          updated_at: new Date().toISOString()
+        } : null)
+        
+        // 更新对话列表中的时间戳
+        setConversations(prev => prev.map(conv => 
+          conv.id === currentConversation.id 
+            ? { ...conv, updated_at: new Date().toISOString() }
+            : conv
+        ))
+      }
 
     } catch (error) {
       console.error('发送消息失败:', error)
@@ -860,9 +928,23 @@ const IntegratedChat: React.FC = () => {
               <button
                 onClick={(e) => {
                   e.stopPropagation()
-                  if (confirm(`确定要删除对话"${conv.title}"吗？此操作不可撤销！`)) {
-                    deleteConversation(conv.id)
-                  }
+                  setConfirmDialog({
+                    isOpen: true,
+                    title: '删除对话',
+                    message: `确定要删除对话"${conv.title}"吗？此操作不可撤销！`,
+                    onConfirm: async () => {
+                      try {
+                        await deleteConversation(conv.id)
+                        // 删除成功后自动关闭弹窗
+                        setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} })
+                      } catch (error) {
+                        // 删除失败时也直接关闭弹窗，不显示错误信息
+                        console.error('删除对话失败:', error)
+                        setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} })
+                      }
+                    },
+                    type: 'danger'
+                  })
                 }}
                 className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
                 title="删除对话"
@@ -955,10 +1037,75 @@ const IntegratedChat: React.FC = () => {
     )
   }
 
+  // 如果显示欢迎界面，返回欢迎屏幕
+  if (showWelcome) {
+    return (
+      <div className="flex h-screen bg-gray-50">
+        {/* 全局顶部导航栏 */}
+        <div className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 p-4">
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-bold">劳动法智能助手</h1>
+            {/* 整个页面的右上角用户信息 */}
+            <div className="text-sm text-gray-600">
+              👤 {user?.name || user?.email}
+            </div>
+          </div>
+        </div>
+
+        {/* 简化的侧边栏 */}
+        <div className="w-64 bg-white border-r border-gray-200 flex flex-col pt-16">
+          <div className="p-4 border-b border-gray-200">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-lg font-semibold">对话列表</h2>
+              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                0
+              </span>
+            </div>
+            <button 
+              onClick={() => createNewConversationWithPreset()} 
+              className="w-full px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+            >
+              ➕ 新建对话
+            </button>
+          </div>
+          
+          <div className="flex-1 flex items-center justify-center text-gray-500">
+            <div className="text-center">
+              <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <span className="text-xl">💬</span>
+              </div>
+              <p className="text-sm">暂无对话历史</p>
+              <p className="text-xs mt-1">点击上方按钮开始对话</p>
+            </div>
+          </div>
+        </div>
+
+        {/* 欢迎界面 */}
+        <WelcomeScreen 
+          user={user}
+          onStartNewChat={(presetQuestion) => {
+            createNewConversationWithPreset(presetQuestion)
+          }}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-screen bg-gray-50">
+      {/* 全局顶部导航栏 */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 p-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-bold">劳动法智能助手</h1>
+          {/* 整个页面的右上角用户信息 */}
+          <div className="text-sm text-gray-600">
+            👤 {user?.name || user?.email}
+          </div>
+        </div>
+      </div>
+
       {/* 侧边栏 */}
-      <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
+      <div className="w-64 bg-white border-r border-gray-200 flex flex-col pt-16">
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-lg font-semibold">对话列表</h2>
@@ -992,17 +1139,7 @@ const IntegratedChat: React.FC = () => {
       </div>
 
       {/* 主聊天区域 */}
-      <div className="flex-1 flex flex-col">
-        {/* 头部 */}
-        <div className="bg-white border-b border-gray-200 p-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-xl font-bold">AI 助手</h1>
-            <div className="text-sm text-gray-600">
-              👤 {user?.name || user?.email}
-            </div>
-          </div>
-        </div>
-
+      <div className="flex-1 flex flex-col pt-16">
         {/* 消息区域 */}
         <div 
           ref={messageAreaRef}
@@ -1064,6 +1201,16 @@ const IntegratedChat: React.FC = () => {
           </form>
         </div>
       </div>
+
+      {/* 确认对话框 */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} })}
+        type={confirmDialog.type}
+      />
     </div>
   )
 }

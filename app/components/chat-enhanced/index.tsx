@@ -552,9 +552,8 @@ const EnhancedChatComponent: React.FC = () => {
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
-                        if (confirm('确定要删除这个对话吗？')) {
-                          deleteSession(session.id)
-                        }
+                        // 直接删除，不再弹出确认弹窗
+                        deleteSession(session.id)
                       }}
                       className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-50 rounded text-red-500"
                       title="删除对话"
@@ -572,9 +571,8 @@ const EnhancedChatComponent: React.FC = () => {
             {currentSessionId && (
               <button
                 onClick={() => {
-                  if (confirm('确定要清除当前对话的所有消息吗？')) {
-                    clearCurrentSession()
-                  }
+                  // 直接清除，不再弹出确认弹窗
+                  clearCurrentSession()
                 }}
                 className="w-full px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
               >

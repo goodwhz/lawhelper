@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>删除确认对话框样式预览</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 自定义动画 */
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .fade-in {
+            animation: fade-in 0.2s ease-out;
+        }
+        
+        .backdrop-blur-sm {
+            backdrop-filter: blur(4px);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-2xl font-bold text-gray-800 mb-6">删除确认对话框样式预览</h1>
+        
+        <div class="space-y-4">
+            <button 
+                onclick="showDialog('danger')" 
+                class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                测试危险操作对话框
+            </button>
+            
+            <button 
+                onclick="showDialog('warning')" 
+                class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors ml-4">
+                测试警告操作对话框
+            </button>
+            
+            <button 
+                onclick="showDialog('info')" 
+                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors ml-4">
+                测试信息对话框
+            </button>
+        </div>
+        
+        <div class="mt-8 p-4 bg-white rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-2">样式特点：</h2>
+            <ul class="list-disc list-inside text-gray-700 space-y-1">
+                <li>现代化的模态对话框设计</li>
+                <li>背景模糊效果</li>
+                <li>平滑的进入/退出动画</li>
+                <li>可自定义类型（危险/警告/信息）</li>
+                <li>键盘导航支持（ESC关闭，Enter确认）</li>
+                <li>响应式设计</li>
+                <li>可自定义颜色和图标</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- 对话框容器 -->
+    <div id="dialog-container"></div>
+
+    <script>
+        function showDialog(type) {
+            const typeStyles = {
+                danger: {
+                    icon: '⚠️',
+                    iconBg: 'bg-red-100',
+                    iconColor: 'text-red-600',
+                    confirmBg: 'bg-red-600 hover:bg-red-700',
+                    title: '删除确认',
+                    message: '确定要删除这个对话吗？此操作不可撤销！'
+                },
+                warning: {
+                    icon: '⚠️',
+                    iconBg: 'bg-yellow-100',
+                    iconColor: 'text-yellow-600',
+                    confirmBg: 'bg-yellow-600 hover:bg-yellow-700',
+                    title: '警告操作',
+                    message: '此操作可能会影响其他功能，确定要继续吗？'
+                },
+                info: {
+                    icon: 'ℹ️',
+                    iconBg: 'bg-blue-100',
+                    iconColor: 'text-blue-600',
+                    confirmBg: 'bg-blue-600 hover:bg-blue-700',
+                    title: '信息提示',
+                    message: '这是一个自定义样式的确认对话框示例。'
+                }
+            };
+
+            const style = typeStyles[type];
+            
+            const dialogHTML = `
+                <div class="fixed inset-0 z-50 flex items-center justify-center" id="modal-dialog">
+                    <!-- 背景遮罩 -->
+                    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-200" onclick="closeDialog()"></div>
+                    
+                    <!-- 对话框主体 -->
+                    <div class="relative bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 transform transition-all duration-200 scale-100 opacity-100 fade-in">
+                        <!-- 关闭按钮 -->
+                        <button onclick="closeDialog()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+
+                        <div class="p-6">
+                            <!-- 图标和标题 -->
+                            <div class="flex items-center mb-4">
+                                <div class="w-12 h-12 rounded-full ${style.iconBg} flex items-center justify-center mr-4">
+                                    <span class="text-xl ${style.iconColor}">${style.icon}</span>
+                                </div>
+                                <h3 class="text-lg font-semibold text-gray-900">${style.title}</h3>
+                            </div>
+
+                            <!-- 消息内容 -->
+                            <p class="text-gray-600 mb-6 leading-relaxed">${style.message}</p>
+
+                            <!-- 按钮组 -->
+                            <div class="flex gap-3 justify-end">
+                                <button onclick="closeDialog()" class="px-5 py-2.5 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-300">
+                                    取消
+                                </button>
+                                <button onclick="confirmDialog()" class="px-5 py-2.5 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${style.confirmBg} text-white focus:ring-red-500">
+                                    确认
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('dialog-container').innerHTML = dialogHTML;
+            
+            // 添加键盘事件监听
+            document.addEventListener('keydown', handleKeyPress);
+        }
+        
+        function closeDialog() {
+            document.getElementById('dialog-container').innerHTML = '';
+            document.removeEventListener('keydown', handleKeyPress);
+        }
+        
+        function confirmDialog() {
+            alert('操作确认！');
+            closeDialog();
+        }
+        
+        function handleKeyPress(event) {
+            if (event.key === 'Escape') {
+                closeDialog();
+            } else if (event.key === 'Enter') {
+                confirmDialog();
+            }
+        }
+    </script>
+</body>
+</html>

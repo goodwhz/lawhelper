@@ -407,7 +407,7 @@ const DebugChat: React.FC = () => {
         {/* 头部 */}
         <div className="bg-white border-b border-gray-200 p-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-xl font-bold">AI 助手 (调试版)</h1>
+            <h1 className="text-xl font-bold">劳动法智能助手 (调试版)</h1>
             <div className="text-sm text-gray-600">
               👤 {currentUser?.email}
               <button 
