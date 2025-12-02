@@ -3,27 +3,38 @@
  * 直接使用HTTP API调用Supabase管理功能
  */
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
+// 验证环境变量的辅助函数
+function validateEnvironment() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error('Supabase environment variables are missing or invalid')
+  }
+
+  return { supabaseUrl, serviceRoleKey }
+}
 
 /**
  * 直接使用HTTP API删除用户
  * 这种方式绕过了Supabase JS SDK的潜在问题
  */
 export async function deleteUserViaAPI(userId: string) {
+  const { supabaseUrl, serviceRoleKey } = validateEnvironment()
+
   // Supabase Management API的正确格式
-  const url = `${SUPABASE_URL}/rest/v1/rpc/delete_user`
+  const url = `${supabaseUrl}/rest/v1/rpc/delete_user`
 
   console.log('使用HTTP API删除用户:', { url, userId })
 
   try {
     // 方法1: 使用Admin REST API
-    const response = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${userId}`, {
+    const response = await fetch(`${supabaseUrl}/auth/v1/admin/users/${userId}`, {
       method: 'DELETE',
       headers: {
-        'Authorization': `Bearer ${SERVICE_ROLE_KEY}`,
+        'Authorization': `Bearer ${serviceRoleKey}`,
         'Content-Type': 'application/json',
-        'apikey': SERVICE_ROLE_KEY,
+        'apikey': serviceRoleKey,
       },
     })
 
@@ -38,12 +49,12 @@ export async function deleteUserViaAPI(userId: string) {
     console.log('Admin API失败，尝试备用方法...')
 
     // 方法2: 使用SQL函数删除
-    const sqlResponse = await fetch(`${SUPABASE_URL}/rest/v1/rpc/execute_sql`, {
+    const sqlResponse = await fetch(`${supabaseUrl}/rest/v1/rpc/execute_sql`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${SERVICE_ROLE_KEY}`,
+        'Authorization': `Bearer ${serviceRoleKey}`,
         'Content-Type': 'application/json',
-        'apikey': SERVICE_ROLE_KEY,
+        'apikey': serviceRoleKey,
         'Prefer': 'return=minimal',
       },
       body: JSON.stringify({

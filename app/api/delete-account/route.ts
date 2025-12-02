@@ -2,11 +2,23 @@ import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+// 验证环境变量的辅助函数
+function validateEnvironment() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error('Supabase environment variables are not properly configured')
+  }
+
+  return { supabaseUrl, serviceRoleKey }
+}
+
 // 创建具有服务角色权限的Supabase客户端（API路由中需要）
-const supabaseService = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-)
+function createSupabaseClient() {
+  const { supabaseUrl, serviceRoleKey } = validateEnvironment()
+  return createClient(supabaseUrl, serviceRoleKey)
+}
 
 export async function POST(request: NextRequest) {
   // 确保总是返回JSON响应，防止HTML错误页面
@@ -15,6 +27,9 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    // 在运行时创建客户端，避免构建时依赖
+    const supabaseService = createSupabaseClient()
+
     console.log('=== 注销账户请求开始 ===')
 
     // 添加更严格的请求体解析
@@ -73,12 +88,13 @@ export async function POST(request: NextRequest) {
     // 首先检查用户是否真的存在于auth系统中
     console.log('检查用户是否存在...')
     try {
-      const listUsersUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/admin/users`
+      const { supabaseUrl, serviceRoleKey } = validateEnvironment()
+      const listUsersUrl = `${supabaseUrl}/auth/v1/admin/users`
       const checkResponse = await fetch(listUsersUrl, {
         method: 'GET',
         headers: {
-          Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
-          apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+          Authorization: `Bearer ${serviceRoleKey}`,
+          apikey: serviceRoleKey,
         },
       })
 
