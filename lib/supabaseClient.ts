@@ -1,30 +1,24 @@
 import { createClient } from '@supabase/supabase-js'
 
-console.log('=== Supabase Client 初始化 ===')
-console.log('NEXT_PUBLIC_SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
-console.log('NEXT_PUBLIC_SUPABASE_ANON_KEY exists:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
-console.log('NEXT_PUBLIC_SUPABASE_ANON_KEY length:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.length)
-
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('=== Supabase 配置错误 ===')
-  console.error('URL missing:', !supabaseUrl)
-  console.error('Key missing:', !supabaseAnonKey)
-  throw new Error('Supabase 配置不完整：URL 和密钥都必须设置')
+  console.error('NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl ? 'configured' : 'missing')
+  console.error('NEXT_PUBLIC_SUPABASE_ANON_KEY:', supabaseAnonKey ? 'configured' : 'missing')
 }
 
 // 创建带有自定义配置的Supabase客户端
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient(supabaseUrl!, supabaseAnonKey!, {
   auth: {
     persistSession: true,
     storageKey: 'supabase.auth.token',
     detectSessionInUrl: true,
     flowType: 'implicit', // 使用implicit流程，避免PKCE问题
     autoRefreshToken: true,
-    debug: process.env.NODE_ENV === 'development'
-  }
+    debug: process.env.NODE_ENV === 'development',
+  },
 })
 
 export interface LawDocument {

@@ -15,6 +15,7 @@ interface AuthContextType {
   setShowLoginModal: (show: boolean) => void
   checkAndRequireAuth: () => boolean
   refreshUser: () => Promise<void>
+  signOut: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -87,6 +88,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
       return false
     }
     return true
+  }
+
+  // 登出方法
+  const signOut = async () => {
+    try {
+      // 调用auth模块的signOut函数
+      const { signOut: authSignOut } = await import('@/lib/auth')
+      await authSignOut()
+
+      // 清除本地状态
+      setUser(null)
+      setIsAdmin(false)
+      setShowLoginModal(false)
+
+      console.log('AuthContext状态已清除')
+    } catch (error) {
+      console.error('AuthContext登出失败:', error)
+    }
   }
 
   useEffect(() => {
@@ -182,6 +201,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setShowLoginModal,
     checkAndRequireAuth,
     refreshUser,
+    signOut,
   }
 
   return (

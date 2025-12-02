@@ -1,511 +1,446 @@
-import Cookies from 'js-cookie'
-import { supabase } from './supabaseClient'
+import { createClient } from '@supabase/supabase-js'
 
+// 创建普通客户端用于当前会话操作（客户端安全）
+const supabaseClient = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+)
+
+// 创建具有服务角色权限的Supabase客户端（仅服务端使用）
+function createSupabaseServiceClient() {
+  if (typeof window !== 'undefined') {
+    throw new Error('Service client can only be used on server side')
+  }
+
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  )
+}
+
+// 用户类型定义
 export interface User {
   id: string
   email: string
-  name?: string
-  role: 'user' | 'admin'
+  name: string
+  role: 'admin' | 'user'
   created_at: string
   updated_at: string
 }
 
-export interface AuthState {
-  user: User | null
-  isLoading: boolean
-  isAuthenticated: boolean
-}
-
+// 登录凭证接口
 export interface LoginCredentials {
   email: string
   password: string
 }
 
+// 注册凭证接口
 export interface RegisterCredentials {
   email: string
   password: string
   name?: string
 }
 
-// 管理员邮箱列表（硬编码）
-const ADMIN_EMAILS = [
-  'admin@lawhelper.com',
-  'super@admin.com',
-]
-
-// 检查用户是否为管理员
-export const checkIsAdmin = (email: string): boolean => {
-  return ADMIN_EMAILS.includes(email.toLowerCase())
+export interface DeleteAccountResult {
+  success: boolean
+  message: string
+  error?: string
+  mode?: 'full' | 'partial'
 }
 
-// 用户登录
-export async function signIn(credentials: LoginCredentials) {
+/**
+ * 完全删除用户账户及其所有相关数据
+ * @param userId 用户ID
+ * @returns 删除结果
+ */
+export async function deleteUserAccount(userId: string): Promise<DeleteAccountResult> {
+  console.log('开始完整删除用户账户:', userId)
+
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: credentials.email,
-      password: credentials.password,
-    })
+    // 动态创建服务端客户端
+    const supabaseService = createSupabaseServiceClient()
 
-    if (error) {
-      console.error('登录失败:', error)
+    // 1. 首先使用服务角色权限删除auth用户
+    console.log('步骤1: 删除auth用户记录...')
+    const { error: authDeleteError } = await supabaseService.auth.admin.deleteUser(userId)
 
-      // 根据错误类型返回友好的错误信息
-      if (error.message === 'Invalid login credentials') {
-        return {
-          success: false,
-          error: '邮箱或密码错误',
-        }
-      } else if (error.message.includes('Email not confirmed')) {
-        return {
-          success: false,
-          error: '请先验证您的邮箱',
-        }
-      } else {
-        return {
-          success: false,
-          error: `登录失败: ${error.message}`,
-        }
-      }
-    }
-
-    if (data.user) {
-      // 检查或创建用户资料
-      await upsertUserProfile(data.user)
-
-      // 设置登录状态cookie
-      Cookies.set('auth_state', 'authenticated', {
-        expires: 7, // 7天
-        path: '/',
-      })
-
+    if (authDeleteError) {
+      console.error('删除auth用户失败:', authDeleteError)
       return {
-        success: true,
-        user: data.user,
-        isAdmin: checkIsAdmin(data.user.email || ''),
+        success: false,
+        error: `删除认证记录失败: ${authDeleteError.message}`,
       }
     }
+
+    console.log('步骤2: 删除user_profiles记录...')
+    // 2. 删除用户资料记录
+    const { error: profileDeleteError } = await supabaseService
+      .from('user_profiles')
+      .delete()
+      .eq('id', userId)
+
+    if (profileDeleteError) {
+      console.warn('删除用户资料失败:', profileDeleteError)
+      // 继续执行，不因为资料删除失败而中断
+    }
+
+    console.log('步骤3: 删除对话记录...')
+    // 3. 删除用户的所有对话记录
+    const { error: conversationsDeleteError } = await supabaseService
+      .from('conversations')
+      .delete()
+      .eq('user_id', userId)
+
+    if (conversationsDeleteError) {
+      console.warn('删除对话记录失败:', conversationsDeleteError)
+      // 继续执行
+    }
+
+    console.log('步骤4: 删除消息记录...')
+    // 4. 删除用户的所有消息记录
+    const { error: messagesDeleteError } = await supabaseService
+      .from('messages')
+      .delete()
+      .eq('user_id', userId)
+
+    if (messagesDeleteError) {
+      console.warn('删除消息记录失败:', messagesDeleteError)
+      // 继续执行
+    }
+
+    console.log('步骤5: 登出所有会话...')
+    // 5. 尝试登出当前会话
+    try {
+      const { error: signOutError } = await supabaseClient.auth.signOut()
+      if (signOutError) {
+        console.warn('登出会话失败:', signOutError)
+      }
+    } catch (signOutError) {
+      console.warn('登出操作异常:', signOutError)
+    }
+
+    console.log('用户账户删除完成')
 
     return {
-      success: false,
-      error: '登录失败：未知错误',
+      success: true,
+      message: '账户及其所有相关数据已完全删除',
+      mode: 'full',
     }
   } catch (error: any) {
-    console.error('signIn error:', error)
+    console.error('删除用户账户时发生未预期的错误:', error)
     return {
       success: false,
-      error: error.message || '登录失败，请重试',
+      error: `删除过程中发生错误: ${error.message}`,
     }
   }
 }
 
-// 用户注册
+/**
+ * 获取用户删除统计信息
+ * @param userId 用户ID
+ * @returns 删除统计信息
+ */
+/**
+ * 获取用户资料信息
+ * @param userId 用户ID
+ * @returns 用户资料信息
+ */
+/**
+ * 获取当前用户
+ * @returns 当前用户信息
+ */
+export async function getCurrentUser() {
+  try {
+    const { data: { user }, error } = await supabaseClient.auth.getUser()
+
+    if (error) {
+      console.error('获取当前用户失败:', error)
+      return null
+    }
+
+    if (!user) {
+      return null
+    }
+
+    // 获取用户资料信息
+    const profile = await getUserProfile(user.id)
+
+    return {
+      user,
+      profile,
+      isAdmin: profile?.role === 'admin' || user.email?.endsWith('@admin.com') || false,
+    }
+  } catch (error) {
+    console.error('获取当前用户异常:', error)
+    return null
+  }
+}
+
+/**
+ * 监听认证状态变化
+ * @param callback 回调函数
+ * @returns 订阅对象
+ */
+export function onAuthStateChange(callback: (user: any, isAdmin: boolean) => void) {
+  return supabaseClient.auth.onAuthStateChange(async (event, session) => {
+    if (session?.user) {
+      try {
+        const profile = await getUserProfile(session.user.id)
+        const isAdmin = profile?.role === 'admin' || session.user.email?.endsWith('@admin.com') || false
+        callback(session.user, isAdmin)
+      } catch (error) {
+        console.error('认证状态变化处理失败:', error)
+        callback(session.user, false)
+      }
+    } else {
+      callback(null, false)
+    }
+  })
+}
+
+/**
+ * 检查认证状态
+ * @returns 是否有认证cookie
+ */
+export function checkAuthStatus() {
+  if (typeof document === 'undefined') { return false }
+
+  // 检查是否有Supabase相关的cookie或localStorage
+  const hasAuthCookie = document.cookie.includes('sb-')
+  const hasAuthStorage = localStorage.getItem('supabase.auth.token') !== null
+
+  return hasAuthCookie || hasAuthStorage
+}
+
+/**
+ * 用户登录
+ * @param credentials 登录凭证
+ * @returns 登录结果
+ */
+export async function signIn(credentials: LoginCredentials) {
+  try {
+    const { data, error } = await supabaseClient.auth.signInWithPassword(credentials)
+
+    if (error) {
+      return { success: false, error: error.message }
+    }
+
+    if (!data.user) {
+      return { success: false, error: '登录失败' }
+    }
+
+    const profile = await getUserProfile(data.user.id)
+
+    return {
+      success: true,
+      user: {
+        id: data.user.id,
+        email: data.user.email || '',
+        name: profile?.name || data.user.user_metadata?.name || data.user.email?.split('@')[0] || '',
+        role: profile?.role || 'user',
+        created_at: data.user.created_at,
+        updated_at: profile?.updated_at || data.user.updated_at,
+      },
+      isAdmin: profile?.role === 'admin' || data.user.email?.endsWith('@admin.com') || false,
+    }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+/**
+ * 用户注册
+ * @param credentials 注册凭证
+ * @returns 注册结果
+ */
 export async function signUp(credentials: RegisterCredentials) {
   try {
-    const { data, error } = await supabase.auth.signUp({
+    const { data, error } = await supabaseClient.auth.signUp({
       email: credentials.email,
       password: credentials.password,
       options: {
         data: {
-          name: credentials.name || '',
-          role: 'user',
+          name: credentials.name || credentials.email.split('@')[0],
         },
       },
     })
 
     if (error) {
-      console.error('注册失败:', error)
-
-      // 根据错误类型返回友好的错误信息
-      if (error.message.includes('already registered')) {
-        return {
-          success: false,
-          error: '该邮箱已被注册',
-        }
-      } else if (error.message.includes('weak password')) {
-        return {
-          success: false,
-          error: '密码强度不够，请使用更复杂的密码',
-        }
-      } else if (error.message.includes('valid email')) {
-        return {
-          success: false,
-          error: '请输入有效的邮箱地址',
-        }
-      } else {
-        return {
-          success: false,
-          error: `注册失败: ${error.message}`,
-        }
-      }
+      return { success: false, error: error.message }
     }
 
-    if (data.user) {
-      // 注册成功，立即创建用户资料（不管是否需要邮箱验证）
-      try {
-        await upsertUserProfile(data.user)
-        console.log('用户资料创建成功')
-      } catch (profileError) {
-        console.error('创建用户资料失败:', profileError)
-        // 不阻止注册流程，只记录错误
-      }
-    }
-
-    if (data.user && !data.session) {
-      // 注册成功但需要邮箱验证
-      return {
-        success: true,
-        error: '注册成功，请查收邮件并验证邮箱',
-        user: data.user,
-        isAdmin: checkIsAdmin(data.user.email || ''),
-      }
-    }
-
-    if (data.user && data.session) {
-      // 自动登录成功
-      // 设置登录状态cookie
-      Cookies.set('auth_state', 'authenticated', {
-        expires: 7,
-        path: '/',
-      })
-
-      return {
-        success: true,
-        user: data.user,
-        isAdmin: checkIsAdmin(data.user.email || ''),
-      }
-    }
-
-    return {
-      success: false,
-      error: '注册失败：未知错误',
-    }
+    return { success: true, data }
   } catch (error: any) {
-    console.error('signUp error:', error)
-    return {
-      success: false,
-      error: error.message || '注册失败，请重试',
-    }
+    return { success: false, error: error.message }
   }
 }
 
-// 用户登出
-export async function signOut() {
+/**
+ * 更新用户资料
+ * @param userId 用户ID
+ * @param updates 更新数据
+ * @returns 更新结果
+ */
+export async function updateUserProfile(userId: string, updates: Partial<User>) {
   try {
-    const { error } = await supabase.auth.signOut()
+    // 根据运行环境选择客户端
+    const client = typeof window === 'undefined' ? createSupabaseServiceClient() : supabaseClient
+
+    const { data, error } = await client
+      .from('user_profiles')
+      .update(updates)
+      .eq('id', userId)
+      .select()
+      .single()
 
     if (error) {
-      console.error('登出失败:', error)
-      throw new Error(`登出失败: ${error.message}`)
+      console.error('更新用户资料失败:', error)
+      return { success: false, error: error.message }
     }
 
-    // 清除cookie
-    Cookies.remove('auth_state', { path: '/' })
-
-    return true
+    return { success: true, data }
   } catch (error: any) {
-    console.error('signOut error:', error)
-    throw error
+    return { success: false, error: error.message }
   }
 }
 
-// 获取当前用户
-export async function getCurrentUser() {
+/**
+ * 检查用户是否为管理员
+ * @param userId 用户ID
+ * @returns 是否为管理员
+ */
+export async function checkIsAdmin(userId: string): Promise<boolean> {
   try {
-    const { data: { user }, error } = await supabase.auth.getUser()
+    // 根据运行环境选择客户端
+    const client = typeof window === 'undefined' ? createSupabaseServiceClient() : supabaseClient
+
+    const { data, error } = await client
+      .from('user_profiles')
+      .select('role')
+      .eq('id', userId)
+      .single()
 
     if (error) {
-      console.error('获取用户信息失败:', error)
+      console.warn('检查管理员权限失败:', error)
+      return false
+    }
+
+    return data?.role === 'admin'
+  } catch (error) {
+    console.error('检查管理员权限异常:', error)
+    return false
+  }
+}
+
+/**
+ * 重置密码
+ * @param email 用户邮箱
+ * @returns 重置结果
+ */
+export async function resetPassword(email: string) {
+  try {
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email)
+
+    if (error) {
+      return { success: false, error: error.message }
+    }
+
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+/**
+ * 获取用户资料信息
+ * @param userId 用户ID
+ * @returns 用户资料信息
+ */
+export async function getUserProfile(userId: string) {
+  try {
+    // 根据运行环境选择客户端
+    const client = typeof window === 'undefined' ? createSupabaseServiceClient() : supabaseClient
+
+    const { data, error } = await client
+      .from('user_profiles')
+      .select('*')
+      .eq('id', userId)
+      .single()
+
+    if (error) {
+      console.warn('获取用户资料失败:', error)
       return null
     }
 
-    if (user) {
-      return {
-        user,
-        isAdmin: checkIsAdmin(user.email || ''),
-      }
-    }
-
-    return null
+    return data
   } catch (error) {
-    console.error('getCurrentUser error:', error)
+    console.error('获取用户资料异常:', error)
     return null
   }
 }
 
-// 更新用户资料（简化版本）
-export async function updateUserProfile(userId: string, name: string, email: string, isAdmin: boolean = false) {
+/**
+ * 客户端登出函数
+ * 清除本地存储的认证状态并调用Supabase登出
+ */
+export async function signOut() {
   try {
-    console.log('=== 更新用户资料 ===')
-    console.log('用户ID:', userId)
-    console.log('姓名:', name)
-    console.log('邮箱:', email)
-    console.log('管理员:', isAdmin)
+    // 1. 调用Supabase登出API
+    const { error } = await supabaseClient.auth.signOut()
 
-    const userRole = isAdmin ? 'admin' : 'user'
-
-    // 先尝试更新现有记录
-    try {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .update({
-          name,
-          role: userRole,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', userId)
-        .select()
-
-      if (error) {
-        console.error('更新现有记录失败:', error)
-
-        // 如果更新失败（可能记录不存在），尝试插入新记录
-        console.log('尝试插入新记录...')
-        const { data: insertData, error: insertError } = await supabase
-          .from('user_profiles')
-          .insert({
-            id: userId,
-            email,
-            name,
-            role: userRole,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .select()
-
-        if (insertError) {
-          console.error('插入新记录失败:', insertError)
-          throw new Error(`更新用户资料失败: ${insertError.message}`)
-        } else {
-          console.log('插入新记录成功:', insertData)
-        }
-      } else {
-        console.log('更新现有记录成功:', data)
-      }
-    } catch (updateError: any) {
-      console.error('用户资料操作异常:', updateError)
-      throw new Error(`更新用户资料失败: ${updateError.message}`)
+    if (error) {
+      console.warn('Supabase登出警告:', error)
     }
 
-    // 同时更新用户元数据（用于备份）
-    try {
-      const { error } = await supabase.auth.updateUser({
-        data: {
-          name,
-        },
-      })
-
-      if (error) {
-        console.warn('更新用户元数据失败:', error)
-        // 不抛出错误，因为主要更新已经成功
-      } else {
-        console.log('更新用户元数据成功')
+    // 2. 清除本地存储的认证数据
+    if (typeof window !== 'undefined') {
+      // 清除Supabase相关的localStorage数据
+      const keysToRemove = []
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key && (key.includes('supabase') || key.includes('sb-'))) {
+          keysToRemove.push(key)
+        }
       }
-    } catch (metaError) {
-      console.warn('更新用户元数据异常:', metaError)
+      keysToRemove.forEach(key => localStorage.removeItem(key))
+
+      // 清除sessionStorage
+      sessionStorage.clear()
+
+      console.log('已清除本地认证存储')
     }
 
     return { success: true }
   } catch (error) {
-    console.error('updateUserProfile error:', error)
-    throw error
+    console.error('登出过程中发生错误:', error)
+    return { success: false, error }
   }
 }
 
-// 获取用户资料（简化版本）
-export async function getUserProfile(userId: string) {
+/**
+ * 获取用户删除统计信息
+ * @param userId 用户ID
+ * @returns 删除统计信息
+ */
+export async function getUserDeleteStats(userId: string) {
   try {
-    console.log('=== 获取用户资料 ===')
-    console.log('用户ID:', userId)
-
-    // 直接查询 user_profiles 表
-    try {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', userId)
-        .single()
-
-      if (error) {
-        console.error('查询用户资料失败:', error)
-        return null
-      } else {
-        console.log('查询用户资料成功:', data)
-        return data
-      }
-    } catch (queryError) {
-      console.error('查询用户资料异常:', queryError)
-      return null
-    }
-  } catch (error) {
-    console.error('getUserProfile error:', error)
-    return null
-  }
-}
-
-// 更新或创建用户资料（保持向后兼容）
-async function upsertUserProfile(authUser: any) {
-  try {
-    if (!authUser || !authUser.id) {
-      console.error('用户信息无效:', authUser)
-      return
-    }
-
-    const isAdmin = checkIsAdmin(authUser.email || '')
-    const name = authUser.user_metadata?.name || authUser.email?.split('@')[0] || ''
-
-    await updateUserProfile(
-      authUser.id,
-      name,
-      authUser.email,
-      isAdmin,
-    )
-
-    // 更新最后登录时间
-    await updateLastLoginTime(authUser.id)
-
-    console.log('用户资料处理完成')
-  } catch (error) {
-    console.error('upsertUserProfile error:', error)
-    // 不再抛出错误，避免影响登录流程
-  }
-}
-
-// 检查登录状态
-export function checkAuthStatus(): boolean {
-  return Cookies.get('auth_state') === 'authenticated'
-}
-
-// 监听认证状态变化
-export function onAuthStateChange(callback: (user: any, isAdmin: boolean) => void) {
-  return supabase.auth.onAuthStateChange(async (event, session) => {
-    if (session?.user) {
-      const isAdmin = checkIsAdmin(session.user.email || '')
-      callback(session.user, isAdmin)
-
-      // 更新cookie状态
-      if (event === 'SIGNED_IN') {
-        Cookies.set('auth_state', 'authenticated', { expires: 7, path: '/' })
-
-        // 登录时更新最后登录时间
-        await updateLastLoginTime(session.user.id)
-      } else if (event === 'SIGNED_OUT') {
-        Cookies.remove('auth_state', { path: '/' })
-      }
-    } else {
-      callback(null, false)
-      Cookies.remove('auth_state', { path: '/' })
-    }
-  })
-}
-
-// 重置密码
-export async function resetPassword(email: string) {
-  try {
-    const redirectUrl = `${window.location.origin}/reset-password`
-    console.log('=== 发送密码重置邮件 ===')
-    console.log('邮箱:', email)
-    console.log('重定向URL:', redirectUrl)
-
-    // 使用最简单的配置发送重置邮件
-    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: redirectUrl,
-    })
-
-    if (error) {
-      console.error('重置密码失败:', error)
-      console.error('错误详情:', {
-        message: error.message,
-        status: error.status,
-        code: error.code,
-        details: error.details,
-      })
-
-      // 根据错误类型提供更具体的错误信息
-      if (error.message.includes('User not found')) {
-        throw new Error('该邮箱未注册，请先注册账号')
-      } else if (error.message.includes('rate limit')) {
-        throw new Error('发送过于频繁，请稍后再试')
-      } else {
-        throw new Error(`重置密码失败: ${error.message}`)
-      }
-    }
-
-    console.log('重置密码邮件发送成功:', data)
-    return true
-  } catch (error: any) {
-    console.error('resetPassword error:', error)
-    throw error
-  }
-}
-
-// 更新密码
-export async function updatePassword(newPassword: string, accessToken?: string, refreshToken?: string) {
-  try {
-    // 如果提供了访问令牌，则使用它来设置会话
-    if (accessToken) {
-      const { error: sessionError } = await supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken || '',
-      })
-
-      if (sessionError) {
-        console.error('设置会话失败:', sessionError)
-        return {
-          success: false,
-          error: '密码重置链接已过期或无效',
-        }
-      }
-    }
-
-    // 更新用户密码
-    const { error } = await supabase.auth.updateUser({
-      password: newPassword,
-    })
-
-    if (error) {
-      console.error('更新密码失败:', error)
-      return {
-        success: false,
-        error: `更新密码失败: ${error.message}`,
-      }
-    }
+    const [profiles, conversations, messages] = await Promise.all([
+      supabaseService.from('user_profiles').select('count').eq('id', userId),
+      supabaseService.from('conversations').select('count').eq('user_id', userId),
+      supabaseService.from('messages').select('count').eq('user_id', userId),
+    ])
 
     return {
-      success: true,
-    }
-  } catch (error: any) {
-    console.error('updatePassword error:', error)
-    return {
-      success: false,
-      error: error.message || '更新密码失败，请重试',
-    }
-  }
-}
-
-// 更新用户最后登录时间
-export async function updateLastLoginTime(userId: string) {
-  try {
-    const { error } = await supabase
-      .from('user_profiles')
-      .update({
-        last_login_at: new Date().toISOString(),
-      })
-      .eq('id', userId)
-
-    if (error) {
-      console.error('更新最后登录时间失败:', error)
-    } else {
-      console.log('最后登录时间更新成功')
+      profiles: profiles.count || 0,
+      conversations: conversations.count || 0,
+      messages: messages.count || 0,
     }
   } catch (error) {
-    console.error('updateLastLoginTime error:', error)
+    console.error('获取用户统计信息失败:', error)
+    return {
+      profiles: 0,
+      conversations: 0,
+      messages: 0,
+    }
   }
-}
-
-// 检查用户是否为管理员（异步版本，用于API路由）
-export async function isAdmin(user: any): Promise<boolean> {
-  if (!user || !user.email) {
-    return false
-  }
-  return checkIsAdmin(user.email)
 }

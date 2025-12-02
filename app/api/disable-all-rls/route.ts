@@ -17,22 +17,21 @@ export async function POST() {
         '',
         '或者直接执行以下关键命令:',
         'ALTER TABLE public.user_profiles DISABLE ROW LEVEL SECURITY;',
-        'ALTER TABLE public.conversations DISABLE ROW LEVEL SECURITY;', 
+        'ALTER TABLE public.conversations DISABLE ROW LEVEL SECURITY;',
         'ALTER TABLE public.messages DISABLE ROW LEVEL SECURITY;',
         'ALTER TABLE public.law_documents DISABLE ROW LEVEL SECURITY;',
         'ALTER TABLE public.law_categories DISABLE ROW LEVEL SECURITY;',
         '',
-        '执行完成后，您的应用将能够正常读写数据库内容。'
+        '执行完成后，您的应用将能够正常读写数据库内容。',
       ],
       sqlFile: 'quick-rls-fix.sql',
-      verificationUrl: '/api/test-database-access'
+      verificationUrl: '/api/health-check',
     })
-
   } catch (error) {
     console.error('RLS 指导失败:', error)
     return NextResponse.json(
       { error: 'RLS 指导失败', details: (error as Error).message },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }
@@ -41,6 +40,6 @@ export async function GET() {
   return NextResponse.json({
     message: 'RLS 禁用 API',
     usage: '发送 POST 请求来获取禁用 RLS 的详细指导',
-    status: 'ready'
+    status: 'ready',
   })
 }
