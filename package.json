@@ -10,7 +10,8 @@
     "fix": "eslint . --fix",
     "eslint-fix": "eslint . --fix",
     "lint-staged": "lint-staged",
-    "prepare": "husky"
+    "prepare": "husky",
+    "sync:users": "node scripts/run-sync.js"
   },
   "dependencies": {
     "@floating-ui/react": "^0.26.25",

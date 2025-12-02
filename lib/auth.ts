@@ -139,20 +139,29 @@ export async function signUp(credentials: RegisterCredentials) {
       }
     }
 
+    if (data.user) {
+      // 注册成功，立即创建用户资料（不管是否需要邮箱验证）
+      try {
+        await upsertUserProfile(data.user)
+        console.log('用户资料创建成功')
+      } catch (profileError) {
+        console.error('创建用户资料失败:', profileError)
+        // 不阻止注册流程，只记录错误
+      }
+    }
+
     if (data.user && !data.session) {
       // 注册成功但需要邮箱验证
       return {
         success: true,
         error: '注册成功，请查收邮件并验证邮箱',
         user: data.user,
-        isAdmin: false,
+        isAdmin: checkIsAdmin(data.user.email || ''),
       }
     }
 
     if (data.user && data.session) {
-      // 自动登录成功，创建用户资料
-      await upsertUserProfile(data.user)
-
+      // 自动登录成功
       // 设置登录状态cookie
       Cookies.set('auth_state', 'authenticated', {
         expires: 7,
@@ -239,27 +248,27 @@ export async function updateUserProfile(userId: string, name: string, email: str
       const { data, error } = await supabase
         .from('user_profiles')
         .update({
-          name: name,
+          name,
           role: userRole,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('id', userId)
         .select()
 
       if (error) {
         console.error('更新现有记录失败:', error)
-        
+
         // 如果更新失败（可能记录不存在），尝试插入新记录
         console.log('尝试插入新记录...')
         const { data: insertData, error: insertError } = await supabase
           .from('user_profiles')
           .insert({
             id: userId,
-            email: email,
-            name: name,
+            email,
+            name,
             role: userRole,
             created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
           })
           .select()
 
@@ -281,8 +290,8 @@ export async function updateUserProfile(userId: string, name: string, email: str
     try {
       const { error } = await supabase.auth.updateUser({
         data: {
-          name: name
-        }
+          name,
+        },
       })
 
       if (error) {
@@ -348,7 +357,7 @@ async function upsertUserProfile(authUser: any) {
       authUser.id,
       name,
       authUser.email,
-      isAdmin
+      isAdmin,
     )
 
     // 更新最后登录时间
@@ -376,7 +385,7 @@ export function onAuthStateChange(callback: (user: any, isAdmin: boolean) => voi
       // 更新cookie状态
       if (event === 'SIGNED_IN') {
         Cookies.set('auth_state', 'authenticated', { expires: 7, path: '/' })
-        
+
         // 登录时更新最后登录时间
         await updateLastLoginTime(session.user.id)
       } else if (event === 'SIGNED_OUT') {
@@ -396,10 +405,10 @@ export async function resetPassword(email: string) {
     console.log('=== 发送密码重置邮件 ===')
     console.log('邮箱:', email)
     console.log('重定向URL:', redirectUrl)
-    
+
     // 使用最简单的配置发送重置邮件
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: redirectUrl
+      redirectTo: redirectUrl,
     })
 
     if (error) {
@@ -408,9 +417,9 @@ export async function resetPassword(email: string) {
         message: error.message,
         status: error.status,
         code: error.code,
-        details: error.details
+        details: error.details,
       })
-      
+
       // 根据错误类型提供更具体的错误信息
       if (error.message.includes('User not found')) {
         throw new Error('该邮箱未注册，请先注册账号')
@@ -478,8 +487,8 @@ export async function updateLastLoginTime(userId: string) {
   try {
     const { error } = await supabase
       .from('user_profiles')
-      .update({ 
-        last_login_at: new Date().toISOString() 
+      .update({
+        last_login_at: new Date().toISOString(),
       })
       .eq('id', userId)
 
