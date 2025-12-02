@@ -351,6 +351,9 @@ async function upsertUserProfile(authUser: any) {
       isAdmin
     )
 
+    // 更新最后登录时间
+    await updateLastLoginTime(authUser.id)
+
     console.log('用户资料处理完成')
   } catch (error) {
     console.error('upsertUserProfile error:', error)
@@ -373,6 +376,9 @@ export function onAuthStateChange(callback: (user: any, isAdmin: boolean) => voi
       // 更新cookie状态
       if (event === 'SIGNED_IN') {
         Cookies.set('auth_state', 'authenticated', { expires: 7, path: '/' })
+        
+        // 登录时更新最后登录时间
+        await updateLastLoginTime(session.user.id)
       } else if (event === 'SIGNED_OUT') {
         Cookies.remove('auth_state', { path: '/' })
       }
@@ -465,4 +471,32 @@ export async function updatePassword(newPassword: string, accessToken?: string, 
       error: error.message || '更新密码失败，请重试',
     }
   }
+}
+
+// 更新用户最后登录时间
+export async function updateLastLoginTime(userId: string) {
+  try {
+    const { error } = await supabase
+      .from('user_profiles')
+      .update({ 
+        last_login_at: new Date().toISOString() 
+      })
+      .eq('id', userId)
+
+    if (error) {
+      console.error('更新最后登录时间失败:', error)
+    } else {
+      console.log('最后登录时间更新成功')
+    }
+  } catch (error) {
+    console.error('updateLastLoginTime error:', error)
+  }
+}
+
+// 检查用户是否为管理员（异步版本，用于API路由）
+export async function isAdmin(user: any): Promise<boolean> {
+  if (!user || !user.email) {
+    return false
+  }
+  return checkIsAdmin(user.email)
 }

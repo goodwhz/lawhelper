@@ -69,6 +69,15 @@ const IntegratedChat: React.FC = () => {
     }
   }, [isAuthenticated, user])
 
+  // 进入页面时总是显示欢迎界面
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      setShowWelcome(true)
+      setCurrentConversation(null)
+      setMessages([])
+    }
+  }, [isAuthenticated, user])
+
   // 加载对话列表
   const loadConversations = async () => {
     if (!user) {
@@ -101,16 +110,11 @@ const IntegratedChat: React.FC = () => {
       console.log('成功加载对话列表，数量:', convs.length)
       setConversations(convs)
 
-      if (convs.length === 0) {
-        console.log('没有现有对话，显示欢迎界面')
-        setShowWelcome(true)
-        setCurrentConversation(null)
-        setMessages([])
-      } else {
-        console.log('加载第一个对话:', convs[0].id)
-        setShowWelcome(false)
-        await loadConversation(convs[0].id)
-      }
+      // 总是显示欢迎界面，不自动加载对话
+      console.log('对话列表加载完成，数量:', convs.length)
+      setShowWelcome(true)
+      setCurrentConversation(null)
+      setMessages([])
     } catch (error) {
       console.error('加载对话失败 - 完整错误信息:', error)
       if (error instanceof Error) {
@@ -321,6 +325,9 @@ const IntegratedChat: React.FC = () => {
 
       setCurrentConversation(conversation)
       setMessages(msgs || [])
+      
+      // 隐藏欢迎界面
+      setShowWelcome(false)
 
       // 滚动到底部
       setTimeout(() => {
@@ -431,22 +438,15 @@ const IntegratedChat: React.FC = () => {
         
         console.log('对话删除成功:', result)
 
-        // 如果删除的是当前对话，清空状态
+        // 如果删除的是当前对话，清空状态并显示欢迎界面
         if (currentConversation?.id === conversationId) {
           setCurrentConversation(null)
           setMessages([])
+          setShowWelcome(true)
         }
 
         // 重新加载对话列表
         await loadConversations()
-
-        // 如果还有其他对话，加载第一个
-        if (conversations.length > 1) {
-          const remainingConvs = conversations.filter(c => c.id !== conversationId)
-          if (remainingConvs.length > 0) {
-            await loadConversation(remainingConvs[0].id)
-          }
-        }
 
         return true
       }
@@ -488,22 +488,15 @@ const IntegratedChat: React.FC = () => {
         
         console.log('对话删除成功:', result)
 
-      // 如果删除的是当前对话，清空状态
+      // 如果删除的是当前对话，清空状态并显示欢迎界面
       if (currentConversation?.id === conversationId) {
         setCurrentConversation(null)
         setMessages([])
+        setShowWelcome(true)
       }
 
       // 重新加载对话列表
       await loadConversations()
-
-      // 如果还有其他对话，加载第一个
-      if (conversations.length > 1) {
-        const remainingConvs = conversations.filter(c => c.id !== conversationId)
-        if (remainingConvs.length > 0) {
-          await loadConversation(remainingConvs[0].id)
-        }
-      }
 
       return true
     } catch (error) {
@@ -605,9 +598,10 @@ const IntegratedChat: React.FC = () => {
           
           console.log('批量删除对话成功:', result)
 
-          // 清空当前状态
+          // 清空当前状态并显示欢迎界面
           setCurrentConversation(null)
           setMessages([])
+          setShowWelcome(true)
 
           // 重新加载对话列表
           await loadConversations()
@@ -624,14 +618,9 @@ const IntegratedChat: React.FC = () => {
     })
   }, [user, conversations, loadConversations])
 
-  // 安全获取字符串内容
-  const safeTrim = (content: any): string => {
-    return typeof content === 'string' ? content.trim() : String(content || '').trim()
-  }
-
   // 发送消息
   const sendMessage = useCallback(async (content: string) => {
-    if (!content || typeof content !== 'string' || !content.trim() || isLoading || !user) {
+    if (!content.trim() || isLoading || !user) {
       alert('请先登录')
       return
     }
@@ -639,7 +628,7 @@ const IntegratedChat: React.FC = () => {
     // 如果没有当前对话，创建一个新对话
     let targetConversation = currentConversation
     if (!targetConversation) {
-      targetConversation = await createNewConversationWithTitle(safeTrim(content))
+      targetConversation = await createNewConversationWithTitle(content.trim())
       if (!targetConversation) {
         alert('创建对话失败')
         return
@@ -648,10 +637,9 @@ const IntegratedChat: React.FC = () => {
 
     // 如果当前对话标题是默认的"新对话"，自动更新为用户的问题
     if (targetConversation.title === '新对话') {
-      await updateConversationTitle(targetConversation.id, safeTrim(content))
+      await updateConversationTitle(targetConversation.id, content.trim())
       // 本地更新对话标题，不重新加载整个列表
-      const trimmedContent = safeTrim(content)
-      const newTitle = trimmedContent.length > 50 ? trimmedContent.substring(0, 50) + '...' : trimmedContent
+      const newTitle = content.trim().length > 50 ? content.trim().substring(0, 50) + '...' : content.trim()
       setCurrentConversation(prev => prev ? { ...prev, title: newTitle } : null)
       setConversations(prev => prev.map(conv => 
         conv.id === targetConversation.id 
@@ -666,7 +654,7 @@ const IntegratedChat: React.FC = () => {
     try {
       // 保存用户消息
       const userMessage: Omit<ChatMessage, 'id' | 'created_at'> = {
-        content: safeTrim(content),
+        content: content.trim(),
         role: 'user'
       }
 
@@ -693,7 +681,7 @@ const IntegratedChat: React.FC = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: safeTrim(content),
+          message: content.trim(),
           conversation_id: targetConversation.dify_conversation_id,
           user_id: user.id
         }),
@@ -1052,31 +1040,50 @@ const IntegratedChat: React.FC = () => {
           </div>
         </div>
 
-        {/* 简化的侧边栏 */}
+        {/* 侧边栏 */}
         <div className="w-64 bg-white border-r border-gray-200 flex flex-col pt-16">
           <div className="p-4 border-b border-gray-200">
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-lg font-semibold">对话列表</h2>
               <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                0
+                {conversations.length}
               </span>
             </div>
-            <button 
-              onClick={() => createNewConversationWithPreset()} 
-              className="w-full px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-            >
-              ➕ 新建对话
-            </button>
+            <div className="space-y-2">
+              <button 
+                onClick={() => createNewConversationWithPreset()} 
+                className="w-full px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+              >
+                ➕ 新建对话
+              </button>
+              {conversations.length > 0 && (
+                <button 
+                  onClick={deleteAllConversations} 
+                  className="w-full px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm flex items-center justify-center"
+                >
+                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  清空所有对话
+                </button>
+              )}
+            </div>
           </div>
           
-          <div className="flex-1 flex items-center justify-center text-gray-500">
-            <div className="text-center">
-              <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <span className="text-xl">💬</span>
+          <div className="flex-1 overflow-y-auto p-4 space-y-2">
+            {conversations.length === 0 ? (
+              <div className="flex-1 flex items-center justify-center text-gray-500">
+                <div className="text-center">
+                  <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <span className="text-xl">💬</span>
+                  </div>
+                  <p className="text-sm">暂无对话历史</p>
+                  <p className="text-xs mt-1">点击上方按钮开始对话</p>
+                </div>
               </div>
-              <p className="text-sm">暂无对话历史</p>
-              <p className="text-xs mt-1">点击上方按钮开始对话</p>
-            </div>
+            ) : (
+              renderConversationList()
+            )}
           </div>
         </div>
 
@@ -1096,7 +1103,24 @@ const IntegratedChat: React.FC = () => {
       {/* 全局顶部导航栏 */}
       <div className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 p-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold">劳动法智能助手</h1>
+          <div className="flex items-center space-x-3">
+            {!showWelcome && (
+              <button
+                onClick={() => {
+                  setShowWelcome(true)
+                  setCurrentConversation(null)
+                  setMessages([])
+                }}
+                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                title="返回欢迎界面"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+              </button>
+            )}
+            <h1 className="text-xl font-bold">劳动法智能助手</h1>
+          </div>
           {/* 整个页面的右上角用户信息 */}
           <div className="text-sm text-gray-600">
             👤 {user?.name || user?.email}
