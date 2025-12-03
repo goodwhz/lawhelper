@@ -1,7 +1,7 @@
 import type { NextRequest } from 'next/server'
 
-const DIFY_API_URL = process.env.DIFY_API_URL || process.env.NEXT_PUBLIC_API_URL || 'https://dify.aipfuture.com/v1'
-const DIFY_APP_KEY = process.env.DIFY_APP_KEY || process.env.NEXT_PUBLIC_APP_KEY
+const DIFY_API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://dify.aipfuture.com/v1'
+const DIFY_APP_KEY = process.env.NEXT_PUBLIC_APP_KEY
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,6 +11,7 @@ export async function POST(request: NextRequest) {
     console.log('DIFY_API_URL:', DIFY_API_URL)
     console.log('DIFY_APP_KEY exists:', !!DIFY_APP_KEY)
     console.log('DIFY_APP_KEY length:', DIFY_APP_KEY?.length)
+    console.log('NEXT_PUBLIC_APP_ID:', process.env.NEXT_PUBLIC_APP_ID)
 
     if (!message || !DIFY_APP_KEY) {
       return new Response(
@@ -34,26 +35,88 @@ export async function POST(request: NextRequest) {
     console.log('Message:', message)
     console.log('Conversation ID:', conversation_id)
 
+    console.log('=== Dify API请求信息 ===')
+    console.log('API URL:', `${DIFY_API_URL}/chat-messages`)
+    console.log('请求方法: POST')
+    console.log('Authorization:', `Bearer ${DIFY_APP_KEY?.substring(0, 10)}...`)
+    
+    // 确保所有必需的参数都存在
+    if (!message || message.trim() === '') {
+      return new Response(
+        JSON.stringify({
+          error: '消息内容不能为空',
+        }),
+        {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      )
+    }
+
+    // 检查Dify API所需的参数格式
+    const requestBody: any = {
+      inputs: {},
+      query: message,
+      response_mode: 'streaming', // 使用流式响应
+      conversation_id: conversation_id || undefined, // 使用undefined而不是null
+      user: user_id || `user_${Date.now()}`,
+      auto_generate_name: true,
+    }
+    
+    // 如果有APP ID，添加到请求体中
+    if (process.env.NEXT_PUBLIC_APP_ID) {
+      requestBody.app_id = process.env.NEXT_PUBLIC_APP_ID
+    }
+    
+    console.log('请求体内容:', JSON.stringify(requestBody, null, 2))
+    
+    console.log('请求体:', JSON.stringify(requestBody, null, 2))
+    
+    // 尝试不同的API端点
+    // 有些Dify实例使用 /chat-messages，有些使用 /v1/chat-messages
+    let apiUrl = DIFY_API_URL
+    
+    // 如果URL已经包含/v1，直接添加端点
+    if (apiUrl.endsWith('/v1')) {
+      apiUrl += '/chat-messages'
+    } else {
+      // 否则添加完整路径
+      apiUrl += '/v1/chat-messages'
+    }
+    
+    console.log('实际API URL:', apiUrl)
+    
     // 调用 Dify API - 流式响应
-    const response = await fetch(`${DIFY_API_URL}/chat-messages`, {
+    const headers: Record<string, string> = {
+      'Authorization': `Bearer ${DIFY_APP_KEY}`,
+      'Content-Type': 'application/json',
+    }
+    
+    // 有些Dify实例可能需要额外的头部
+    if (process.env.NEXT_PUBLIC_APP_ID) {
+      headers['X-App-Id'] = process.env.NEXT_PUBLIC_APP_ID
+    }
+    
+    const response = await fetch(apiUrl, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${DIFY_APP_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        inputs: {},
-        query: message,
-        response_mode: 'streaming', // 使用流式响应
-        conversation_id: conversation_id || null,
-        user: user_id || `user_${Date.now()}`,
-        auto_generate_name: true,
-      }),
+      headers,
+      body: JSON.stringify(requestBody),
     })
 
     if (!response.ok) {
       const errorData = await response.text()
       console.error('Dify API error:', errorData)
+      console.error('Status:', response.status)
+      console.error('Headers:', Object.fromEntries(response.headers.entries()))
+
+      // 尝试解析JSON错误响应
+      let parsedError = null
+      try {
+        parsedError = JSON.parse(errorData)
+        console.error('Parsed error:', parsedError)
+      } catch (e) {
+        console.error('Failed to parse error response as JSON:', e)
+      }
 
       // 如果是HTML错误页面，说明是网络问题或服务不可用
       if (errorData.includes('<!DOCTYPE')) {
@@ -61,6 +124,8 @@ export async function POST(request: NextRequest) {
           JSON.stringify({
             error: 'Dify服务暂时不可用，请稍后重试',
             details: '网络连接问题或服务维护中',
+            status: response.status,
+            rawError: errorData.substring(0, 500),
           }),
           {
             status: 503,
@@ -69,7 +134,19 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      throw new Error(`Dify API error: ${response.status}`)
+      // 返回更详细的错误信息
+      return new Response(
+        JSON.stringify({
+          error: 'Dify API调用失败',
+          status: response.status,
+          details: parsedError?.message || errorData || '未知错误',
+          rawError: errorData.substring(0, 500),
+        }),
+        {
+          status: response.status,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      )
     }
 
     console.log('Dify API 响应成功，开始流式传输')
@@ -151,10 +228,15 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Chat API error:', error)
+    console.error('Error type:', typeof error)
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace')
+    
     return new Response(
       JSON.stringify({
         error: error instanceof Error ? error.message : '聊天服务暂时不可用',
         details: '请检查网络连接或稍后重试',
+        type: typeof error,
+        stack: error instanceof Error ? error.stack : null,
       }),
       {
         status: 500,

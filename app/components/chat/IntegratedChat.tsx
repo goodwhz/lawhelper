@@ -659,6 +659,9 @@ const IntegratedChat: React.FC = () => {
     setIsLoading(true)
     setIsStreaming(true)
 
+    // 声明临时消息变量，确保在整个函数范围内可访问
+    let tempAiMessage: ChatMessage | null = null
+
     try {
       // 保存用户消息
       const userMessage: Omit<ChatMessage, 'id' | 'created_at'> = {
@@ -672,7 +675,7 @@ const IntegratedChat: React.FC = () => {
       }
 
       // 创建临时的AI消息用于流式显示
-      let tempAiMessage: ChatMessage | null = {
+      tempAiMessage = {
         id: `temp-${Date.now()}`,
         content: '',
         role: 'assistant',
@@ -696,7 +699,23 @@ const IntegratedChat: React.FC = () => {
       })
 
       if (!response.ok) {
-        throw new Error(`API调用失败: ${response.status}`)
+        // 尝试获取详细的错误信息
+        let errorMessage = `API调用失败: ${response.status}`
+        try {
+          const errorText = await response.text()
+          console.error('API错误响应:', errorText)
+          if (errorText) {
+            try {
+              const errorData = JSON.parse(errorText)
+              errorMessage += ` - ${errorData.error || errorData.message || errorData.details || '未知错误'}`
+            } catch {
+              errorMessage += ` - ${errorText.substring(0, 200)}`
+            }
+          }
+        } catch (e) {
+          console.error('获取错误信息失败:', e)
+        }
+        throw new Error(errorMessage)
       }
 
       // 处理流式响应
@@ -707,10 +726,15 @@ const IntegratedChat: React.FC = () => {
       let conversationId = ''
 
       if (reader) {
+        let streamEnded = false
+        
         while (true) {
           const { done, value } = await reader.read()
           
-          if (done) break
+          if (done) {
+            console.log('流读取完成，退出循环')
+            break
+          }
           
           const chunk = decoder.decode(value, { stream: true })
           const lines = chunk.split('\n')
@@ -721,12 +745,22 @@ const IntegratedChat: React.FC = () => {
               
               if (data === '[DONE]') {
                 // 流结束
+                console.log('收到[DONE]标记，设置loading为false')
+                streamEnded = true
+                
+                // 确保临时消息被更新
                 if (tempAiMessage) {
-                  setMessages(prev => prev.map(msg => 
-                    msg.id === tempAiMessage.id 
-                      ? { ...msg, loading: false }
-                      : msg
-                  ))
+                  setMessages(prev => {
+                    const updated = prev.map(msg => 
+                      msg.id === tempAiMessage.id 
+                        ? { ...msg, loading: false }
+                        : msg
+                    )
+                    console.log('流结束时更新消息，加载中的消息数量:', updated.filter(m => m.loading).length)
+                    return updated
+                  })
+                  // 立即清除临时消息引用，防止后续引用
+                  tempAiMessage = null
                 }
                 break
               }
@@ -755,8 +789,21 @@ const IntegratedChat: React.FC = () => {
           }
         }
       }
+      
+      // 如果流已经结束但消息仍然处于加载状态，强制更新
+      if (tempAiMessage && tempAiMessage.loading) {
+        console.log('流结束后强制重置消息加载状态')
+        setMessages(prev => prev.map(msg => 
+          msg.id === tempAiMessage?.id 
+            ? { ...msg, loading: false }
+            : msg
+        ))
+      }
 
       // 保存AI响应到数据库
+      console.log('AI响应长度:', aiResponse.trim().length)
+      console.log('临时消息ID:', tempAiMessage?.id)
+      
       if (aiResponse.trim()) {
         const aiMessage: Omit<ChatMessage, 'id' | 'created_at'> = {
           content: aiResponse.trim(),
@@ -765,11 +812,23 @@ const IntegratedChat: React.FC = () => {
 
         const savedAiMessage = await saveMessage(aiMessage)
         if (savedAiMessage) {
+          console.log('消息已保存，ID:', savedAiMessage.id)
           // 替换临时消息为保存的消息
-          setMessages(prev => prev.map(msg => 
-            msg.id === tempAiMessage?.id ? savedAiMessage : msg
-          ))
+          setMessages(prev => {
+            const updated = prev.map(msg => 
+              msg.id === tempAiMessage?.id ? savedAiMessage : msg
+            )
+            console.log('消息列表更新，加载中的消息数量:', updated.filter(m => m.loading).length)
+            return updated
+          })
           
+          tempAiMessage = null
+        }
+      } else {
+        // 如果没有响应内容，也要清除临时消息
+        console.log('AI响应为空，清除临时消息')
+        if (tempAiMessage) {
+          setMessages(prev => prev.filter(msg => msg.id !== tempAiMessage.id))
           tempAiMessage = null
         }
       }
@@ -811,8 +870,31 @@ const IntegratedChat: React.FC = () => {
       setMessages(prev => prev.filter(msg => !msg.id.startsWith('temp-')))
       
     } finally {
+      // 确保所有临时消息都被清除
+      if (tempAiMessage) {
+        console.log('finally块中清除临时消息:', tempAiMessage.id)
+        setMessages(prev => {
+          const filtered = prev.filter(msg => msg.id !== tempAiMessage.id)
+          console.log('清除临时消息后的消息列表长度:', filtered.length)
+          return filtered
+        })
+      }
+      
+      // 确保加载状态被重置
+      console.log('finally块中重置加载状态')
       setIsLoading(false)
       setIsStreaming(false)
+      
+      // 确保没有消息处于加载状态
+      setMessages(prev => {
+        const updated = prev.map(msg => 
+          msg.loading ? { ...msg, loading: false } : msg
+        )
+        if (prev.some(m => m.loading) && !updated.some(m => m.loading)) {
+          console.log('在finally块中清除了所有加载状态')
+        }
+        return updated
+      })
     }
   }, [user, currentConversation, isLoading, saveMessage, loadConversations, supabase])
 
@@ -967,6 +1049,12 @@ const IntegratedChat: React.FC = () => {
       )
     }
 
+    // 调试：检查是否有加载中的消息
+    const loadingMessages = messages.filter(m => m.loading)
+    if (loadingMessages.length > 0) {
+      console.log('渲染消息时发现加载中的消息:', loadingMessages.map(m => ({ id: m.id, content: m.content.substring(0, 20) })))
+    }
+
     return messages.map(msg => (
       <div key={msg.id} className={`flex ${msg.role === 'assistant' ? 'justify-start' : 'justify-end'}`}>
         <div className={`message-bubble px-4 py-2 rounded-lg ${
@@ -984,7 +1072,7 @@ const IntegratedChat: React.FC = () => {
           )}
           <div className="message-content whitespace-pre-wrap">{msg.content}</div>
           {msg.loading && (
-            <span className="inline-flex items-center ml-2">
+            <span className="inline-flex items-center ml-2" title="AI正在生成回复...">
               <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
             </span>
           )}
