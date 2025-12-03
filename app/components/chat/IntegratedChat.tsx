@@ -186,8 +186,7 @@ const IntegratedChat: React.FC = () => {
       // 更新本地对话列表，添加新对话到顶部
       setConversations(prev => [data, ...prev])
       
-      // 后台重新加载对话列表（不阻塞当前操作）
-      loadConversations().catch(console.error)
+      // 不再重新加载对话列表，避免干扰当前对话
       
       // 如果有预设问题，发送消息
       if (presetQuestion) {
@@ -438,15 +437,18 @@ const IntegratedChat: React.FC = () => {
         
         console.log('对话删除成功:', result)
 
-        // 如果删除的是当前对话，清空状态并显示欢迎界面
-        if (currentConversation?.id === conversationId) {
-          setCurrentConversation(null)
-          setMessages([])
-          setShowWelcome(true)
-        }
+      // 如果删除的是当前对话，清空状态并显示欢迎界面
+      if (currentConversation?.id === conversationId) {
+        setCurrentConversation(null)
+        setMessages([])
+        setShowWelcome(true)
+      }
 
-        // 重新加载对话列表
-        await loadConversations()
+      // 立即从本地对话列表中移除已删除的对话
+      setConversations(prev => prev.filter(conv => conv.id !== conversationId))
+      
+      // 后台重新加载对话列表确保数据同步
+      loadConversations().catch(console.error)
 
         return true
       }
@@ -495,8 +497,11 @@ const IntegratedChat: React.FC = () => {
         setShowWelcome(true)
       }
 
-      // 重新加载对话列表
-      await loadConversations()
+      // 立即从本地对话列表中移除已删除的对话
+      setConversations(prev => prev.filter(conv => conv.id !== conversationId))
+      
+      // 后台重新加载对话列表确保数据同步
+      loadConversations().catch(console.error)
 
       return true
     } catch (error) {
@@ -602,9 +607,12 @@ const IntegratedChat: React.FC = () => {
           setCurrentConversation(null)
           setMessages([])
           setShowWelcome(true)
-
-          // 重新加载对话列表
-          await loadConversations()
+          
+          // 立即清空本地对话列表
+          setConversations([])
+          
+          // 后台重新加载对话列表确保数据同步
+          loadConversations().catch(console.error)
 
           // 删除成功后自动关闭弹窗，不再显示alert
           setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} })

@@ -114,11 +114,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // 初始化认证状态
     const initAuth = async () => {
       try {
+        // 先检查是否有会话存储的认证信息
+        const hasStoredAuth = sessionStorage.getItem('supabase.auth.token') || localStorage.getItem('supabase.auth.token')
+        
         // 先检查cookie状态
         const hasAuthCookie = checkAuthStatus()
 
-        if (hasAuthCookie) {
-          // 有登录cookie，获取用户信息
+        if (hasAuthCookie || hasStoredAuth) {
+          // 有登录cookie或存储的认证信息，获取用户信息
           await refreshUser()
         } else {
           setUser(null)

@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
+import { validatePassword, getPasswordRequirements } from '@/utils/password-validation'
+import { updatePassword } from '@/lib/auth'
 
 export default function ResetPasswordPage() {
   const router = useRouter()
@@ -15,6 +17,20 @@ export default function ResetPasswordPage() {
   const [success, setSuccess] = useState('')
   const [isValid, setIsValid] = useState(false)
   const [processing, setProcessing] = useState(true)
+  const [passwordValidation, setPasswordValidation] = useState(validatePassword(''))
+  const [showPasswordRequirements, setShowPasswordRequirements] = useState(false)
+
+  const passwordRequirements = getPasswordRequirements()
+
+  // 实时验证密码
+  useEffect(() => {
+    if (formData.password) {
+      const validation = validatePassword(formData.password)
+      setPasswordValidation(validation)
+    } else {
+      setPasswordValidation(validatePassword(''))
+    }
+  }, [formData.password])
 
   // 检查URL中的令牌
   useEffect(() => {
@@ -84,8 +100,10 @@ export default function ResetPasswordPage() {
       return false
     }
 
-    if (formData.password.length < 6) {
-      setError('密码长度至少6位')
+    // 验证密码策略
+    const passwordValidation = validatePassword(formData.password)
+    if (!passwordValidation.isValid) {
+      setError(passwordValidation.errors.join('；'))
       return false
     }
 
@@ -108,17 +126,14 @@ export default function ResetPasswordPage() {
     try {
       console.log('开始更新密码...')
       
-      // 直接使用supabase更新密码
-      const { data, error } = await supabase.auth.updateUser({
-        password: formData.password
-      })
+      // 使用包含验证的updatePassword函数
+      const result = await updatePassword(formData.password)
 
-      if (error) {
-        console.error('密码更新失败:', error)
-        throw error
+      if (!result.success) {
+        throw new Error(result.error)
       }
 
-      console.log('密码更新成功:', data.user?.email)
+      console.log('密码更新成功')
       setSuccess('密码重置成功！正在跳转到登录页面...')
       
       // 2秒后跳转
@@ -197,11 +212,51 @@ export default function ResetPasswordPage() {
               name="password"
               value={formData.password}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-law-red-500"
-              placeholder="请输入新密码（至少6位）"
+              onFocus={() => setShowPasswordRequirements(true)}
+              onBlur={() => setShowPasswordRequirements(false)}
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-law-red-500 ${
+                formData.password && !passwordValidation.isValid 
+                  ? 'border-red-300 focus:ring-red-500' 
+                  : formData.password && passwordValidation.isValid 
+                  ? 'border-green-300 focus:ring-green-500'
+                  : 'border-gray-300'
+              }`}
+              placeholder="请输入新密码"
               disabled={isLoading}
               required
             />
+            
+            {showPasswordRequirements && (
+              <div className="mt-2 p-3 bg-gray-50 border border-gray-200 rounded-md">
+                <h4 className="text-sm font-medium text-gray-700 mb-2">密码要求：</h4>
+                <ul className="space-y-1">
+                  {passwordRequirements.map((requirement, index) => {
+                    const isMet = (
+                      (index === 0 && passwordValidation.requirements.length) ||
+                      (index === 1 && passwordValidation.requirements.hasLowercase) ||
+                      (index === 2 && passwordValidation.requirements.hasUppercase) ||
+                      (index === 3 && passwordValidation.requirements.hasNumber)
+                    )
+                    return (
+                      <li key={index} className={`text-xs flex items-center ${
+                        isMet ? 'text-green-600' : 'text-gray-600'
+                      }`}>
+                        <span className="mr-2">
+                          {isMet ? '✓' : '○'}
+                        </span>
+                        {requirement}
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+            )}
+            
+            {formData.password && !passwordValidation.isValid && (
+              <p className="mt-1 text-sm text-red-600">
+                {passwordValidation.errors.join('；')}
+              </p>
+            )}
           </div>
           
           <div>

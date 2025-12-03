@@ -49,17 +49,8 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ user, onStartNewChat }) =
   const [showCopyToast, setShowCopyToast] = React.useState(false)
 
   const handleQuickAction = async (question: string) => {
-    try {
-      await navigator.clipboard.writeText(question)
-      setShowCopyToast(true)
-      setTimeout(() => {
-        setShowCopyToast(false)
-      }, 2000)
-    } catch (err) {
-      console.error('复制失败:', err)
-      // 如果复制失败，可以回退到开始对话
-      onStartNewChat(question)
-    }
+    // 直接开始对话而不是复制到剪贴板
+    onStartNewChat(question)
   }
 
   return (
@@ -134,7 +125,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ user, onStartNewChat }) =
         <div className="text-center mt-16">
           <div className="inline-flex items-center px-4 py-2 bg-blue-50 rounded-full">
             <span className="text-blue-600 text-sm">
-              💡 点击"开始对话"立即咨询，或选择上方的常见问题复制到剪贴板
+              💡 点击"开始对话"立即咨询，或选择上方的问题开始对话
             </span>
           </div>
         </div>

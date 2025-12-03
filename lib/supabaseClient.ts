@@ -15,7 +15,7 @@ export const supabase = createClient(supabaseUrl!, supabaseAnonKey!, {
     persistSession: true,
     storageKey: 'supabase.auth.token',
     detectSessionInUrl: true,
-    flowType: 'implicit', // 使用implicit流程，避免PKCE问题
+    flowType: 'implicit', // 使用implicit流程，与现有登录兼容
     autoRefreshToken: true,
     debug: process.env.NODE_ENV === 'development',
   },

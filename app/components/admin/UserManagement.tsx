@@ -27,7 +27,7 @@ interface UsersResponse {
 }
 
 const UserManagement: React.FC = () => {
-  const { user: currentUser } = useAuth()
+  const { user: currentUser, isAdmin } = useAuth()
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -80,10 +80,25 @@ const UserManagement: React.FC = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true)
+      
+      // 检查用户是否为管理员
+      if (!isAdmin) {
+        console.warn('用户不是管理员，无法获取用户列表')
+        setLoading(false)
+        return
+      }
+      
       const token = await getCurrentUserToken()
       
       if (!token) {
-        console.error('未找到用户token')
+        console.error('未找到用户token，用户可能未登录')
+        console.log('可能的解决方案：')
+        console.log('1. 重新登录用户')
+        console.log('2. 检查浏览器控制台的详细认证信息')
+        console.log('3. 访问 /test-auth 页面进行调试')
+        setLoading(false)
+        // 显示用户友好的错误信息
+        alert('无法获取用户认证信息，请重新登录或访问 /test-auth 页面进行调试')
         return
       }
 
@@ -126,23 +141,91 @@ const UserManagement: React.FC = () => {
   // 获取当前用户token
   const getCurrentUserToken = async () => {
     try {
-      // 直接从Supabase获取当前session
-      const { supabase } = await import('@/lib/supabaseClient')
-      const { data: { session }, error } = await supabase.auth.getSession()
+      console.log('开始获取用户token...')
+      console.log('当前用户状态:', {
+        hasUser: !!currentUser,
+        userEmail: currentUser?.email,
+        isAdmin
+      })
       
-      if (error) {
-        console.error('获取session失败:', error)
+      // 如果没有用户，直接返回null
+      if (!currentUser) {
+        console.warn('用户未登录')
         return null
       }
       
+      // 直接从Supabase获取当前session
+      const { supabase } = await import('@/lib/supabaseClient')
+      
+      // 首先尝试获取当前用户（这个方法更可靠）
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      
+      console.log('getUser结果:', {
+        hasUser: !!user,
+        userId: user?.id,
+        userEmail: user?.email,
+        error: userError?.message
+      })
+      
+      if (userError) {
+        console.error('获取用户失败:', userError)
+      }
+      
+      // 然后尝试获取session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      
+      console.log('getSession结果:', {
+        hasSession: !!session,
+        hasAccessToken: !!session?.access_token,
+        hasUser: !!session?.user,
+        sessionUserId: session?.user?.id,
+        currentUserId: currentUser?.id,
+        error: sessionError?.message
+      })
+      
+      if (sessionError) {
+        console.error('获取session失败:', sessionError)
+      }
+      
+      // 优先使用session中的token
       if (session?.access_token) {
+        console.log('✅ 成功从session获取到token')
         return session.access_token
       }
       
-      console.log('未找到有效的session')
+      // 尝试从不同的存储键获取token
+      if (typeof window !== 'undefined') {
+        const possibleKeys = [
+          'supabase.auth.token',
+          `sb-${process.env.NEXT_PUBLIC_SUPABASE_URL?.split('//')[1]?.split('.')[0]}-auth-token`,
+          'sb-auth-token'
+        ]
+        
+        for (const key of possibleKeys) {
+          const tokenData = localStorage.getItem(key)
+          if (tokenData) {
+            try {
+              if (typeof tokenData === 'string' && tokenData.startsWith('ey')) {
+                console.log(`✅ 从${key}获取到JWT token`)
+                return tokenData
+              } else {
+                const parsed = JSON.parse(tokenData)
+                if (parsed.accessToken || parsed.access_token) {
+                  console.log(`✅ 从${key}获取到token`)
+                  return parsed.accessToken || parsed.access_token
+                }
+              }
+            } catch (e) {
+              console.warn(`解析${key}失败:`, e)
+            }
+          }
+        }
+      }
+      
+      console.warn('❌ 未找到有效的用户token')
       return null
     } catch (error) {
-      console.error('获取用户token失败:', error)
+      console.error('获取用户token异常:', error)
       return null
     }
   }
@@ -271,12 +354,29 @@ const UserManagement: React.FC = () => {
   }
 
   useEffect(() => {
-    fetchUsers()
-  }, [currentPage, searchQuery, roleFilter, sortBy, sortOrder])
+    // 只有管理员或有用户时才获取数据
+    if (isAdmin) {
+      fetchUsers()
+    } else {
+      setLoading(false)
+    }
+  }, [currentPage, searchQuery, roleFilter, sortBy, sortOrder, isAdmin])
 
   useEffect(() => {
     setSelectAll(selectedUsers.length === users.length && users.length > 0)
   }, [selectedUsers, users])
+
+  // 检查用户权限
+  if (!isAdmin) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center">
+          <div className="text-red-600 text-lg font-medium mb-2">权限不足</div>
+          <div className="text-gray-500">您需要管理员权限才能访问此页面</div>
+        </div>
+      </div>
+    )
+  }
 
   if (loading) {
     return (

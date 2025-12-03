@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { validatePassword } from '@/utils/password-validation'
 
 // 创建普通客户端用于当前会话操作（客户端安全）
 const supabaseClient = createClient(
@@ -200,16 +201,19 @@ export function onAuthStateChange(callback: (user: any, isAdmin: boolean) => voi
 
 /**
  * 检查认证状态
- * @returns 是否有认证cookie
+ * @returns 是否有认证cookie或存储的认证信息
  */
 export function checkAuthStatus() {
   if (typeof document === 'undefined') { return false }
 
-  // 检查是否有Supabase相关的cookie或localStorage
+  // 检查是否有Supabase相关的cookie
   const hasAuthCookie = document.cookie.includes('sb-')
-  const hasAuthStorage = localStorage.getItem('supabase.auth.token') !== null
+  
+  // 检查localStorage和sessionStorage中的认证信息
+  const hasLocalStorage = localStorage.getItem('supabase.auth.token') !== null
+  const hasSessionStorage = sessionStorage.getItem('supabase.auth.token') !== null
 
-  return hasAuthCookie || hasAuthStorage
+  return hasAuthCookie || hasLocalStorage || hasSessionStorage
 }
 
 /**
@@ -255,6 +259,15 @@ export async function signIn(credentials: LoginCredentials) {
  */
 export async function signUp(credentials: RegisterCredentials) {
   try {
+    // 验证密码策略
+    const passwordValidation = validatePassword(credentials.password)
+    if (!passwordValidation.isValid) {
+      return { 
+        success: false, 
+        error: passwordValidation.errors.join('；') 
+      }
+    }
+
     const { data, error } = await supabaseClient.auth.signUp({
       email: credentials.email,
       password: credentials.password,
@@ -346,6 +359,36 @@ export async function resetPassword(email: string) {
     }
 
     return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+/**
+ * 更新用户密码
+ * @param newPassword 新密码
+ * @returns 更新结果
+ */
+export async function updatePassword(newPassword: string) {
+  try {
+    // 验证密码策略
+    const passwordValidation = validatePassword(newPassword)
+    if (!passwordValidation.isValid) {
+      return { 
+        success: false, 
+        error: passwordValidation.errors.join('；') 
+      }
+    }
+
+    const { data, error } = await supabaseClient.auth.updateUser({
+      password: newPassword
+    })
+
+    if (error) {
+      return { success: false, error: error.message }
+    }
+
+    return { success: true, data }
   } catch (error: any) {
     return { success: false, error: error.message }
   }

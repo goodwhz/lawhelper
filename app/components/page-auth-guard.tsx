@@ -31,6 +31,17 @@ export default function PageAuthGuard({
       return
     }
 
+    // 检查是否是页面刷新（通过检查性能导航类型）
+    const isPageRefresh = (
+      typeof window !== 'undefined' && 
+      window.performance && 
+      window.performance.getEntriesByType('navigation')[0] && 
+      (window.performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming).type === 'reload'
+    )
+
+    // 如果是页面刷新，延迟重定向，给认证恢复更多时间
+    const redirectDelay = isPageRefresh ? 2000 : 100
+
     // 如果只允许管理员访问
     if (adminOnly) {
       if (!isAuthenticated || !isAdmin) {
@@ -39,7 +50,7 @@ export default function PageAuthGuard({
           setShouldRedirect(true)
           // 使用window.location进行跳转，避免Next.js路由问题
           window.location.href = '/login'
-        }, 100)
+        }, redirectDelay)
         return () => clearTimeout(timer)
       }
     }
@@ -51,7 +62,7 @@ export default function PageAuthGuard({
         setShouldRedirect(true)
         // 使用window.location进行跳转，避免Next.js路由问题
         window.location.href = '/login'
-      }, 100)
+      }, redirectDelay)
       return () => clearTimeout(timer)
     }
   }, [isAuthenticated, isAdmin, isLoading, pathname, requireAuth, adminOnly])
