@@ -45,37 +45,67 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // 刷新用户信息
   const refreshUser = async () => {
     try {
+      // 检查缓存中的用户信息
+      if (typeof window !== 'undefined') {
+        try {
+          const cachedUser = sessionStorage.getItem('userCache')
+          if (cachedUser) {
+            const { user, isAdmin, timestamp } = JSON.parse(cachedUser)
+            // 缓存有效期 2 分钟
+            if (Date.now() - timestamp < 2 * 60 * 1000) {
+              setUser(user)
+              setIsAdmin(isAdmin)
+              setIsLoading(false)
+              return
+            }
+          }
+        } catch (cacheError) {
+          console.warn('读取用户缓存失败:', cacheError)
+        }
+      }
+
       const result = await getCurrentUser()
       if (result) {
-        // 导入并使用 getUserProfile 函数
-        const { getUserProfile } = await import('@/lib/auth')
-        let profile = null
-
-        try {
-          profile = await getUserProfile(result.user.id)
-        } catch (profileError) {
-          console.warn('获取用户资料失败:', profileError)
-        }
-
         const userData: User = {
           id: result.user.id,
           email: result.user.email || '',
-          name: profile?.name || result.user.user_metadata?.name || result.user.email?.split('@')[0] || '',
-          role: profile?.role || (result.isAdmin ? 'admin' : 'user'),
+          name: result.profile?.name || result.user.user_metadata?.name || result.user.email?.split('@')[0] || '',
+          role: result.profile?.role || (result.isAdmin ? 'admin' : 'user'),
           created_at: result.user.created_at,
-          updated_at: profile?.updated_at || result.user.updated_at,
+          updated_at: result.profile?.updated_at || result.user.updated_at,
         }
 
         setUser(userData)
         setIsAdmin(result.isAdmin)
+
+        // 更新缓存
+        if (typeof window !== 'undefined') {
+          try {
+            sessionStorage.setItem('userCache', JSON.stringify({
+              user: userData,
+              isAdmin: result.isAdmin,
+              timestamp: Date.now()
+            }))
+          } catch (cacheError) {
+            console.warn('缓存用户信息失败:', cacheError)
+          }
+        }
       } else {
         setUser(null)
         setIsAdmin(false)
+        // 清除缓存
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem('userCache')
+        }
       }
     } catch (error) {
       console.error('刷新用户信息失败:', error)
       setUser(null)
       setIsAdmin(false)
+      // 清除可能损坏的缓存
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('userCache')
+      }
     } finally {
       setIsLoading(false)
     }
@@ -111,17 +141,36 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     let mounted = true
 
-    // 初始化认证状态
+    // 快速初始化认证状态
     const initAuth = async () => {
       try {
-        // 先检查是否有会话存储的认证信息
-        const hasStoredAuth = sessionStorage.getItem('supabase.auth.token') || localStorage.getItem('supabase.auth.token')
-        
-        // 先检查cookie状态
+        // 优先检查本地缓存
+        if (typeof window !== 'undefined') {
+          try {
+            const cachedUser = sessionStorage.getItem('userCache')
+            if (cachedUser) {
+              const { user, isAdmin, timestamp } = JSON.parse(cachedUser)
+              // 缓存有效期 2 分钟
+              if (Date.now() - timestamp < 2 * 60 * 1000) {
+                setUser(user)
+                setIsAdmin(isAdmin)
+                setIsLoading(false)
+                
+                // 异步验证认证状态，不阻塞界面
+                verifyAuthState()
+                return
+              }
+            }
+          } catch (cacheError) {
+            console.warn('读取用户缓存失败:', cacheError)
+          }
+        }
+
+        // 检查认证状态
         const hasAuthCookie = checkAuthStatus()
+        const hasStoredAuth = sessionStorage.getItem('supabase.auth.token') || localStorage.getItem('supabase.auth.token')
 
         if (hasAuthCookie || hasStoredAuth) {
-          // 有登录cookie或存储的认证信息，获取用户信息
           await refreshUser()
         } else {
           setUser(null)
@@ -138,59 +187,95 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
     }
 
+    // 异步验证认证状态
+    const verifyAuthState = async () => {
+      try {
+        const result = await getCurrentUser()
+        if (!result || !result.user) {
+          // 认证失效，清除缓存
+          setUser(null)
+          setIsAdmin(false)
+          if (typeof window !== 'undefined') {
+            sessionStorage.removeItem('userCache')
+          }
+        }
+      } catch (error) {
+        console.warn('验证认证状态失败:', error)
+      }
+    }
+
     initAuth()
 
-    // 监听认证状态变化
+    // 监听认证状态变化，使用防抖避免频繁更新
+    let authChangeTimeout: NodeJS.Timeout
     const { data: { subscription } } = onAuthStateChange(async (authUser, isUserAdmin) => {
       if (!mounted) { return }
 
-      if (authUser) {
-        try {
-          // 导入并使用 getUserProfile 函数
-          const { getUserProfile } = await import('@/lib/auth')
-          let profile = null
-
-          try {
-            profile = await getUserProfile(authUser.id)
-          } catch (profileError) {
-            console.warn('获取用户资料失败:', profileError)
-          }
-
-          const userData: User = {
-            id: authUser.id,
-            email: authUser.email || '',
-            name: profile?.name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || '',
-            role: profile?.role || (isUserAdmin ? 'admin' : 'user'),
-            created_at: authUser.created_at,
-            updated_at: profile?.updated_at || authUser.updated_at,
-          }
-
-          setUser(userData)
-          setIsAdmin(isUserAdmin)
-        } catch (error) {
-          console.error('处理认证状态变化失败:', error)
-          setUser({
-            id: authUser.id,
-            email: authUser.email || '',
-            name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || '',
-            role: isUserAdmin ? 'admin' : 'user',
-            created_at: authUser.created_at,
-            updated_at: authUser.updated_at,
-          })
-          setIsAdmin(isUserAdmin)
-        }
-      } else {
-        setUser(null)
-        setIsAdmin(false)
+      // 清除之前的超时
+      if (authChangeTimeout) {
+        clearTimeout(authChangeTimeout)
       }
 
-      setIsLoading(false)
+      // 使用防抖，避免快速连续的状态变化
+      authChangeTimeout = setTimeout(async () => {
+        if (authUser) {
+          try {
+            const userData: User = {
+              id: authUser.id,
+              email: authUser.email || '',
+              name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || '',
+              role: isUserAdmin ? 'admin' : 'user',
+              created_at: authUser.created_at,
+              updated_at: authUser.updated_at,
+            }
+
+            setUser(userData)
+            setIsAdmin(isUserAdmin)
+
+            // 更新缓存
+            if (typeof window !== 'undefined') {
+              try {
+                sessionStorage.setItem('userCache', JSON.stringify({
+                  user: userData,
+                  isAdmin: isUserAdmin,
+                  timestamp: Date.now()
+                }))
+              } catch (cacheError) {
+                console.warn('缓存用户信息失败:', cacheError)
+              }
+            }
+          } catch (error) {
+            console.error('处理认证状态变化失败:', error)
+            setUser({
+              id: authUser.id,
+              email: authUser.email || '',
+              name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || '',
+              role: isUserAdmin ? 'admin' : 'user',
+              created_at: authUser.created_at,
+              updated_at: authUser.updated_at,
+            })
+            setIsAdmin(isUserAdmin)
+          }
+        } else {
+          setUser(null)
+          setIsAdmin(false)
+          // 清除缓存
+          if (typeof window !== 'undefined') {
+            sessionStorage.removeItem('userCache')
+          }
+        }
+
+        setIsLoading(false)
+      }, 100) // 100ms 防抖延迟
     })
 
     // 清理函数
     return () => {
       mounted = false
       subscription.unsubscribe()
+      if (authChangeTimeout) {
+        clearTimeout(authChangeTimeout)
+      }
     }
   }, [])
 

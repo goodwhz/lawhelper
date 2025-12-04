@@ -223,7 +223,13 @@ export function checkAuthStatus() {
  */
 export async function signIn(credentials: LoginCredentials) {
   try {
-    const { data, error } = await supabaseClient.auth.signInWithPassword(credentials)
+    // 使用 Promise.race 设置超时机制
+    const signInPromise = supabaseClient.auth.signInWithPassword(credentials)
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('登录超时，请重试')), 10000)
+    )
+    
+    const { data, error } = await Promise.race([signInPromise, timeoutPromise]) as any
 
     if (error) {
       return { success: false, error: error.message }
@@ -233,22 +239,50 @@ export async function signIn(credentials: LoginCredentials) {
       return { success: false, error: '登录失败' }
     }
 
-    const profile = await getUserProfile(data.user.id)
+    // 并行获取用户资料，而不是串行
+    const profilePromise = getUserProfile(data.user.id)
+    const profileTimeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('获取用户资料超时')), 5000)
+    )
+    
+    let profile = null
+    try {
+      profile = await Promise.race([profilePromise, profileTimeoutPromise]) as any
+    } catch (profileError) {
+      console.warn('获取用户资料超时，使用默认值:', profileError)
+      // 使用默认值，不中断登录流程
+    }
+
+    const user = {
+      id: data.user.id,
+      email: data.user.email || '',
+      name: profile?.name || data.user.user_metadata?.name || data.user.email?.split('@')[0] || '',
+      role: profile?.role || 'user',
+      created_at: data.user.created_at,
+      updated_at: profile?.updated_at || data.user.updated_at,
+    }
+
+    const isAdmin = profile?.role === 'admin' || data.user.email?.endsWith('@admin.com') || false
+
+    // 缓存用户信息到 sessionStorage
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem('userCache', JSON.stringify({ user, isAdmin, timestamp: Date.now() }))
+      } catch (cacheError) {
+        console.warn('缓存用户信息失败:', cacheError)
+      }
+    }
 
     return {
       success: true,
-      user: {
-        id: data.user.id,
-        email: data.user.email || '',
-        name: profile?.name || data.user.user_metadata?.name || data.user.email?.split('@')[0] || '',
-        role: profile?.role || 'user',
-        created_at: data.user.created_at,
-        updated_at: profile?.updated_at || data.user.updated_at,
-      },
-      isAdmin: profile?.role === 'admin' || data.user.email?.endsWith('@admin.com') || false,
+      user,
+      isAdmin,
     }
   } catch (error: any) {
-    return { success: false, error: error.message }
+    if (error.message?.includes('超时')) {
+      return { success: false, error: '网络请求超时，请检查网络连接后重试' }
+    }
+    return { success: false, error: error.message || '登录失败，请重试' }
   }
 }
 
@@ -397,27 +431,67 @@ export async function updatePassword(newPassword: string) {
 /**
  * 获取用户资料信息
  * @param userId 用户ID
+ * @param useCache 是否使用缓存，默认true
  * @returns 用户资料信息
  */
-export async function getUserProfile(userId: string) {
+export async function getUserProfile(userId: string, useCache: boolean = true) {
   try {
+    // 检查缓存（仅在客户端且启用缓存时）
+    if (useCache && typeof window !== 'undefined') {
+      try {
+        const cached = sessionStorage.getItem(`profile_${userId}`)
+        if (cached) {
+          const { data, timestamp } = JSON.parse(cached)
+          // 缓存有效期 5 分钟
+          if (Date.now() - timestamp < 5 * 60 * 1000) {
+            return data
+          }
+        }
+      } catch (cacheError) {
+        console.warn('读取用户资料缓存失败:', cacheError)
+      }
+    }
+
     // 根据运行环境选择客户端
     const client = typeof window === 'undefined' ? createSupabaseServiceClient() : supabaseClient
 
-    const { data, error } = await client
+    // 添加超时控制
+    const queryPromise = client
       .from('user_profiles')
       .select('*')
       .eq('id', userId)
       .single()
+    
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('查询超时')), 3000)
+    )
+
+    const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any
 
     if (error) {
       console.warn('获取用户资料失败:', error)
       return null
     }
 
+    // 缓存结果（仅在客户端）
+    if (useCache && typeof window !== 'undefined' && data) {
+      try {
+        sessionStorage.setItem(`profile_${userId}`, JSON.stringify({
+          data,
+          timestamp: Date.now()
+        }))
+      } catch (cacheError) {
+        console.warn('缓存用户资料失败:', cacheError)
+      }
+    }
+
     return data
-  } catch (error) {
-    console.error('获取用户资料异常:', error)
+  } catch (error: any) {
+    if (error.message?.includes('超时')) {
+      console.warn('获取用户资料超时')
+    } else {
+      console.error('获取用户资料异常:', error)
+    }
     return null
   }
 }
