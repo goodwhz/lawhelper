@@ -1,7 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
 import type { User } from '@/lib/auth'
 import { getCurrentUser, onAuthStateChange, checkAuthStatus } from '@/lib/auth'
 
@@ -84,7 +84,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             sessionStorage.setItem('userCache', JSON.stringify({
               user: userData,
               isAdmin: result.isAdmin,
-              timestamp: Date.now()
+              timestamp: Date.now(),
             }))
           } catch (cacheError) {
             console.warn('缓存用户信息失败:', cacheError)
@@ -155,7 +155,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 setUser(user)
                 setIsAdmin(isAdmin)
                 setIsLoading(false)
-                
+
                 // 异步验证认证状态，不阻塞界面
                 verifyAuthState()
                 return
@@ -238,7 +238,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 sessionStorage.setItem('userCache', JSON.stringify({
                   user: userData,
                   isAdmin: isUserAdmin,
-                  timestamp: Date.now()
+                  timestamp: Date.now(),
                 }))
               } catch (cacheError) {
                 console.warn('缓存用户信息失败:', cacheError)

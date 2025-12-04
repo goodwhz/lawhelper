@@ -1,16 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { NextResponse } from 'next/server'
 
 const DIFY_API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://dify.aipfuture.com/v1'
 const DIFY_APP_KEY = process.env.NEXT_PUBLIC_APP_KEY
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { conversationId: string } }
+  { params }: { params: Promise<{ conversationId: string }> },
 ) {
   try {
-    const { conversationId } = params
+    // 在Next.js 15+中，params是异步的
+    const { conversationId } = await params
     const body = await request.json()
-    
+
     console.log('=== 生成对话名称 ===')
     console.log('Conversation ID:', conversationId)
 
@@ -33,12 +35,11 @@ export async function POST(
     console.log('对话名称生成成功')
 
     return NextResponse.json(data)
-
   } catch (error) {
     console.error('Conversation Name API error:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : '生成对话名称失败' },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }

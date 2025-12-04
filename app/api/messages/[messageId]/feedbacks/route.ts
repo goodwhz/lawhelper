@@ -1,16 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { NextResponse } from 'next/server'
 
 const DIFY_API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://dify.aipfuture.com/v1'
 const DIFY_APP_KEY = process.env.NEXT_PUBLIC_APP_KEY
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { messageId: string } }
+  { params }: { params: Promise<{ messageId: string }> },
 ) {
   try {
-    const { messageId } = params
+    // 在Next.js 15+中，params是异步的
+    const { messageId } = await params
     const body = await request.json()
-    
+
     console.log('=== 提交反馈 ===')
     console.log('Message ID:', messageId)
 
@@ -33,12 +35,11 @@ export async function POST(
     console.log('反馈提交成功')
 
     return NextResponse.json(data)
-
   } catch (error) {
     console.error('Feedback API error:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : '提交反馈失败' },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }
