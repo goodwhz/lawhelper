@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import { useConversationDelete } from '@/hooks/use-conversation-delete'
-import { useConversation } from '@/hooks/use-conversation'
+import useConversation from '@/hooks/use-conversation'
 import DeleteConfirmationDialog from '@/app/components/delete-confirmation-dialog'
 import type { ConversationItem } from '@/types/app'
 
