@@ -1300,12 +1300,15 @@ const IntegratedChat: React.FC = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <button
-                onClick={() => window.location.href = '/'}
+                onClick={() => {
+                  // 返回主页面
+                  window.location.href = '/'
+                }}
                 className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
                 title="返回主页面"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                 </svg>
               </button>
               <h1 className="text-xl font-bold">劳动法智能助手</h1>
@@ -1318,7 +1321,7 @@ const IntegratedChat: React.FC = () => {
         </div>
 
         {/* 侧边栏 */}
-        <div className="w-64 bg-white border-r border-gray-200 flex flex-col pt-20">
+        <div className="w-64 bg-white border-r border-gray-200 flex flex-col pt-16">
           <div className="p-4 border-b border-gray-200">
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-lg font-semibold">对话列表</h2>
@@ -1347,7 +1350,7 @@ const IntegratedChat: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 pt-20 space-y-2">
+          <div className="flex-1 overflow-y-auto p-4 space-y-2">
             {conversations.length === 0
               ? (
                 <div className="flex-1 flex items-center justify-center text-gray-500">
@@ -1380,32 +1383,37 @@ const IntegratedChat: React.FC = () => {
   return (
     <div className="flex h-screen bg-gray-50">
       {/* 全局顶部导航栏 */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200 p-4 shadow-sm">
+      <div className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <button
-              onClick={() => window.location.href = '/'}
-              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-              title="返回主页面"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-            </button>
             {!showWelcome && (
-              <button
-                onClick={() => {
-                  setShowWelcome(true)
-                  setCurrentConversation(null)
-                  setMessages([])
-                }}
-                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-                title="返回欢迎界面"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-              </button>
+              <>
+                <button
+                  onClick={() => {
+                    // 返回主页面
+                    window.location.href = '/'
+                  }}
+                  className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                  title="返回主页面"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => {
+                    setShowWelcome(true)
+                    setCurrentConversation(null)
+                    setMessages([])
+                  }}
+                  className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                  title="返回对话主页面"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
+                </button>
+              </>
             )}
             <h1 className="text-xl font-bold">劳动法智能助手</h1>
           </div>
@@ -1445,7 +1453,7 @@ const IntegratedChat: React.FC = () => {
             )}
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto p-4 pt-20 space-y-2">
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
           {renderConversationList()}
         </div>
       </div>
@@ -1455,7 +1463,7 @@ const IntegratedChat: React.FC = () => {
         {/* 消息区域 */}
         <div
           ref={messageAreaRef}
-          className="flex-1 overflow-y-auto p-4 pt-20 space-y-4"
+          className="flex-1 overflow-y-auto p-4 space-y-4"
         >
           {renderMessages()}
 
