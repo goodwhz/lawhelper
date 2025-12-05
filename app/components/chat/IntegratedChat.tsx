@@ -1,7 +1,7 @@
 'use client'
 import React, { useState, useCallback, useRef, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
-import type { Conversation } from './types'
+import type { ChatMessage, Conversation } from './types'
 import { useAuth } from '@/contexts/AuthContext'
 import ConfirmDialog from '@/app/components/ui/ConfirmDialog'
 import WelcomeScreen from '@/app/components/ui/WelcomeScreen'

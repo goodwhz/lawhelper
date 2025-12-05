@@ -35,12 +35,27 @@ const SimpleChat: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const messageAreaRef = useRef<HTMLDivElement>(null)
 
-  // 初始化
-  useEffect(() => {
-    checkAuthStatus()
-  }, [])
+  // Toast 通知状态
+  const [toast, setToast] = useState<{
+    show: boolean
+    message: string
+    type: 'success' | 'error' | 'warning' | 'info'
+  }>({
+    show: false,
+    message: '',
+    type: 'info',
+  })
 
-  const checkAuthStatus = async () => {
+  // 显示 Toast 通知
+  const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
+    setToast({ show: true, message, type })
+    setTimeout(() => {
+      setToast(prev => ({ ...prev, show: false }))
+    }, 3000)
+  }
+
+  // 初始化
+  const checkAuthStatus = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession()
     
     if (session?.user) {
@@ -65,10 +80,10 @@ const SimpleChat: React.FC = () => {
         setIsAuthenticated(false)
       }
     })
-  }
+  }, [loadConversations])
 
   // 加载对话列表
-  const loadConversations = async () => {
+  const loadConversations = useCallback(async () => {
     if (!currentUser) return
 
     try {
@@ -95,7 +110,7 @@ const SimpleChat: React.FC = () => {
     } catch (error) {
       console.error('加载对话失败:', error)
     }
-  }
+  }, [currentUser])
 
   // 创建新对话
   const createNewConversation = async () => {
@@ -114,7 +129,7 @@ const SimpleChat: React.FC = () => {
 
       if (error) {
         console.error('创建对话失败:', error)
-        alert('创建对话失败: ' + error.message)
+        showToast('创建对话失败: ' + error.message, 'error')
         return
       }
 
@@ -123,12 +138,12 @@ const SimpleChat: React.FC = () => {
       return data
     } catch (error) {
       console.error('创建对话失败:', error)
-      alert('创建对话失败')
+      showToast('创建对话失败', 'error')
     }
   }
 
   // 加载特定对话
-  const loadConversation = async (conversationId: string) => {
+  const loadConversation = useCallback(async (conversationId: string) => {
     if (!currentUser) return
 
     try {
@@ -170,12 +185,12 @@ const SimpleChat: React.FC = () => {
     } catch (error) {
       console.error('加载对话失败:', error)
     }
-  }
+  }, [currentUser])
 
   // 发送消息
   const sendMessage = async (content: string) => {
     if (!content.trim() || isLoading || !currentUser || !currentConversation) {
-      alert('请先选择对话')
+      showToast('请先选择对话', 'warning')
       return
     }
 
@@ -198,7 +213,7 @@ const SimpleChat: React.FC = () => {
 
       if (userError) {
         console.error('保存用户消息失败:', userError)
-        alert('发送失败: ' + userError.message)
+        showToast('发送失败: ' + userError.message, 'error')
         setIsLoading(false)
         return
       }
@@ -230,7 +245,7 @@ const SimpleChat: React.FC = () => {
 
     } catch (error) {
       console.error('发送消息失败:', error)
-      alert('发送消息失败')
+      showToast('发送消息失败', 'error')
     } finally {
       setIsLoading(false)
     }
@@ -399,7 +414,28 @@ const SimpleChat: React.FC = () => {
         </div>
       </div>
     </div>
-  )
-}
+
+    {/* Toast 通知 */}
+    {toast.show && (
+      <div
+        className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 transform ${
+          toast.show ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'
+        } ${
+          toast.type === 'success'
+            ? 'bg-green-500 text-white'
+            : toast.type === 'error'
+              ? 'bg-red-500 text-white'
+              : toast.type === 'warning'
+                ? 'bg-yellow-500 text-white'
+                : 'bg-blue-500 text-white'
+        }`}
+      >
+        <div className="flex items-center">
+          <span className="text-sm font-medium">{toast.message}</span>
+        </div>
+      </div>
+    )}
+  </div>
+)
 
 export default SimpleChat
