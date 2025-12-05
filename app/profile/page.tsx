@@ -17,7 +17,7 @@ interface UserProfile {
 }
 
 function ProfilePage() {
-  const { isAdmin, refreshUser } = useAuth()
+  const { refreshUser, forceUpdate } = useAuth()
   const router = useRouter()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -84,22 +84,54 @@ function ProfilePage() {
     try {
       console.log('=== 开始保存个人资料 ===')
 
-      // 使用新的更新用户资料函数
-      await updateUserProfile(
-        profile.id,
-        formData.name,
-        profile.email,
-        isAdmin,
-      )
+      // 构建更新对象，只包含需要更新的字段
+      const updates: any = {}
+
+      // 只有当名称发生变化时才包含name字段
+      if (formData.name.trim() !== profile.name) {
+        updates.name = formData.name.trim()
+      }
+
+      // 如果没有任何字段需要更新，直接返回成功
+      if (Object.keys(updates).length === 0) {
+        setMessage('没有需要更新的内容')
+        setIsEditing(false)
+        return
+      }
+
+      console.log('更新内容:', updates)
+
+      // 使用新的更新用户资料函数 - 修正参数传递
+      const result = await updateUserProfile(profile.id, updates)
+
+      if (!result.success) {
+        throw new Error(result.error || '保存失败')
+      }
 
       setMessage('保存成功！')
       setIsEditing(false)
 
-      // 先刷新用户信息以更新AuthContext
-      await refreshUser()
+      // 清除所有相关的缓存
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('userCache')
+        if (profile) {
+          sessionStorage.removeItem(`profile_${profile.id}`)
+        }
+      }
+
+      // 先强制刷新用户信息以更新AuthContext
+      await refreshUser(true)
 
       // 然后重新加载profile数据
       await loadProfile()
+
+      // 强制更新所有使用useAuth的组件
+      forceUpdate()
+
+      // 强制重新渲染Navigation组件
+      setTimeout(() => {
+        window.dispatchEvent(new Event('storage'))
+      }, 100)
     } catch (error: any) {
       console.error('保存资料失败:', error)
       setMessage(error.message || '保存失败，请重试')

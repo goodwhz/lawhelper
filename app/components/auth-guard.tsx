@@ -2,7 +2,6 @@
 
 import React from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import AuthModal from './auth-modal'
 
 interface AuthGuardProps {
   children: React.ReactNode
@@ -11,23 +10,41 @@ interface AuthGuardProps {
   adminOnly?: boolean
 }
 
-export default function AuthGuard({ 
-  children, 
-  fallback, 
+export default function AuthGuard({
+  children,
+  fallback,
   requireAuth = false,
-  adminOnly = false 
+  adminOnly = false,
 }: AuthGuardProps) {
-  const { isAuthenticated, isAdmin, showLoginModal, setShowLoginModal, checkAndRequireAuth } = useAuth()
+  const { isAuthenticated, isAdmin, isLoading, checkAndRequireAuth: _checkAndRequireAuth } = useAuth()
+
+  // 使用 useEffect 来处理认证检查，避免在渲染期间调用
+  React.useEffect(() => {
+    if (!requireAuth) { return }
+
+    if (adminOnly && (!isAuthenticated || !isAdmin)) {
+      _checkAndRequireAuth()
+      return
+    }
+
+    if (!isAuthenticated) {
+      _checkAndRequireAuth()
+    }
+  }, [requireAuth, adminOnly, isAuthenticated, isAdmin, isLoading, _checkAndRequireAuth])
 
   // 如果不需要认证，直接渲染子组件
   if (!requireAuth) {
     return <>{children}</>
   }
 
+  // 如果还在加载中，显示加载状态
+  if (isLoading) {
+    return fallback || null
+  }
+
   // 如果只允许管理员访问
   if (adminOnly) {
     if (!isAuthenticated || !isAdmin) {
-      checkAndRequireAuth()
       return fallback || null
     }
     return <>{children}</>
@@ -35,7 +52,6 @@ export default function AuthGuard({
 
   // 如果需要认证
   if (!isAuthenticated) {
-    checkAndRequireAuth()
     return fallback || null
   }
 
@@ -49,7 +65,7 @@ export function useProtectedAction() {
 
   const executeProtectedAction = (
     action: () => void,
-    options?: { requireAuth?: boolean; adminOnly?: boolean }
+    options?: { requireAuth?: boolean, adminOnly?: boolean },
   ) => {
     const { requireAuth = false, adminOnly = false } = options || {}
 
@@ -73,11 +89,11 @@ export function useProtectedAction() {
 // Higher-order component for protecting components
 export function withAuth<P extends object>(
   Component: React.ComponentType<P>,
-  options?: { requireAuth?: boolean; adminOnly?: boolean }
+  options?: { requireAuth?: boolean, adminOnly?: boolean },
 ) {
   return function AuthenticatedComponent(props: P) {
     const { requireAuth = false, adminOnly = false } = options || {}
-    
+
     return (
       <AuthGuard requireAuth={requireAuth} adminOnly={adminOnly}>
         <Component {...props} />

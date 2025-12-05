@@ -208,7 +208,7 @@ export function checkAuthStatus() {
 
   // 检查是否有Supabase相关的cookie
   const hasAuthCookie = document.cookie.includes('sb-')
-  
+
   // 检查localStorage和sessionStorage中的认证信息
   const hasLocalStorage = localStorage.getItem('supabase.auth.token') !== null
   const hasSessionStorage = sessionStorage.getItem('supabase.auth.token') !== null
@@ -225,10 +225,10 @@ export async function signIn(credentials: LoginCredentials) {
   try {
     // 使用 Promise.race 设置超时机制
     const signInPromise = supabaseClient.auth.signInWithPassword(credentials)
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('登录超时，请重试')), 10000)
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('登录超时，请重试')), 10000),
     )
-    
+
     const { data, error } = await Promise.race([signInPromise, timeoutPromise]) as any
 
     if (error) {
@@ -241,10 +241,10 @@ export async function signIn(credentials: LoginCredentials) {
 
     // 并行获取用户资料，而不是串行
     const profilePromise = getUserProfile(data.user.id)
-    const profileTimeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('获取用户资料超时')), 5000)
+    const profileTimeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('获取用户资料超时')), 5000),
     )
-    
+
     let profile = null
     try {
       profile = await Promise.race([profilePromise, profileTimeoutPromise]) as any
@@ -296,9 +296,9 @@ export async function signUp(credentials: RegisterCredentials) {
     // 验证密码策略
     const passwordValidation = validatePassword(credentials.password)
     if (!passwordValidation.isValid) {
-      return { 
-        success: false, 
-        error: passwordValidation.errors.join('；') 
+      return {
+        success: false,
+        error: passwordValidation.errors.join('；'),
       }
     }
 
@@ -330,24 +330,46 @@ export async function signUp(credentials: RegisterCredentials) {
  */
 export async function updateUserProfile(userId: string, updates: Partial<User>) {
   try {
+    console.log('更新用户资料参数:', { userId, updates })
+
+    // 检查是否有有效的更新字段
+    if (!updates || Object.keys(updates).length === 0) {
+      console.warn('没有提供有效的更新字段')
+      return { success: true, data: null, message: '没有需要更新的字段' }
+    }
+
+    // 过滤掉 undefined 和 null 值的字段
+    const filteredUpdates = Object.fromEntries(
+      Object.entries(updates).filter(([_, value]) => value !== undefined && value !== null),
+    )
+
+    if (Object.keys(filteredUpdates).length === 0) {
+      console.warn('过滤后没有有效的更新字段')
+      return { success: true, data: null, message: '没有有效的更新内容' }
+    }
+
+    console.log('过滤后的更新参数:', { userId, updates: filteredUpdates })
+
     // 根据运行环境选择客户端
     const client = typeof window === 'undefined' ? createSupabaseServiceClient() : supabaseClient
 
     const { data, error } = await client
       .from('user_profiles')
-      .update(updates)
+      .update(filteredUpdates)
       .eq('id', userId)
       .select()
       .single()
 
     if (error) {
-      console.error('更新用户资料失败:', error)
-      return { success: false, error: error.message }
+      console.error('更新用户资料失败:', { error, userId, filteredUpdates })
+      return { success: false, error: error.message || '更新失败' }
     }
 
+    console.log('更新用户资料成功:', data)
     return { success: true, data }
   } catch (error: any) {
-    return { success: false, error: error.message }
+    console.error('更新用户资料异常:', { error, userId, updates })
+    return { success: false, error: error.message || '更新过程中发生未知错误' }
   }
 }
 
@@ -408,14 +430,14 @@ export async function updatePassword(newPassword: string) {
     // 验证密码策略
     const passwordValidation = validatePassword(newPassword)
     if (!passwordValidation.isValid) {
-      return { 
-        success: false, 
-        error: passwordValidation.errors.join('；') 
+      return {
+        success: false,
+        error: passwordValidation.errors.join('；'),
       }
     }
 
     const { data, error } = await supabaseClient.auth.updateUser({
-      password: newPassword
+      password: newPassword,
     })
 
     if (error) {
@@ -461,9 +483,9 @@ export async function getUserProfile(userId: string, useCache: boolean = true) {
       .select('*')
       .eq('id', userId)
       .single()
-    
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('查询超时')), 3000)
+
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('查询超时')), 3000),
     )
 
     const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any
@@ -478,7 +500,7 @@ export async function getUserProfile(userId: string, useCache: boolean = true) {
       try {
         sessionStorage.setItem(`profile_${userId}`, JSON.stringify({
           data,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         }))
       } catch (cacheError) {
         console.warn('缓存用户资料失败:', cacheError)

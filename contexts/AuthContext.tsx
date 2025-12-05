@@ -25,7 +25,13 @@ export function useAuth() {
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider')
   }
-  return context
+
+  // 添加一个强制更新方法
+  const forceUpdate = () => {
+    context.refreshUser(true)
+  }
+
+  return { ...context, forceUpdate }
 }
 
 interface AuthProviderProps {
@@ -43,10 +49,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const loginRequired = showLoginModal && !isAuthenticated
 
   // 刷新用户信息
-  const refreshUser = async () => {
+  const refreshUser = async (forceRefresh = false) => {
     try {
       // 检查缓存中的用户信息
-      if (typeof window !== 'undefined') {
+      if (!forceRefresh && typeof window !== 'undefined') {
         try {
           const cachedUser = sessionStorage.getItem('userCache')
           if (cachedUser) {
@@ -77,6 +83,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         setUser(userData)
         setIsAdmin(result.isAdmin)
+
+        // 清除用户资料缓存，确保获取最新数据
+        if (typeof window !== 'undefined') {
+          try {
+            sessionStorage.removeItem(`profile_${result.user.id}`)
+          } catch (cacheError) {
+            console.warn('清除用户资料缓存失败:', cacheError)
+          }
+        }
 
         // 更新缓存
         if (typeof window !== 'undefined') {
@@ -114,7 +129,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // 检查是否需要登录
   const checkAndRequireAuth = () => {
     if (!isAuthenticated && !isLoading) {
-      setShowLoginModal(true)
+      // 使用 setTimeout 将状态更新延迟到渲染完成后
+      setTimeout(() => setShowLoginModal(true), 0)
       return false
     }
     return true

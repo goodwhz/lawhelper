@@ -1,6 +1,6 @@
 'use client'
 import type { FC } from 'react'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
@@ -11,29 +11,26 @@ import WeChatModal from './wechat-modal'
 const Navigation: FC = () => {
   const pathname = usePathname()
   const router = useRouter()
-  
-  // 安全地获取 auth 状态
-  let authState: any = {
-    user: null,
-    isAuthenticated: false,
-    isAdmin: false,
-    isLoading: false,
-    setShowLoginModal: () => {}
-  }
-  let executeProtectedAction: any = () => {}
-  
-  try {
-    authState = useAuth()
-    const { executeProtectedAction: protectedAction } = useProtectedAction()
-    executeProtectedAction = protectedAction
-  } catch (error) {
-    console.warn('Auth context not available, using fallback')
-    executeProtectedAction = (action: Function) => action()
-  }
-  
+
+  // 始终在组件顶层调用hooks，保持调用顺序
+  const authState = useAuth()
+  const protectedAction = useProtectedAction()
+
   const { user, isAuthenticated, isAdmin, isLoading, setShowLoginModal } = authState
+  const { executeProtectedAction } = protectedAction
   const [isWeChatModalOpen, setIsWeChatModalOpen] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
+
+  // 监听存储事件以强制重新渲染
+  useEffect(() => {
+    const handleStorageChange = () => {
+      // 强制组件重新渲染
+      setShowUserMenu(false)
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
+  }, [])
 
   const navItems = []
 
@@ -88,7 +85,7 @@ const Navigation: FC = () => {
               <Link href="/about" className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors font-medium">
                 关于
               </Link>
-              
+
               <button
                 onClick={() => setIsWeChatModalOpen(true)}
                 className="bg-law-red-500 text-white px-4 py-2 rounded-lg hover:bg-law-red-600 transition-colors font-medium"
@@ -97,16 +94,18 @@ const Navigation: FC = () => {
               </button>
 
               {/* 登录状态 */}
-              {isLoading ? (
+              {isLoading && (
                 <div className="w-20 h-9 bg-gray-200 rounded-lg animate-pulse"></div>
-              ) : !isAuthenticated ? (
+              )}
+              {!isLoading && !isAuthenticated && (
                 <button
                   onClick={() => setShowLoginModal(true)}
                   className="bg-law-orange-500 text-white px-4 py-2 rounded-lg hover:bg-law-orange-600 transition-colors font-medium"
                 >
                   登录
                 </button>
-              ) : (
+              )}
+              {!isLoading && isAuthenticated && (
                 <div className="relative">
                   <button
                     onClick={() => setShowUserMenu(!showUserMenu)}
