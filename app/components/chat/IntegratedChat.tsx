@@ -65,7 +65,7 @@ const IntegratedChat: React.FC = () => {
     if (isAuthenticated && user) {
       loadConversations()
     }
-  }, [isAuthenticated, user, loadConversations])
+  }, [isAuthenticated, user])
 
   // 进入页面时总是显示欢迎界面
   useEffect(() => {
@@ -187,7 +187,7 @@ const IntegratedChat: React.FC = () => {
       setCurrentConversation(null)
       setMessages([])
     }
-  }, [user, isAuthenticated])
+  }, [user, isAuthenticated, showToast, setShowWelcome, setCurrentConversation, setMessages])
 
   // 创建新对话
   const createNewConversation = async () => {
