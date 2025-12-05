@@ -189,21 +189,8 @@ const IntegratedChat: React.FC = () => {
     }
   }, [user, isAuthenticated, showToast, setShowWelcome, setCurrentConversation, setMessages])
 
-  // 创建新对话
-  const createNewConversation = async () => {
-    return await createNewConversationWithTitle('新对话')
-  }
-
   // 创建带标题的新对话
-  const createNewConversationWithPreset = useCallback(async (presetQuestion?: string) => {
-    const title = presetQuestion && typeof presetQuestion === 'string'
-      ? presetQuestion.substring(0, 50) + (presetQuestion.length > 50 ? '...' : '')
-      : '新对话'
-    return await createNewConversationWithTitle(title, presetQuestion)
-  }, [createNewConversationWithTitle])
-
-  // 创建带标题的新对话
-  const createNewConversationWithTitle = async (title: string, presetQuestion?: string) => {
+  const createNewConversationWithTitle = useCallback(async (title: string, presetQuestion?: string) => {
     if (!user) {
       console.error('创建对话失败: 用户不存在')
       return null
@@ -217,45 +204,25 @@ const IntegratedChat: React.FC = () => {
       }
 
       console.log('正在创建对话，数据:', conversationData)
-      console.log('用户信息:', { id: user.id, email: user.email })
 
       const { data, error } = await supabase
         .from('conversations')
-        .insert(conversationData)
-        .select('id, title, user_id, status, created_at, updated_at')
+        .insert([conversationData])
+        .select()
         .single()
 
       if (error) {
-        console.error('Supabase 错误:', {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code,
-          fullError: error,
-        })
-        throw error
+        console.error('创建对话失败:', error)
+        showToast('创建对话失败', 'error')
+        return null
       }
 
-      console.log('对话创建成功，完整数据:', data)
-      console.log('对话ID:', data?.id)
-      console.log('对话ID类型:', typeof data?.id)
-      console.log('对话标题:', data?.title)
-
-      // 验证返回的数据
-      if (!data || !data.id) {
-        console.error('创建对话返回的数据无效:', data)
-        throw new Error('对话创建失败：返回的数据不完整')
-      }
-
-      // 隐藏欢迎界面
-      setShowWelcome(false)
+      console.log('对话创建成功:', data)
 
       // 设置为当前对话
       setCurrentConversation(data)
       setMessages([])
-
-      // 更新本地对话列表，添加新对话到顶部
-      setConversations(prev => [data, ...prev])
+      setShowWelcome(false)
 
       // 不再重新加载对话列表，避免干扰当前对话
 
@@ -278,7 +245,20 @@ const IntegratedChat: React.FC = () => {
       }
       return null
     }
-  }
+  }, [user, supabase])
+
+  // 创建带标题的新对话
+  const createNewConversationWithPreset = useCallback(async (_presetQuestion?: string) => {
+    const title = _presetQuestion && typeof _presetQuestion === 'string'
+      ? _presetQuestion.substring(0, 50) + (_presetQuestion.length > 50 ? '...' : '')
+      : '新对话'
+    return await createNewConversationWithTitle(title, _presetQuestion)
+  }, [createNewConversationWithTitle])
+
+  // 创建新对话
+  const createNewConversation = useCallback(async () => {
+    return await createNewConversationWithTitle('新对话')
+  }, [createNewConversationWithTitle])
 
   // 更新对话标题
   const updateConversationTitle = useCallback(async (conversationId: string, newTitle: string) => {
@@ -445,7 +425,7 @@ const IntegratedChat: React.FC = () => {
   }
 
   // 加载特定对话
-  const loadConversation = async (conversationId: string) => {
+  const loadConversation = useCallback(async (conversationId: string) => {
     if (!user) { return }
 
     try {
@@ -484,10 +464,10 @@ const IntegratedChat: React.FC = () => {
     } catch (error) {
       console.error('加载对话失败:', error)
     }
-  }
+  }, [user, supabase, setCurrentConversation, setMessages, showToast])
 
   // 保存消息到数据库
-  const saveMessage = async (message: Omit<ChatMessage, 'id' | 'created_at'>) => {
+  const saveMessage = useCallback(async (message: Omit<ChatMessage, 'id' | 'created_at'>) => {
     if (!user || !currentConversation) { return null }
 
     try {
@@ -507,7 +487,7 @@ const IntegratedChat: React.FC = () => {
       console.error('保存消息失败:', error)
       return null
     }
-  }
+  }, [user, currentConversation, supabase])
 
   // 删除对话
   const deleteConversation = useCallback(async (conversationId: string) => {
@@ -653,7 +633,7 @@ const IntegratedChat: React.FC = () => {
       const errorMessage = error instanceof Error ? error.message : '删除对话失败'
       throw new Error(errorMessage)
     }
-  }, [user, isAuthenticated, currentConversation, loadConversations])
+  }, [user, isAuthenticated, currentConversation])
 
   // 批量删除所有对话
   const deleteAllConversations = useCallback(async () => {
@@ -768,7 +748,7 @@ const IntegratedChat: React.FC = () => {
       },
       type: 'danger',
     })
-  }, [user, conversations, loadConversations])
+  }, [user, conversations])
 
   // 发送消息
   const sendMessage = useCallback(async (content: string) => {
