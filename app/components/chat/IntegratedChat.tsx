@@ -12,6 +12,10 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
 )
 
+// 消息缓存 - 存储每个对话的消息，避免重复查询
+const messageCache = new Map<string, ChatMessage[]>()
+const conversationCache = new Map<string, Conversation>()
+
 const IntegratedChat: React.FC = () => {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth()
   const [conversations, setConversations] = useState<Conversation[]>([])
@@ -19,6 +23,7 @@ const IntegratedChat: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isStreaming, setIsStreaming] = useState(false)
+  const [isSwitchingConversation, setIsSwitchingConversation] = useState(false)
   const [editingConversationId, setEditingConversationId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
   const abortControllerRef = useRef<AbortController | null>(null)
@@ -60,23 +65,56 @@ const IntegratedChat: React.FC = () => {
   // 欢迎界面状态
   const [showWelcome, setShowWelcome] = useState(false)
 
-  // 初始化
+  // 初始化时恢复上次对话状态
   useEffect(() => {
     if (isAuthenticated && user) {
-      loadConversations()
+      loadConversations().then(() => {
+        // 尝试恢复上次访问的对话
+        const lastConversationId = localStorage.getItem(`lastConversation_${user.id}`)
+        if (lastConversationId) {
+          // 延迟一点加载，确保对话列表已经设置好
+          setTimeout(() => {
+            loadConversation(lastConversationId).catch(console.error)
+          }, 100)
+        }
+      })
     }
   }, [isAuthenticated, user])
 
-  // 进入页面时总是显示欢迎界面
+  // 保存当前对话ID到localStorage
   useEffect(() => {
-    if (isAuthenticated && user) {
-      setShowWelcome(true)
-      setCurrentConversation(null)
-      setMessages([])
+    if (currentConversation?.id && user) {
+      localStorage.setItem(`lastConversation_${user.id}`, currentConversation.id)
     }
-  }, [isAuthenticated, user])
+  }, [currentConversation, user])
 
-  // 加载对话列表
+  // 优化：当对话更新时，刷新相关缓存
+  const refreshConversationCache = useCallback(async (conversationId: string) => {
+    if (!user) { return }
+
+    try {
+      // 重新获取对话信息
+      const { data: conversation, error: convError } = await supabase
+        .from('conversations')
+        .select('*')
+        .eq('id', conversationId)
+        .eq('user_id', user.id)
+        .single()
+
+      if (!convError && conversation) {
+        conversationCache.set(conversationId, conversation)
+
+        // 如果是当前对话，更新状态
+        if (currentConversation?.id === conversationId) {
+          setCurrentConversation(conversation)
+        }
+      }
+    } catch (error) {
+      console.warn(`刷新对话 ${conversationId} 缓存失败:`, error)
+    }
+  }, [user, supabase, currentConversation])
+
+  // 加载对话列表 - 优化版本
   const loadConversations = useCallback(async () => {
     if (!user) {
       console.error('加载对话失败: 用户不存在')
@@ -140,6 +178,13 @@ const IntegratedChat: React.FC = () => {
       const convs = data || []
       console.log('成功加载对话列表，数量:', convs.length)
 
+      // 更新对话缓存
+      convs.forEach((conv) => {
+        if (conv.id) {
+          conversationCache.set(conv.id, conv)
+        }
+      })
+
       // 详细检查每个对话的数据完整性
       convs.forEach((conv, index) => {
         console.log(`对话 ${index + 1}:`, {
@@ -163,6 +208,15 @@ const IntegratedChat: React.FC = () => {
       setShowWelcome(true)
       setCurrentConversation(null)
       setMessages([])
+
+      // 预加载前几个对话的消息以提升后续切换体验
+      const conversationsToPreload = convs.slice(0, 3) // 预加载前3个对话
+      const preloadPromises = conversationsToPreload
+        .filter(conv => conv.id && !messageCache.has(conv.id))
+        .map(conv => preloadConversationMessages(conv.id!))
+
+      // 异步预加载，不阻塞当前操作
+      Promise.allSettled(preloadPromises).catch(console.error)
     } catch (error) {
       console.error('加载对话失败 - 完整错误信息:', error)
       if (error instanceof Error) {
@@ -187,7 +241,7 @@ const IntegratedChat: React.FC = () => {
       setCurrentConversation(null)
       setMessages([])
     }
-  }, [user, isAuthenticated, showToast, setShowWelcome, setCurrentConversation, setMessages])
+  }, [user, isAuthenticated, showToast, setShowWelcome, setCurrentConversation, setMessages, preloadConversationMessages])
 
   // 创建带标题的新对话
   const createNewConversationWithTitle = useCallback(async (title: string, presetQuestion?: string) => {
@@ -424,49 +478,131 @@ const IntegratedChat: React.FC = () => {
     }
   }
 
-  // 加载特定对话
+  // 加载特定对话 - 优化版本
   const loadConversation = useCallback(async (conversationId: string) => {
     if (!user) { return }
 
+    // 如果正在加载同一个对话，直接返回
+    if (currentConversation?.id === conversationId) {
+      return
+    }
+
+    setIsSwitchingConversation(true)
+
     try {
-      // 获取对话信息
-      const { data: conversation, error: convError } = await supabase
-        .from('conversations')
-        .select('*')
-        .eq('id', conversationId)
-        .eq('user_id', user.id)
-        .single()
+      // 首先检查缓存
+      const cachedConversation = conversationCache.get(conversationId)
+      const cachedMessages = messageCache.get(conversationId)
 
-      if (convError) { throw convError }
-
-      // 获取消息
-      const { data: msgs, error: msgError } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('conversation_id', conversationId)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: true })
-
-      if (msgError) { throw msgError }
-
-      setCurrentConversation(conversation)
-      setMessages(msgs || [])
-
-      // 隐藏欢迎界面
+      // 立即设置缓存的对话和消息（如果有），提供即时反馈
+      if (cachedConversation) {
+        setCurrentConversation(cachedConversation)
+      }
+      if (cachedMessages) {
+        setMessages(cachedMessages)
+      }
       setShowWelcome(false)
+
+      // 并行获取对话信息和消息（如果缓存中没有）
+      const [conversationPromise, messagesPromise] = [
+        cachedConversation
+          ? Promise.resolve(cachedConversation)
+          : supabase
+            .from('conversations')
+            .select('*')
+            .eq('id', conversationId)
+            .eq('user_id', user.id)
+            .single(),
+        cachedMessages
+          ? Promise.resolve(cachedMessages)
+          : supabase
+            .from('messages')
+            .select('*')
+            .eq('conversation_id', conversationId)
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: true }),
+      ]
+
+      const [conversationResult, messagesResult] = await Promise.allSettled([
+        conversationPromise,
+        messagesPromise,
+      ])
+
+      // 处理对话信息
+      if (conversationResult.status === 'fulfilled' && !cachedConversation) {
+        const conversation = conversationResult.value.data
+        if (conversation) {
+          conversationCache.set(conversationId, conversation)
+          setCurrentConversation(conversation)
+        }
+      } else if (conversationResult.status === 'rejected') {
+        throw conversationResult.reason
+      }
+
+      // 处理消息
+      if (messagesResult.status === 'fulfilled' && !cachedMessages) {
+        const msgs = messagesResult.value.data || []
+        messageCache.set(conversationId, msgs)
+        setMessages(msgs)
+      } else if (messagesResult.status === 'rejected') {
+        throw messagesResult.reason
+      }
+
+      // 预加载相邻对话的消息
+      const currentIndex = conversations.findIndex(conv => conv.id === conversationId)
+      if (currentIndex >= 0) {
+        const prevIndex = currentIndex > 0 ? currentIndex - 1 : -1
+        const nextIndex = currentIndex < conversations.length - 1 ? currentIndex + 1 : -1
+
+        // 预加载前一个和后一个对话
+        const preloadPromises: Promise<void>[] = []
+
+        if (prevIndex >= 0 && !messageCache.has(conversations[prevIndex].id)) {
+          preloadPromises.push(preloadConversationMessages(conversations[prevIndex].id))
+        }
+        if (nextIndex >= 0 && !messageCache.has(conversations[nextIndex].id)) {
+          preloadPromises.push(preloadConversationMessages(conversations[nextIndex].id))
+        }
+
+        // 异步预加载，不阻塞当前操作
+        Promise.allSettled(preloadPromises).catch(console.error)
+      }
 
       // 滚动到底部
       setTimeout(() => {
         if (messageAreaRef.current) {
           messageAreaRef.current.scrollTop = messageAreaRef.current.scrollHeight
         }
-      }, 100)
+      }, 50)
     } catch (error) {
       console.error('加载对话失败:', error)
+      showToast('加载对话失败，请重试', 'error')
+    } finally {
+      setIsSwitchingConversation(false)
     }
-  }, [user, supabase, setCurrentConversation, setMessages, showToast])
+  }, [user, supabase, currentConversation, conversations, showToast])
 
-  // 保存消息到数据库
+  // 预加载对话消息的辅助函数
+  const preloadConversationMessages = useCallback(async (conversationId: string) => {
+    try {
+      if (messageCache.has(conversationId)) { return }
+
+      const { data: msgs, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', conversationId)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: true })
+
+      if (!error && msgs) {
+        messageCache.set(conversationId, msgs)
+      }
+    } catch (error) {
+      console.warn(`预加载对话 ${conversationId} 消息失败:`, error)
+    }
+  }, [supabase, user])
+
+  // 保存消息到数据库 - 优化版本
   const saveMessage = useCallback(async (message: Omit<ChatMessage, 'id' | 'created_at'>) => {
     if (!user || !currentConversation) { return null }
 
@@ -482,6 +618,19 @@ const IntegratedChat: React.FC = () => {
         .single()
 
       if (error) { throw error }
+
+      // 立即更新缓存
+      if (data && currentConversation.id) {
+        const currentMessages = messageCache.get(currentConversation.id) || []
+        const updatedMessages = [...currentMessages, data]
+        messageCache.set(currentConversation.id, updatedMessages)
+
+        // 如果这是当前对话，也更新状态
+        if (currentConversation.id === data.conversation_id) {
+          setMessages(updatedMessages)
+        }
+      }
+
       return data
     } catch (error) {
       console.error('保存消息失败:', error)
@@ -1064,13 +1213,20 @@ const IntegratedChat: React.FC = () => {
             currentConversation?.id === conv.id
               ? 'bg-blue-50 border border-blue-200'
               : 'bg-gray-50'
-          }`}
+          } ${isSwitchingConversation && currentConversation?.id === conv.id ? 'opacity-75' : ''}`}
         >
           {/* 对话内容区域 */}
           <div
             onClick={() => loadConversation(conv.id)}
             className="cursor-pointer pr-16"
           >
+            {/* 切换中的加载指示器 */}
+            {isSwitchingConversation && currentConversation?.id === conv.id && (
+              <div className="flex items-center space-x-2 mb-1">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                <span className="text-xs text-blue-600">加载中...</span>
+              </div>
+            )}
             {editingConversationId === conv.id
               ? (
                 <div className="flex items-center space-x-2">
