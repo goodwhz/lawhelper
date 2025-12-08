@@ -6,6 +6,7 @@ import Navigation from '@/app/components/navigation'
 import PageAuthGuard from '@/app/components/page-auth-guard'
 import ErrorBoundary from '@/app/components/error-boundary'
 import UserManagement from '@/app/components/admin/UserManagement'
+import ContentManagement from '@/app/components/admin/ContentManagement'
 
 function AdminPage() {
   const { user } = useAuth()
@@ -14,7 +15,7 @@ function AdminPage() {
   const tabs = [
     { id: 'users', label: '用户管理', icon: '👥' },
     { id: 'content', label: '内容管理', icon: '📚' },
-    { id: 'settings', label: '系统设置', icon: '⚙️' }
+    { id: 'settings', label: '系统设置', icon: '⚙️' },
   ]
 
   return (
@@ -22,7 +23,7 @@ function AdminPage() {
       <PageAuthGuard adminOnly={true}>
         <div className="min-h-screen bg-gray-50">
           <Navigation />
-          
+
           <div className="bg-white shadow">
             <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
               <div>
@@ -39,7 +40,7 @@ function AdminPage() {
               {/* Tab导航 */}
               <div className="border-b border-gray-200 mb-6">
                 <nav className="-mb-px flex space-x-8">
-                  {tabs.map((tab) => (
+                  {tabs.map(tab => (
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id as any)}
@@ -69,37 +70,8 @@ function AdminPage() {
                 )}
 
                 {activeTab === 'content' && (
-                  <div className="p-6">
-                    <div className="mb-6">
-                      <h2 className="text-xl font-semibold text-gray-900 mb-2">内容管理</h2>
-                      <p className="text-gray-600">管理法律文档和分类，包括文档的添加、编辑、删除和分类管理。</p>
-                    </div>
-                    
-                    <div className="border-4 border-dashed border-gray-200 rounded-lg p-8 text-center">
-                      <div className="text-6xl mb-4">📚</div>
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">内容管理功能</h3>
-                      <p className="text-gray-600 mb-4">
-                        此功能正在开发中，敬请期待。<br />
-                        将包括：法律文档管理、分类管理、内容审核等功能。
-                      </p>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                          <div className="text-2xl mb-2">📄</div>
-                          <h4 className="font-medium text-gray-900 mb-1">文档管理</h4>
-                          <p className="text-sm text-gray-600">添加、编辑、删除法律文档</p>
-                        </div>
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                          <div className="text-2xl mb-2">🏷️</div>
-                          <h4 className="font-medium text-gray-900 mb-1">分类管理</h4>
-                          <p className="text-sm text-gray-600">管理文档分类和标签</p>
-                        </div>
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                          <div className="text-2xl mb-2">📊</div>
-                          <h4 className="font-medium text-gray-900 mb-1">内容统计</h4>
-                          <p className="text-sm text-gray-600">查看文档访问统计和分析</p>
-                        </div>
-                      </div>
-                    </div>
+                  <div>
+                    <ContentManagement />
                   </div>
                 )}
 
@@ -109,7 +81,7 @@ function AdminPage() {
                       <h2 className="text-xl font-semibold text-gray-900 mb-2">系统设置</h2>
                       <p className="text-gray-600">配置系统参数和选项，包括系统配置、权限设置、日志管理等。</p>
                     </div>
-                    
+
                     <div className="border-4 border-dashed border-gray-200 rounded-lg p-8 text-center">
                       <div className="text-6xl mb-4">⚙️</div>
                       <h3 className="text-lg font-medium text-gray-900 mb-2">系统设置功能</h3>

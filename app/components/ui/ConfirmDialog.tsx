@@ -1,14 +1,9 @@
-'use client'
-
 import React from 'react'
-import { createPortal } from 'react-dom'
 
 interface ConfirmDialogProps {
   isOpen: boolean
   title?: string
   message: string
-  confirmText?: string
-  cancelText?: string
   onConfirm: () => void
   onCancel: () => void
   type?: 'danger' | 'warning' | 'info'
@@ -16,127 +11,88 @@ interface ConfirmDialogProps {
 
 const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   isOpen,
-  title = '确认操作',
+  title,
   message,
-  confirmText = '确认',
-  cancelText = '取消',
   onConfirm,
   onCancel,
-  type = 'danger'
+  type = 'warning',
 }) => {
-  if (!isOpen) return null
+  if (!isOpen) { return null }
 
-  const handleConfirm = () => {
-    onConfirm()
-  }
-
-  const handleCancel = () => {
-    onCancel()
-  }
-
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      onCancel()
+  const getIconAndColors = () => {
+    switch (type) {
+      case 'danger':
+        return {
+          icon: (
+            <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.318 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          ),
+          bgColor: 'bg-red-50',
+          titleColor: 'text-red-900',
+          buttonBgColor: 'bg-red-600 hover:bg-red-700 focus:ring-red-500',
+        }
+      case 'warning':
+        return {
+          icon: (
+            <svg className="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.318 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          ),
+          bgColor: 'bg-yellow-50',
+          titleColor: 'text-yellow-900',
+          buttonBgColor: 'bg-yellow-600 hover:bg-yellow-700 focus:ring-yellow-500',
+        }
+      case 'info':
+      default:
+        return {
+          icon: (
+            <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          ),
+          bgColor: 'bg-blue-50',
+          titleColor: 'text-blue-900',
+          buttonBgColor: 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500',
+        }
     }
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      onCancel()
-    } else if (e.key === 'Enter') {
-      handleConfirm()
-    }
-  }
+  const { icon, bgColor, titleColor, buttonBgColor } = getIconAndColors()
 
-  const typeStyles = {
-    danger: {
-      icon: '⚠️',
-      iconBg: 'bg-red-100',
-      iconColor: 'text-red-600',
-      confirmBg: 'bg-red-600 hover:bg-red-700',
-      confirmText: 'text-white'
-    },
-    warning: {
-      icon: '⚠️',
-      iconBg: 'bg-yellow-100',
-      iconColor: 'text-yellow-600',
-      confirmBg: 'bg-yellow-600 hover:bg-yellow-700',
-      confirmText: 'text-white'
-    },
-    info: {
-      icon: 'ℹ️',
-      iconBg: 'bg-blue-100',
-      iconColor: 'text-blue-600',
-      confirmBg: 'bg-blue-600 hover:bg-blue-700',
-      confirmText: 'text-white'
-    }
-  }
-
-  const currentStyle = typeStyles[type]
-
-  const dialogContent = (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      onKeyDown={handleKeyDown}
-    >
-      {/* 背景遮罩 */}
-      <div 
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-200"
-        onClick={handleBackdropClick}
-      />
-      
-      {/* 对话框主体 */}
-      <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 transform transition-all duration-200 scale-100 opacity-100">
-        {/* 关闭按钮 */}
-        <button
-          onClick={onCancel}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100"
-          aria-label="关闭"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-
-        <div className="p-6">
-          {/* 图标和标题 */}
-          <div className="flex items-center mb-4">
-            <div className={`w-12 h-12 rounded-full ${currentStyle.iconBg} flex items-center justify-center mr-4`}>
-              <span className={`text-xl ${currentStyle.iconColor}`}>{currentStyle.icon}</span>
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+  return (
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+      <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-lg bg-white">
+        <div className="mt-3 text-center">
+          <div className={`mx-auto flex items-center justify-center h-12 w-12 rounded-full ${bgColor}`}>
+            {icon}
           </div>
-
-          {/* 消息内容 */}
-          <p className="text-gray-600 mb-6 leading-relaxed">{message}</p>
-
-          {/* 按钮组 */}
-          <div className="flex gap-3 justify-end">
+          <h3 className={`mt-4 text-lg leading-6 font-medium ${titleColor}`}>
+            {title || '确认操作'}
+          </h3>
+          <div className="mt-2 px-7 py-3">
+            <p className="text-sm text-gray-500">
+              {message}
+            </p>
+          </div>
+          <div className="flex items-center justify-center gap-4 mt-4">
             <button
               onClick={onCancel}
-              className="px-5 py-2.5 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-300"
+              className="px-4 py-2 bg-gray-100 text-gray-700 text-base font-medium rounded-md shadow-sm hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
             >
-              {cancelText}
+              取消
             </button>
             <button
-              onClick={handleConfirm}
-              className={`px-5 py-2.5 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                type === 'danger' 
-                  ? 'bg-red-600 hover:bg-red-700 text-white focus:ring-red-500' 
-                  : type === 'warning'
-                  ? 'bg-yellow-600 hover:bg-yellow-700 text-white focus:ring-yellow-500'
-                  : 'bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500'
-              }`}
+              onClick={onConfirm}
+              className={`px-4 py-2 ${buttonBgColor} text-white text-base font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors`}
             >
-              {confirmText}
+              确认
             </button>
           </div>
         </div>
       </div>
     </div>
   )
-
-  return createPortal(dialogContent, document.body)
 }
 
 export default ConfirmDialog

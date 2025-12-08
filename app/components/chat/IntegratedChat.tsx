@@ -79,7 +79,7 @@ const IntegratedChat: React.FC = () => {
         }
       })
     }
-  }, [isAuthenticated, user])
+  }, [isAuthenticated, user, loadConversations, loadConversation])
 
   // 保存当前对话ID到localStorage
   useEffect(() => {
@@ -89,7 +89,7 @@ const IntegratedChat: React.FC = () => {
   }, [currentConversation, user])
 
   // 优化：当对话更新时，刷新相关缓存
-  const refreshConversationCache = useCallback(async (conversationId: string) => {
+  const _refreshConversationCache = useCallback(async (conversationId: string) => {
     if (!user) { return }
 
     try {
@@ -112,7 +112,27 @@ const IntegratedChat: React.FC = () => {
     } catch (error) {
       console.warn(`刷新对话 ${conversationId} 缓存失败:`, error)
     }
-  }, [user, supabase, currentConversation])
+  }, [user, currentConversation])
+
+  // 预加载对话消息的辅助函数
+  const preloadConversationMessages = useCallback(async (conversationId: string) => {
+    try {
+      if (messageCache.has(conversationId)) { return }
+
+      const { data: msgs, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', conversationId)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: true })
+
+      if (!error && msgs) {
+        messageCache.set(conversationId, msgs)
+      }
+    } catch (error) {
+      console.warn(`预加载对话 ${conversationId} 消息失败:`, error)
+    }
+  }, [user])
 
   // 加载对话列表 - 优化版本
   const loadConversations = useCallback(async () => {
@@ -241,7 +261,7 @@ const IntegratedChat: React.FC = () => {
       setCurrentConversation(null)
       setMessages([])
     }
-  }, [user, isAuthenticated, showToast, setShowWelcome, setCurrentConversation, setMessages, preloadConversationMessages])
+  }, [user, isAuthenticated, setShowWelcome, setCurrentConversation, setMessages, preloadConversationMessages])
 
   // 创建带标题的新对话
   const createNewConversationWithTitle = useCallback(async (title: string, presetQuestion?: string) => {
@@ -299,7 +319,7 @@ const IntegratedChat: React.FC = () => {
       }
       return null
     }
-  }, [user, supabase])
+  }, [user, showToast, sendMessage])
 
   // 创建带标题的新对话
   const createNewConversationWithPreset = useCallback(async (_presetQuestion?: string) => {
@@ -580,27 +600,7 @@ const IntegratedChat: React.FC = () => {
     } finally {
       setIsSwitchingConversation(false)
     }
-  }, [user, supabase, currentConversation, conversations, showToast])
-
-  // 预加载对话消息的辅助函数
-  const preloadConversationMessages = useCallback(async (conversationId: string) => {
-    try {
-      if (messageCache.has(conversationId)) { return }
-
-      const { data: msgs, error } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('conversation_id', conversationId)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: true })
-
-      if (!error && msgs) {
-        messageCache.set(conversationId, msgs)
-      }
-    } catch (error) {
-      console.warn(`预加载对话 ${conversationId} 消息失败:`, error)
-    }
-  }, [supabase, user])
+  }, [user, currentConversation, conversations, showToast, preloadConversationMessages])
 
   // 保存消息到数据库 - 优化版本
   const saveMessage = useCallback(async (message: Omit<ChatMessage, 'id' | 'created_at'>) => {
@@ -636,7 +636,7 @@ const IntegratedChat: React.FC = () => {
       console.error('保存消息失败:', error)
       return null
     }
-  }, [user, currentConversation, supabase])
+  }, [user, currentConversation])
 
   // 删除对话
   const deleteConversation = useCallback(async (conversationId: string) => {
@@ -782,7 +782,7 @@ const IntegratedChat: React.FC = () => {
       const errorMessage = error instanceof Error ? error.message : '删除对话失败'
       throw new Error(errorMessage)
     }
-  }, [user, isAuthenticated, currentConversation])
+  }, [user, isAuthenticated, currentConversation, loadConversations])
 
   // 批量删除所有对话
   const deleteAllConversations = useCallback(async () => {
@@ -897,7 +897,7 @@ const IntegratedChat: React.FC = () => {
       },
       type: 'danger',
     })
-  }, [user, conversations])
+  }, [user, conversations, loadConversations])
 
   // 发送消息
   const sendMessage = useCallback(async (content: string) => {
