@@ -23,7 +23,7 @@ const IntegratedChat: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isStreaming, setIsStreaming] = useState(false)
-  const [isSwitchingConversation, setIsSwitchingConversation] = useState(false)
+  const [isSwitchingConversation, _setIsSwitchingConversation] = useState(false)
   const [editingConversationId, setEditingConversationId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
   const abortControllerRef = useRef<AbortController | null>(null)
@@ -64,75 +64,6 @@ const IntegratedChat: React.FC = () => {
 
   // 欢迎界面状态
   const [showWelcome, setShowWelcome] = useState(false)
-
-  // 初始化时恢复上次对话状态
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      loadConversations().then(() => {
-        // 尝试恢复上次访问的对话
-        const lastConversationId = localStorage.getItem(`lastConversation_${user.id}`)
-        if (lastConversationId) {
-          // 延迟一点加载，确保对话列表已经设置好
-          setTimeout(() => {
-            loadConversation(lastConversationId).catch(console.error)
-          }, 100)
-        }
-      })
-    }
-  }, [isAuthenticated, user, loadConversations, loadConversation])
-
-  // 保存当前对话ID到localStorage
-  useEffect(() => {
-    if (currentConversation?.id && user) {
-      localStorage.setItem(`lastConversation_${user.id}`, currentConversation.id)
-    }
-  }, [currentConversation, user])
-
-  // 优化：当对话更新时，刷新相关缓存
-  const _refreshConversationCache = useCallback(async (conversationId: string) => {
-    if (!user) { return }
-
-    try {
-      // 重新获取对话信息
-      const { data: conversation, error: convError } = await supabase
-        .from('conversations')
-        .select('*')
-        .eq('id', conversationId)
-        .eq('user_id', user.id)
-        .single()
-
-      if (!convError && conversation) {
-        conversationCache.set(conversationId, conversation)
-
-        // 如果是当前对话，更新状态
-        if (currentConversation?.id === conversationId) {
-          setCurrentConversation(conversation)
-        }
-      }
-    } catch (error) {
-      console.warn(`刷新对话 ${conversationId} 缓存失败:`, error)
-    }
-  }, [user, currentConversation])
-
-  // 预加载对话消息的辅助函数
-  const preloadConversationMessages = useCallback(async (conversationId: string) => {
-    try {
-      if (messageCache.has(conversationId)) { return }
-
-      const { data: msgs, error } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('conversation_id', conversationId)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: true })
-
-      if (!error && msgs) {
-        messageCache.set(conversationId, msgs)
-      }
-    } catch (error) {
-      console.warn(`预加载对话 ${conversationId} 消息失败:`, error)
-    }
-  }, [user])
 
   // 加载对话列表 - 优化版本
   const loadConversations = useCallback(async () => {
@@ -178,7 +109,7 @@ const IntegratedChat: React.FC = () => {
         if (error.code === 'PGRST301' || error.code?.includes('permission')) {
           console.error('权限错误: 用户可能没有访问对话的权限')
           // 尝试重新获取用户认证状态
-          const { data: { session } } = await supabase.auth.getSession()
+          const { data: session } = await supabase.auth.getSession()
           console.log('当前session状态:', !!session)
           if (!session) {
             console.error('用户未登录，需要重新认证')
@@ -197,142 +128,140 @@ const IntegratedChat: React.FC = () => {
 
       const convs = data || []
       console.log('成功加载对话列表，数量:', convs.length)
-
-      // 更新对话缓存
-      convs.forEach((conv) => {
-        if (conv.id) {
-          conversationCache.set(conv.id, conv)
-        }
-      })
-
-      // 详细检查每个对话的数据完整性
-      convs.forEach((conv, index) => {
-        console.log(`对话 ${index + 1}:`, {
-          id: conv.id,
-          title: conv.title,
-          user_id: conv.user_id,
-          hasId: !!conv.id,
-          idType: typeof conv.id,
-          idString: JSON.stringify(conv.id),
-        })
-
-        if (!conv.id) {
-          console.error(`对话 ${index + 1} 缺少ID字段，完整数据:`, conv)
-        }
-      })
-
       setConversations(convs)
 
-      // 总是显示欢迎界面，不自动加载对话
-      console.log('对话列表加载完成，数量:', convs.length)
-      setShowWelcome(true)
-      setCurrentConversation(null)
-      setMessages([])
-
-      // 预加载前几个对话的消息以提升后续切换体验
-      const conversationsToPreload = convs.slice(0, 3) // 预加载前3个对话
-      const preloadPromises = conversationsToPreload
-        .filter(conv => conv.id && !messageCache.has(conv.id))
-        .map(conv => preloadConversationMessages(conv.id!))
-
-      // 异步预加载，不阻塞当前操作
-      Promise.allSettled(preloadPromises).catch(console.error)
-    } catch (error) {
-      console.error('加载对话失败 - 完整错误信息:', error)
-      if (error instanceof Error) {
-        console.error('错误名称:', error.name)
-        console.error('错误消息:', error.message)
-        console.error('错误堆栈:', error.stack)
+      // 如果没有对话，显示欢迎界面
+      if (convs.length === 0) {
+        setShowWelcome(true)
+        setCurrentConversation(null)
+        setMessages([])
       } else {
-        console.error('非标准错误对象:', typeof error, error)
+        setShowWelcome(false)
       }
-
-      // 检查是否是认证问题
-      if (error instanceof Error && error.message.includes('重新登录')) {
-        // 认证问题，不设置任何状态，让用户重新登录
-        console.error('用户需要重新登录')
-        return
-      }
-
-      // 其他错误，设置空对话列表作为回退
-      console.warn('设置空对话列表，避免应用崩溃')
+    } catch (error) {
+      console.error('加载对话列表时发生错误:', error)
       setConversations([])
       setShowWelcome(true)
       setCurrentConversation(null)
       setMessages([])
     }
-  }, [user, isAuthenticated, setShowWelcome, setCurrentConversation, setMessages, preloadConversationMessages])
+  }, [user, isAuthenticated])
 
-  // 创建带标题的新对话
-  const createNewConversationWithTitle = useCallback(async (title: string, presetQuestion?: string) => {
-    if (!user) {
-      console.error('创建对话失败: 用户不存在')
-      return null
+  // 加载特定对话的消息
+  const loadConversation = useCallback(async (conversationId: string) => {
+    if (!user || !conversationId) {
+      console.error('加载对话失败: 用户或对话ID不存在', { user: !!user, conversationId })
+      return
     }
 
+    setIsLoading(true)
     try {
-      const conversationData = {
-        user_id: user.id,
-        title: title.length > 50 ? `${title.slice(0, 50)}...` : title,
-        status: 'active',
+      // 先从缓存中查找
+      if (messageCache.has(conversationId)) {
+        const cachedMessages = messageCache.get(conversationId)!
+        setMessages(cachedMessages)
+        console.log('从缓存加载消息:', cachedMessages.length, '条')
+      } else {
+        // 从数据库加载
+        const { data: msgs, error } = await supabase
+          .from('messages')
+          .select('*')
+          .eq('conversation_id', conversationId)
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: true })
+
+        if (error) {
+          console.error('加载消息失败:', error)
+          throw error
+        }
+
+        const messages = msgs || []
+        console.log('从数据库加载消息:', messages.length, '条')
+        messageCache.set(conversationId, messages)
+        setMessages(messages)
       }
 
-      console.log('正在创建对话，数据:', conversationData)
-
-      const { data, error } = await supabase
+      // 设置当前对话
+      const { data: conversation, error: convError } = await supabase
         .from('conversations')
-        .insert([conversationData])
+        .select('*')
+        .eq('id', conversationId)
+        .eq('user_id', user.id)
+        .single()
+
+      if (convError) {
+        console.error('获取对话信息失败:', convError)
+        throw convError
+      }
+
+      setCurrentConversation(conversation)
+      setShowWelcome(false)
+    } catch (error) {
+      console.error('加载对话时发生错误:', error)
+      showToast('加载对话失败，请重试', 'error')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [user, showToast])
+
+  // 初始化时恢复上次对话状态
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      loadConversations().then(() => {
+        // 尝试恢复上次访问的对话
+        const lastConversationId = localStorage.getItem(`lastConversation_${user.id}`)
+        if (lastConversationId) {
+          // 延迟一点加载，确保对话列表已经设置好
+          setTimeout(() => {
+            loadConversation(lastConversationId).catch(console.error)
+          }, 100)
+        }
+      })
+    }
+  }, [isAuthenticated, user, loadConversations, loadConversation])
+
+  // 保存当前对话ID到localStorage
+  useEffect(() => {
+    if (currentConversation?.id && user) {
+      localStorage.setItem(`lastConversation_${user.id}`, currentConversation.id)
+    }
+  }, [currentConversation, user])
+
+  // 保存消息到数据库 - 优化版本
+  const saveMessage = useCallback(async (message: Omit<ChatMessage, 'id' | 'created_at'>) => {
+    if (!user || !currentConversation) { return null }
+
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .insert({
+          ...message,
+          conversation_id: currentConversation.id,
+          user_id: user.id,
+        })
         .select()
         .single()
 
-      if (error) {
-        console.error('创建对话失败:', error)
-        showToast('创建对话失败', 'error')
-        return null
-      }
+      if (error) { throw error }
 
-      console.log('对话创建成功:', data)
+      // 立即更新缓存
+      if (data && currentConversation.id) {
+        const currentMessages = messageCache.get(currentConversation.id) || []
+        const updatedMessages = [...currentMessages, data]
+        messageCache.set(currentConversation.id, updatedMessages)
 
-      // 设置为当前对话
-      setCurrentConversation(data)
-      setMessages([])
-      setShowWelcome(false)
-
-      // 不再重新加载对话列表，避免干扰当前对话
-
-      // 如果有预设问题，发送消息
-      if (presetQuestion) {
-        setTimeout(() => {
-          sendMessage(presetQuestion)
-        }, 500)
+        // 如果这是当前对话，也更新状态
+        if (currentConversation.id === data.conversation_id) {
+          setMessages(updatedMessages)
+        }
       }
 
       return data
     } catch (error) {
-      console.error('创建对话失败 - 完整错误信息:', error)
-      if (error instanceof Error) {
-        console.error('错误名称:', error.name)
-        console.error('错误消息:', error.message)
-        console.error('错误堆栈:', error.stack)
-      } else {
-        console.error('非标准错误对象:', typeof error, error)
-      }
+      console.error('保存消息失败:', error)
       return null
     }
-  }, [user, showToast, sendMessage])
-
-  // 创建带标题的新对话
-  const createNewConversationWithPreset = useCallback(async (_presetQuestion?: string) => {
-    const title = _presetQuestion && typeof _presetQuestion === 'string'
-      ? _presetQuestion.substring(0, 50) + (_presetQuestion.length > 50 ? '...' : '')
-      : '新对话'
-    return await createNewConversationWithTitle(title, _presetQuestion)
-  }, [createNewConversationWithTitle])
-
-  // 创建新对话
-  const createNewConversation = useCallback(async () => {
-    return await createNewConversationWithTitle('新对话')
-  }, [createNewConversationWithTitle])
+  }, [user, currentConversation])
 
   // 更新对话标题
   const updateConversationTitle = useCallback(async (conversationId: string, newTitle: string) => {
@@ -448,34 +377,437 @@ const IntegratedChat: React.FC = () => {
         throw new Error(errorMessage)
       }
 
-      const result = await response.json()
+      // 安全解析成功响应
+      let result
+      try {
+        const responseText = await response.text()
+        console.log('成功响应内容:', responseText)
+        result = responseText ? JSON.parse(responseText) : { success: true }
+      } catch (parseError) {
+        console.error('解析成功响应失败:', parseError)
+        result = { success: true, message: '更新成功' }
+      }
+
       console.log('对话标题更新成功:', result)
 
       // 更新本地状态
-      setConversations(prev =>
-        prev.map(conv =>
-          conv.id === conversationId
-            ? { ...conv, title: result.title || titleToSave, updated_at: result.updated_at || new Date().toISOString() }
-            : conv,
-        ),
-      )
+      setConversations(prev => prev.map(conv =>
+        conv.id === conversationId
+          ? { ...conv, title: titleToSave, updated_at: new Date().toISOString() }
+          : conv,
+      ))
 
       // 如果是当前对话，也更新当前对话状态
       if (currentConversation?.id === conversationId) {
-        setCurrentConversation(prev =>
-          prev ? { ...prev, title: result.title || titleToSave, updated_at: result.updated_at || new Date().toISOString() } : null,
-        )
+        setCurrentConversation(prev => prev ? { ...prev, title: titleToSave } : null)
       }
 
-      setEditingConversationId(null)
-      setEditingTitle('')
+      showToast('对话标题已更新', 'success')
     } catch (error) {
       console.error('更新对话标题失败:', error)
       const errorMessage = error instanceof Error ? error.message : '更新对话标题失败'
-      // 不显示弹窗，只记录错误
-      console.error('标题更新错误详情:', errorMessage)
+      showToast(`更新失败: ${errorMessage}`, 'error')
     }
-  }, [user, currentConversation, setConversations, setCurrentConversation, setEditingConversationId, setEditingTitle])
+  }, [user, currentConversation, showToast])
+
+  // 优化：当对话更新时，刷新相关缓存
+  const _refreshConversationCache = useCallback(async (conversationId: string) => {
+    if (!user) { return }
+
+    try {
+      // 重新获取对话信息
+      const { data: conversation, error: convError } = await supabase
+        .from('conversations')
+        .select('*')
+        .eq('id', conversationId)
+        .eq('user_id', user.id)
+        .single()
+
+      if (!convError && conversation) {
+        conversationCache.set(conversationId, conversation)
+
+        // 如果是当前对话，更新状态
+        if (currentConversation?.id === conversationId) {
+          setCurrentConversation(conversation)
+        }
+      }
+    } catch (error) {
+      console.warn(`刷新对话 ${conversationId} 缓存失败:`, error)
+    }
+  }, [user, currentConversation])
+
+  // 发送消息
+  const sendMessage = useCallback(async (content: string) => {
+    if (!content.trim() || isLoading || !user) {
+      showToast('请先登录', 'warning')
+      return
+    }
+
+    // 如果没有当前对话，创建一个新对话
+    let targetConversation = currentConversation
+    if (!targetConversation) {
+      // 直接创建对话，避免循环依赖
+      if (!user) {
+        showToast('请先登录', 'warning')
+        return
+      }
+
+      try {
+        const conversationData = {
+          user_id: user.id,
+          title: content.trim().length > 50 ? `${content.trim().slice(0, 50)}...` : content.trim(),
+          status: 'active',
+        }
+
+        const { data, error } = await supabase
+          .from('conversations')
+          .insert([conversationData])
+          .select()
+          .single()
+
+        if (error || !data) {
+          console.error('创建对话失败:', error)
+          showToast('创建对话失败', 'error')
+          return
+        }
+
+        targetConversation = data
+        setCurrentConversation(data)
+        setMessages([])
+        setShowWelcome(false)
+
+        console.log('新创建的对话:', targetConversation)
+        console.log('新对话ID:', targetConversation.id)
+        console.log('新对话ID类型:', typeof targetConversation.id)
+      } catch (error) {
+        console.error('创建对话失败:', error)
+        showToast('创建对话失败', 'error')
+        return
+      }
+    }
+
+    // 如果当前对话标题是默认的"新对话"，自动更新为用户的问题
+    if (targetConversation.title === '新对话') {
+      console.log('准备更新对话标题，对话ID:', targetConversation.id)
+      await updateConversationTitle(targetConversation.id, content.trim())
+      // 本地更新对话标题，不重新加载整个列表
+      const newTitle = content.trim().length > 50 ? `${content.trim().substring(0, 50)}...` : content.trim()
+      setCurrentConversation(prev => prev ? { ...prev, title: newTitle } : null)
+      setConversations(prev => prev.map(conv =>
+        conv.id === targetConversation.id
+          ? { ...conv, title: newTitle, updated_at: new Date().toISOString() }
+          : conv,
+      ))
+    }
+
+    setIsLoading(true)
+    setIsStreaming(true)
+
+    // 声明临时消息变量，确保在整个函数范围内可访问
+    let tempAiMessage: ChatMessage | null = null
+
+    try {
+      // 保存用户消息
+      const userMessage: Omit<ChatMessage, 'id' | 'created_at'> = {
+        content: content.trim(),
+        role: 'user',
+      }
+
+      const savedUserMessage = await saveMessage(userMessage)
+      if (savedUserMessage) {
+        setMessages(prev => [...prev, savedUserMessage])
+      }
+
+      // 创建临时的AI消息用于流式显示
+      tempAiMessage = {
+        id: `temp-${Date.now()}`,
+        content: '',
+        role: 'assistant',
+        created_at: new Date().toISOString(),
+        loading: true,
+      }
+
+      setMessages(prev => [...prev, tempAiMessage])
+
+      // 调用Dify API进行流式聊天
+      const response = await fetch('/api/dify/chat-stream', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: content.trim(),
+          conversation_id: targetConversation.dify_conversation_id,
+          user_id: user.id,
+        }),
+      })
+
+      if (!response.ok) {
+        // 尝试获取详细的错误信息
+        let errorMessage = `API调用失败: ${response.status}`
+        try {
+          const errorText = await response.text()
+          console.error('API错误响应:', errorText)
+          if (errorText) {
+            try {
+              const errorData = JSON.parse(errorText)
+              errorMessage += ` - ${errorData.error || errorData.message || errorData.details || '未知错误'}`
+            } catch {
+              errorMessage += ` - ${errorText.substring(0, 200)}`
+            }
+          }
+        } catch (e) {
+          console.error('获取错误信息失败:', e)
+        }
+        throw new Error(errorMessage)
+      }
+
+      // 处理流式响应
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+      let aiResponse = ''
+      let conversationId = ''
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read()
+
+          if (done) {
+            console.log('流读取完成，退出循环')
+            break
+          }
+
+          const chunk = decoder.decode(value, { stream: true })
+          const lines = chunk.split('\n')
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6)
+
+              if (data === '[DONE]') {
+                // 流结束
+                console.log('收到[DONE]标记，设置loading为false')
+
+                // 确保临时消息被更新
+                if (tempAiMessage) {
+                  setMessages((prev) => {
+                    const updated = prev.map(msg =>
+                      msg.id === tempAiMessage.id
+                        ? { ...msg, loading: false }
+                        : msg,
+                    )
+                    console.log('流结束时更新消息，加载中的消息数量:', updated.filter(m => m.loading).length)
+                    return updated
+                  })
+                  // 立即清除临时消息引用，防止后续引用
+                  tempAiMessage = null
+                }
+                break
+              }
+
+              try {
+                const parsed = JSON.parse(data)
+
+                if (parsed.answer) {
+                  aiResponse += parsed.answer
+
+                  // 更新临时消息的内容
+                  setMessages(prev => prev.map(msg =>
+                    msg.id === tempAiMessage?.id
+                      ? { ...msg, content: aiResponse }
+                      : msg,
+                  ))
+                }
+
+                if (parsed.conversation_id) { conversationId = parsed.conversation_id }
+              } catch (e) {
+                console.error('解析流式数据失败:', e)
+              }
+            }
+          }
+        }
+      }
+
+      // 如果流已经结束但消息仍然处于加载状态，强制更新
+      if (tempAiMessage && tempAiMessage.loading) {
+        console.log('流结束后强制重置消息加载状态')
+        setMessages(prev => prev.map(msg =>
+          msg.id === tempAiMessage?.id
+            ? { ...msg, loading: false }
+            : msg,
+        ))
+      }
+
+      // 保存AI响应到数据库
+      console.log('AI响应长度:', aiResponse.trim().length)
+      console.log('临时消息ID:', tempAiMessage?.id)
+
+      if (aiResponse.trim()) {
+        const aiMessage: Omit<ChatMessage, 'id' | 'created_at'> = {
+          content: aiResponse.trim(),
+          role: 'assistant',
+        }
+
+        const savedAiMessage = await saveMessage(aiMessage)
+        if (savedAiMessage) {
+          console.log('消息已保存，ID:', savedAiMessage.id)
+          // 替换临时消息为保存的消息
+          setMessages((prev) => {
+            const updated = prev.map(msg =>
+              msg.id === tempAiMessage?.id ? savedAiMessage : msg,
+            )
+            console.log('消息列表更新，加载中的消息数量:', updated.filter(m => m.loading).length)
+            return updated
+          })
+
+          tempAiMessage = null
+        }
+      } else {
+        // 如果没有响应内容，也要清除临时消息
+        console.log('AI响应为空，清除临时消息')
+        if (tempAiMessage) {
+          setMessages(prev => prev.filter(msg => msg.id !== tempAiMessage.id))
+          tempAiMessage = null
+        }
+      }
+
+      // 如果有新的Dify对话ID，更新对话记录
+      if (conversationId && conversationId !== targetConversation.dify_conversation_id) {
+        await supabase
+          .from('conversations')
+          .update({ dify_conversation_id: conversationId })
+          .eq('id', targetConversation.id)
+
+        // 更新当前对话状态
+        setCurrentConversation(prev => prev
+          ? {
+            ...prev,
+            dify_conversation_id: conversationId,
+          }
+          : null)
+      }
+
+      // 只更新当前对话的时间戳，不重新加载整个对话列表
+      if (currentConversation) {
+        setCurrentConversation(prev => prev
+          ? {
+            ...prev,
+            updated_at: new Date().toISOString(),
+          }
+          : null)
+
+        // 更新对话列表中的时间戳
+        setConversations(prev => prev.map(conv =>
+          conv.id === currentConversation.id
+            ? { ...conv, updated_at: new Date().toISOString() }
+            : conv,
+        ))
+      }
+    } catch (error) {
+      console.error('发送消息失败:', error)
+      showToast('发送消息失败，请重试', 'error')
+
+      // 移除临时消息
+      setMessages(prev => prev.filter(msg => !msg.id.startsWith('temp-')))
+    } finally {
+      // 确保所有临时消息都被清除
+      if (tempAiMessage) {
+        console.log('finally块中清除临时消息:', tempAiMessage.id)
+        setMessages((prev) => {
+          const filtered = prev.filter(msg => msg.id !== tempAiMessage.id)
+          console.log('清除临时消息后的消息列表长度:', filtered.length)
+          return filtered
+        })
+      }
+
+      // 确保加载状态被重置
+      console.log('finally块中重置加载状态')
+      setIsLoading(false)
+      setIsStreaming(false)
+
+      // 确保没有消息处于加载状态
+      setMessages((prev) => {
+        const updated = prev.map(msg =>
+          msg.loading ? { ...msg, loading: false } : msg,
+        )
+        if (prev.some(m => m.loading) && !updated.some(m => m.loading)) {
+          console.log('在finally块中清除了所有加载状态')
+        }
+        return updated
+      })
+    }
+  }, [user, currentConversation, isLoading, saveMessage, updateConversationTitle, showToast])
+
+  // 创建带标题的新对话
+  const createNewConversationWithTitle = useCallback(async (title: string, presetQuestion?: string) => {
+    if (!user) {
+      console.error('创建对话失败: 用户不存在')
+      return null
+    }
+
+    try {
+      const conversationData = {
+        user_id: user.id,
+        title: title.length > 50 ? `${title.slice(0, 50)}...` : title,
+        status: 'active',
+      }
+
+      console.log('正在创建对话，数据:', conversationData)
+
+      const { data, error } = await supabase
+        .from('conversations')
+        .insert([conversationData])
+        .select()
+        .single()
+
+      if (error) {
+        console.error('创建对话失败:', error)
+        showToast('创建对话失败', 'error')
+        return null
+      }
+
+      console.log('对话创建成功:', data)
+
+      // 设置为当前对话
+      setCurrentConversation(data)
+      setMessages([])
+      setShowWelcome(false)
+
+      // 不再重新加载对话列表，避免干扰当前对话
+
+      // 如果有预设问题，发送消息
+      if (presetQuestion) {
+        setTimeout(() => {
+          sendMessage(presetQuestion)
+        }, 500)
+      }
+
+      return data
+    } catch (error) {
+      console.error('创建对话失败 - 完整错误信息:', error)
+      if (error instanceof Error) {
+        console.error('错误名称:', error.name)
+        console.error('错误消息:', error.message)
+        console.error('错误堆栈:', error.stack)
+      } else {
+        console.error('非标准错误对象:', typeof error, error)
+      }
+      return null
+    }
+  }, [user, showToast, sendMessage])
+
+  // 创建带标题的新对话
+  const createNewConversationWithPreset = useCallback(async (_presetQuestion?: string) => {
+    const title = _presetQuestion && typeof _presetQuestion === 'string'
+      ? _presetQuestion.substring(0, 50) + (_presetQuestion.length > 50 ? '...' : '')
+      : '新对话'
+    return await createNewConversationWithTitle(title, _presetQuestion)
+  }, [createNewConversationWithTitle])
+
+  // 创建新对话
+  const createNewConversation = useCallback(async () => {
+    return await createNewConversationWithTitle('新对话')
+  }, [createNewConversationWithTitle])
 
   // 开始编辑对话标题
   const startEditingTitle = (conversationId: string, currentTitle: string) => {
@@ -497,146 +829,6 @@ const IntegratedChat: React.FC = () => {
       cancelEditing()
     }
   }
-
-  // 加载特定对话 - 优化版本
-  const loadConversation = useCallback(async (conversationId: string) => {
-    if (!user) { return }
-
-    // 如果正在加载同一个对话，直接返回
-    if (currentConversation?.id === conversationId) {
-      return
-    }
-
-    setIsSwitchingConversation(true)
-
-    try {
-      // 首先检查缓存
-      const cachedConversation = conversationCache.get(conversationId)
-      const cachedMessages = messageCache.get(conversationId)
-
-      // 立即设置缓存的对话和消息（如果有），提供即时反馈
-      if (cachedConversation) {
-        setCurrentConversation(cachedConversation)
-      }
-      if (cachedMessages) {
-        setMessages(cachedMessages)
-      }
-      setShowWelcome(false)
-
-      // 并行获取对话信息和消息（如果缓存中没有）
-      const [conversationPromise, messagesPromise] = [
-        cachedConversation
-          ? Promise.resolve(cachedConversation)
-          : supabase
-            .from('conversations')
-            .select('*')
-            .eq('id', conversationId)
-            .eq('user_id', user.id)
-            .single(),
-        cachedMessages
-          ? Promise.resolve(cachedMessages)
-          : supabase
-            .from('messages')
-            .select('*')
-            .eq('conversation_id', conversationId)
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: true }),
-      ]
-
-      const [conversationResult, messagesResult] = await Promise.allSettled([
-        conversationPromise,
-        messagesPromise,
-      ])
-
-      // 处理对话信息
-      if (conversationResult.status === 'fulfilled' && !cachedConversation) {
-        const conversation = conversationResult.value.data
-        if (conversation) {
-          conversationCache.set(conversationId, conversation)
-          setCurrentConversation(conversation)
-        }
-      } else if (conversationResult.status === 'rejected') {
-        throw conversationResult.reason
-      }
-
-      // 处理消息
-      if (messagesResult.status === 'fulfilled' && !cachedMessages) {
-        const msgs = messagesResult.value.data || []
-        messageCache.set(conversationId, msgs)
-        setMessages(msgs)
-      } else if (messagesResult.status === 'rejected') {
-        throw messagesResult.reason
-      }
-
-      // 预加载相邻对话的消息
-      const currentIndex = conversations.findIndex(conv => conv.id === conversationId)
-      if (currentIndex >= 0) {
-        const prevIndex = currentIndex > 0 ? currentIndex - 1 : -1
-        const nextIndex = currentIndex < conversations.length - 1 ? currentIndex + 1 : -1
-
-        // 预加载前一个和后一个对话
-        const preloadPromises: Promise<void>[] = []
-
-        if (prevIndex >= 0 && !messageCache.has(conversations[prevIndex].id)) {
-          preloadPromises.push(preloadConversationMessages(conversations[prevIndex].id))
-        }
-        if (nextIndex >= 0 && !messageCache.has(conversations[nextIndex].id)) {
-          preloadPromises.push(preloadConversationMessages(conversations[nextIndex].id))
-        }
-
-        // 异步预加载，不阻塞当前操作
-        Promise.allSettled(preloadPromises).catch(console.error)
-      }
-
-      // 滚动到底部
-      setTimeout(() => {
-        if (messageAreaRef.current) {
-          messageAreaRef.current.scrollTop = messageAreaRef.current.scrollHeight
-        }
-      }, 50)
-    } catch (error) {
-      console.error('加载对话失败:', error)
-      showToast('加载对话失败，请重试', 'error')
-    } finally {
-      setIsSwitchingConversation(false)
-    }
-  }, [user, currentConversation, conversations, showToast, preloadConversationMessages])
-
-  // 保存消息到数据库 - 优化版本
-  const saveMessage = useCallback(async (message: Omit<ChatMessage, 'id' | 'created_at'>) => {
-    if (!user || !currentConversation) { return null }
-
-    try {
-      const { data, error } = await supabase
-        .from('messages')
-        .insert({
-          ...message,
-          conversation_id: currentConversation.id,
-          user_id: user.id,
-        })
-        .select()
-        .single()
-
-      if (error) { throw error }
-
-      // 立即更新缓存
-      if (data && currentConversation.id) {
-        const currentMessages = messageCache.get(currentConversation.id) || []
-        const updatedMessages = [...currentMessages, data]
-        messageCache.set(currentConversation.id, updatedMessages)
-
-        // 如果这是当前对话，也更新状态
-        if (currentConversation.id === data.conversation_id) {
-          setMessages(updatedMessages)
-        }
-      }
-
-      return data
-    } catch (error) {
-      console.error('保存消息失败:', error)
-      return null
-    }
-  }, [user, currentConversation])
 
   // 删除对话
   const deleteConversation = useCallback(async (conversationId: string) => {
@@ -898,279 +1090,6 @@ const IntegratedChat: React.FC = () => {
       type: 'danger',
     })
   }, [user, conversations, loadConversations])
-
-  // 发送消息
-  const sendMessage = useCallback(async (content: string) => {
-    if (!content.trim() || isLoading || !user) {
-      showToast('请先登录', 'warning')
-      return
-    }
-
-    // 如果没有当前对话，创建一个新对话
-    let targetConversation = currentConversation
-    if (!targetConversation) {
-      targetConversation = await createNewConversationWithTitle(content.trim())
-      if (!targetConversation) {
-        showToast('创建对话失败', 'error')
-        return
-      }
-
-      console.log('新创建的对话:', targetConversation)
-      console.log('新对话ID:', targetConversation.id)
-      console.log('新对话ID类型:', typeof targetConversation.id)
-    }
-
-    // 如果当前对话标题是默认的"新对话"，自动更新为用户的问题
-    if (targetConversation.title === '新对话') {
-      console.log('准备更新对话标题，对话ID:', targetConversation.id)
-      await updateConversationTitle(targetConversation.id, content.trim())
-      // 本地更新对话标题，不重新加载整个列表
-      const newTitle = content.trim().length > 50 ? `${content.trim().substring(0, 50)}...` : content.trim()
-      setCurrentConversation(prev => prev ? { ...prev, title: newTitle } : null)
-      setConversations(prev => prev.map(conv =>
-        conv.id === targetConversation.id
-          ? { ...conv, title: newTitle, updated_at: new Date().toISOString() }
-          : conv,
-      ))
-    }
-
-    setIsLoading(true)
-    setIsStreaming(true)
-
-    // 声明临时消息变量，确保在整个函数范围内可访问
-    let tempAiMessage: ChatMessage | null = null
-
-    try {
-      // 保存用户消息
-      const userMessage: Omit<ChatMessage, 'id' | 'created_at'> = {
-        content: content.trim(),
-        role: 'user',
-      }
-
-      const savedUserMessage = await saveMessage(userMessage)
-      if (savedUserMessage) {
-        setMessages(prev => [...prev, savedUserMessage])
-      }
-
-      // 创建临时的AI消息用于流式显示
-      tempAiMessage = {
-        id: `temp-${Date.now()}`,
-        content: '',
-        role: 'assistant',
-        created_at: new Date().toISOString(),
-        loading: true,
-      }
-
-      setMessages(prev => [...prev, tempAiMessage])
-
-      // 调用Dify API进行流式聊天
-      const response = await fetch('/api/dify/chat-stream', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: content.trim(),
-          conversation_id: targetConversation.dify_conversation_id,
-          user_id: user.id,
-        }),
-      })
-
-      if (!response.ok) {
-        // 尝试获取详细的错误信息
-        let errorMessage = `API调用失败: ${response.status}`
-        try {
-          const errorText = await response.text()
-          console.error('API错误响应:', errorText)
-          if (errorText) {
-            try {
-              const errorData = JSON.parse(errorText)
-              errorMessage += ` - ${errorData.error || errorData.message || errorData.details || '未知错误'}`
-            } catch {
-              errorMessage += ` - ${errorText.substring(0, 200)}`
-            }
-          }
-        } catch (e) {
-          console.error('获取错误信息失败:', e)
-        }
-        throw new Error(errorMessage)
-      }
-
-      // 处理流式响应
-      const reader = response.body?.getReader()
-      const decoder = new TextDecoder()
-      let aiResponse = ''
-      let conversationId = ''
-
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read()
-
-          if (done) {
-            console.log('流读取完成，退出循环')
-            break
-          }
-
-          const chunk = decoder.decode(value, { stream: true })
-          const lines = chunk.split('\n')
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = line.slice(6)
-
-              if (data === '[DONE]') {
-                // 流结束
-                console.log('收到[DONE]标记，设置loading为false')
-
-                // 确保临时消息被更新
-                if (tempAiMessage) {
-                  setMessages((prev) => {
-                    const updated = prev.map(msg =>
-                      msg.id === tempAiMessage.id
-                        ? { ...msg, loading: false }
-                        : msg,
-                    )
-                    console.log('流结束时更新消息，加载中的消息数量:', updated.filter(m => m.loading).length)
-                    return updated
-                  })
-                  // 立即清除临时消息引用，防止后续引用
-                  tempAiMessage = null
-                }
-                break
-              }
-
-              try {
-                const parsed = JSON.parse(data)
-
-                if (parsed.answer) {
-                  aiResponse += parsed.answer
-
-                  // 更新临时消息的内容
-                  setMessages(prev => prev.map(msg =>
-                    msg.id === tempAiMessage?.id
-                      ? { ...msg, content: aiResponse }
-                      : msg,
-                  ))
-                }
-
-                if (parsed.conversation_id) { conversationId = parsed.conversation_id }
-              } catch (e) {
-                console.error('解析流式数据失败:', e)
-              }
-            }
-          }
-        }
-      }
-
-      // 如果流已经结束但消息仍然处于加载状态，强制更新
-      if (tempAiMessage && tempAiMessage.loading) {
-        console.log('流结束后强制重置消息加载状态')
-        setMessages(prev => prev.map(msg =>
-          msg.id === tempAiMessage?.id
-            ? { ...msg, loading: false }
-            : msg,
-        ))
-      }
-
-      // 保存AI响应到数据库
-      console.log('AI响应长度:', aiResponse.trim().length)
-      console.log('临时消息ID:', tempAiMessage?.id)
-
-      if (aiResponse.trim()) {
-        const aiMessage: Omit<ChatMessage, 'id' | 'created_at'> = {
-          content: aiResponse.trim(),
-          role: 'assistant',
-        }
-
-        const savedAiMessage = await saveMessage(aiMessage)
-        if (savedAiMessage) {
-          console.log('消息已保存，ID:', savedAiMessage.id)
-          // 替换临时消息为保存的消息
-          setMessages((prev) => {
-            const updated = prev.map(msg =>
-              msg.id === tempAiMessage?.id ? savedAiMessage : msg,
-            )
-            console.log('消息列表更新，加载中的消息数量:', updated.filter(m => m.loading).length)
-            return updated
-          })
-
-          tempAiMessage = null
-        }
-      } else {
-        // 如果没有响应内容，也要清除临时消息
-        console.log('AI响应为空，清除临时消息')
-        if (tempAiMessage) {
-          setMessages(prev => prev.filter(msg => msg.id !== tempAiMessage.id))
-          tempAiMessage = null
-        }
-      }
-
-      // 如果有新的Dify对话ID，更新对话记录
-      if (conversationId && conversationId !== targetConversation.dify_conversation_id) {
-        await supabase
-          .from('conversations')
-          .update({ dify_conversation_id: conversationId })
-          .eq('id', targetConversation.id)
-
-        // 更新当前对话状态
-        setCurrentConversation(prev => prev
-          ? {
-            ...prev,
-            dify_conversation_id: conversationId,
-          }
-          : null)
-      }
-
-      // 只更新当前对话的时间戳，不重新加载整个对话列表
-      if (currentConversation) {
-        setCurrentConversation(prev => prev
-          ? {
-            ...prev,
-            updated_at: new Date().toISOString(),
-          }
-          : null)
-
-        // 更新对话列表中的时间戳
-        setConversations(prev => prev.map(conv =>
-          conv.id === currentConversation.id
-            ? { ...conv, updated_at: new Date().toISOString() }
-            : conv,
-        ))
-      }
-    } catch (error) {
-      console.error('发送消息失败:', error)
-      showToast('发送消息失败，请重试', 'error')
-
-      // 移除临时消息
-      setMessages(prev => prev.filter(msg => !msg.id.startsWith('temp-')))
-    } finally {
-      // 确保所有临时消息都被清除
-      if (tempAiMessage) {
-        console.log('finally块中清除临时消息:', tempAiMessage.id)
-        setMessages((prev) => {
-          const filtered = prev.filter(msg => msg.id !== tempAiMessage.id)
-          console.log('清除临时消息后的消息列表长度:', filtered.length)
-          return filtered
-        })
-      }
-
-      // 确保加载状态被重置
-      console.log('finally块中重置加载状态')
-      setIsLoading(false)
-      setIsStreaming(false)
-
-      // 确保没有消息处于加载状态
-      setMessages((prev) => {
-        const updated = prev.map(msg =>
-          msg.loading ? { ...msg, loading: false } : msg,
-        )
-        if (prev.some(m => m.loading) && !updated.some(m => m.loading)) {
-          console.log('在finally块中清除了所有加载状态')
-        }
-        return updated
-      })
-    }
-  }, [user, currentConversation, isLoading, saveMessage, createNewConversationWithTitle, updateConversationTitle, showToast])
 
   // 停止生成
   const stopStreaming = useCallback(() => {
