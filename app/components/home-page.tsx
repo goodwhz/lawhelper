@@ -80,6 +80,14 @@ const HomePage: FC = () => {
       color: 'from-law-blue-500 to-law-blue-600',
       features: ['法律法规查询', '案例参考', '法律条文解读'],
     },
+    {
+      title: '争议解决中心',
+      description: '专业争议处理',
+      icon: '⚖️',
+      href: '/dispute-center',
+      color: 'from-green-500 to-green-600',
+      features: ['劳动争议解决', '人事争议处理', '风险评估', '专业指导'],
+    },
   ]
 
   // 详细功能介绍
@@ -123,6 +131,16 @@ const HomePage: FC = () => {
       benefits: ['海量法律条文', '实时更新维护', '智能搜索功能', '案例参考分析'],
       buttonText: '探索知识库',
       image: '/knowledge-preview.jpg',
+    },
+    {
+      title: '争议解决中心',
+      description: '专业的劳动争议和人事争议解决平台，提供个性化法律解决方案',
+      icon: '⚖️',
+      href: '/dispute-center',
+      color: 'law-green',
+      benefits: ['智能争议分析', '风险评估预警', '多路径解决方案', '85%调解成功率'],
+      buttonText: '进入争议中心',
+      image: '/dispute-preview.jpg',
     },
   ]
 
@@ -225,11 +243,11 @@ const HomePage: FC = () => {
         <div className="text-center mb-12">
           <h2 className="text-4xl font-bold text-law-red-800 mb-4">核心功能</h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            四大核心功能模块，全面提升法律工作效率与准确性
+            五大核心功能模块，全面提升法律工作效率与准确性
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8">
           {features.map((feature, index) => (
             <div 
               key={index} 
@@ -361,7 +379,9 @@ const HomePage: FC = () => {
                       ? 'from-law-orange-100 to-law-orange-200 text-law-orange-800'
                       : feature.color === 'law-blue'
                         ? 'from-law-blue-100 to-law-blue-200 text-law-blue-800'
-                        : 'from-purple-100 to-purple-200 text-purple-800'
+                        : feature.color === 'law-green'
+                          ? 'from-law-green-100 to-law-green-200 text-law-green-800'
+                          : 'from-purple-100 to-purple-200 text-purple-800'
                 } text-sm font-medium mb-4`}>
                   <span className="mr-2">{feature.icon}</span>
                   {feature.title}
@@ -379,7 +399,9 @@ const HomePage: FC = () => {
                             ? 'bg-law-orange-500'
                             : feature.color === 'law-blue'
                               ? 'bg-law-blue-500'
-                              : 'bg-purple-500'
+                              : feature.color === 'law-green'
+                                ? 'bg-law-green-500'
+                                : 'bg-purple-500'
                       }`}></div>
                       <span className="text-gray-700">{benefit}</span>
                     </div>
@@ -395,7 +417,9 @@ const HomePage: FC = () => {
                         ? 'from-law-orange-500 to-law-orange-600 hover:from-law-orange-600 hover:to-law-orange-700'
                         : feature.color === 'law-blue'
                           ? 'from-law-blue-500 to-law-blue-600 hover:from-law-blue-600 hover:to-law-blue-700'
-                          : 'from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700'
+                          : feature.color === 'law-green'
+                            ? 'from-law-green-500 to-law-green-600 hover:from-law-green-600 hover:to-law-green-700'
+                            : 'from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700'
                   } text-white px-8 py-3 rounded-lg font-semibold transition-all duration-300 transform hover:-translate-y-1 shadow-lg hover:shadow-xl`}
                 >
                   {feature.buttonText}

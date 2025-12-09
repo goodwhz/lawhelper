@@ -1,0 +1,135 @@
+/* 争议解决模块专用样式 */
+
+/* 流程步骤动画 */
+.process-step {
+  transition: all 0.3s ease-in-out;
+}
+
+.process-step:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* 进度指示器 */
+.progress-indicator {
+  position: relative;
+}
+
+.progress-indicator::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: -20px;
+  width: 8px;
+  height: 8px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  border-radius: 50%;
+  transform: translateY(-50%);
+}
+
+/* 风险评估动画 */
+.risk-indicator {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* 成功概率指示器 */
+.success-meter {
+  background: linear-gradient(90deg, #ef4444, #f97316, #10b981);
+  height: 6px;
+  border-radius: 3px;
+  position: relative;
+}
+
+.success-meter::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: var(--success-percent, 0%);
+  width: 12px;
+  height: 12px;
+  background: white;
+  border: 2px solid #10b981;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: left 0.5s ease-in-out;
+}
+
+/* 时间线效果 */
+.timeline-connector {
+  position: relative;
+}
+
+.timeline-connector::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 2px;
+  height: 100%;
+  background: linear-gradient(to bottom, #e5e7eb, #9ca3af, #e5e7eb);
+  transform: translateX(-50%);
+}
+
+/* 交互式卡片 */
+.interactive-card {
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.interactive-card:hover {
+  transform: scale(1.02);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+/* 渐变背景效果 */
+.gradient-bg {
+  background: linear-gradient(135deg, 
+    rgba(16, 185, 129, 0.1) 0%, 
+    rgba(139, 92, 246, 0.1) 50%, 
+    rgba(59, 130, 246, 0.1) 100%);
+}
+
+/* 步骤完成动画 */
+.step-completed {
+  animation: completeStep 0.6s ease-out;
+}
+
+@keyframes completeStep {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* 响应式设计优化 */
+@media (max-width: 768px) {
+  .process-step {
+    margin-bottom: 1rem;
+  }
+  
+  .timeline-connector::before {
+    left: 20px;
+  }
+}
+
+/* 打印样式优化 */
+@media print {
+  .process-step {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}

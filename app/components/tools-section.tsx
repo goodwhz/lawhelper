@@ -18,7 +18,6 @@ const ToolsSection: FC = () => {
     { id: 'overtime', name: '加班费计算器', icon: '⏰', description: '计算各类加班费用' },
     { id: 'annual-leave', name: '年假计算器', icon: '🏖️', description: '计算带薪年假天数' },
     { id: 'contract', name: '合同生成器', icon: '📝', description: '生成劳动合同模板' },
-
   ]
 
   const renderTool = () => {
