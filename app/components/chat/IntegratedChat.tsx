@@ -23,7 +23,7 @@ const IntegratedChat: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isStreaming, setIsStreaming] = useState(false)
-  const [isSwitchingConversation, _setIsSwitchingConversation] = useState(false)
+  const [isSwitchingConversation, setIsSwitchingConversation] = useState(false)
   const [editingConversationId, setEditingConversationId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
   const abortControllerRef = useRef<AbortController | null>(null)
@@ -154,7 +154,8 @@ const IntegratedChat: React.FC = () => {
       return
     }
 
-    setIsLoading(true)
+    // 设置切换对话状态，但不显示AI思考提示
+    setIsSwitchingConversation(true)
     try {
       // 先从缓存中查找
       if (messageCache.has(conversationId)) {
@@ -200,9 +201,9 @@ const IntegratedChat: React.FC = () => {
       console.error('加载对话时发生错误:', error)
       showToast('加载对话失败，请重试', 'error')
     } finally {
-      setIsLoading(false)
+      setIsSwitchingConversation(false)
     }
-  }, [user, showToast])
+  }, [user, showToast, setIsSwitchingConversation])
 
   // 初始化时恢复上次对话状态
   useEffect(() => {
@@ -507,27 +508,34 @@ const IntegratedChat: React.FC = () => {
     let tempAiMessage: ChatMessage | null = null
 
     try {
-      // 保存用户消息
-      const userMessage: Omit<ChatMessage, 'id' | 'created_at'> = {
-        content: content.trim(),
-        role: 'user',
-      }
-
-      const savedUserMessage = await saveMessage(userMessage)
-      if (savedUserMessage) {
-        setMessages(prev => [...prev, savedUserMessage])
-      }
-
-      // 创建临时的AI消息用于流式显示
+      // 先创建临时AI消息用于流式显示
       tempAiMessage = {
-        id: `temp-${Date.now()}`,
+        id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         content: '',
         role: 'assistant',
         created_at: new Date().toISOString(),
         loading: true,
       }
 
-      setMessages(prev => [...prev, tempAiMessage])
+      // 同时显示用户消息和临时AI消息
+      const userMessage: Omit<ChatMessage, 'id' | 'created_at'> = {
+        content: content.trim(),
+        role: 'user',
+      }
+
+      // 立即更新界面显示用户消息和临时AI消息
+      setMessages(prev => [...prev, userMessage, tempAiMessage])
+
+      // 异步保存用户消息到数据库
+      const savedUserMessage = await saveMessage(userMessage)
+      if (savedUserMessage) {
+        // 用数据库保存的消息替换临时显示的消息
+        setMessages(prev => prev.map(msg =>
+          msg.id === tempAiMessage?.id
+            ? tempAiMessage
+            : msg.content === userMessage.content && msg.role === 'user' ? savedUserMessage : msg,
+        ))
+      }
 
       // 调用Dify API进行流式聊天
       const response = await fetch('/api/dify/chat-stream', {
@@ -773,7 +781,8 @@ const IntegratedChat: React.FC = () => {
       setMessages([])
       setShowWelcome(false)
 
-      // 不再重新加载对话列表，避免干扰当前对话
+      // 更新对话列表，将新对话添加到列表开头
+      setConversations(prev => [data, ...prev])
 
       // 如果有预设问题，发送消息
       if (presetQuestion) {
@@ -918,6 +927,14 @@ const IntegratedChat: React.FC = () => {
             switch (errorData.code) {
               case 'CONVERSATION_NOT_FOUND':
                 errorMessage = '对话不存在'
+                // 如果对话不存在，仍然从本地列表中移除
+                setConversations(prev => prev.filter(conv => conv.id !== conversationId))
+                if (currentConversation?.id === conversationId) {
+                  setCurrentConversation(null)
+                  setMessages([])
+                  setShowWelcome(true)
+                }
+                return true // 认为删除成功，因为对话已经不存在
                 break
               case 'PERMISSION_DENIED':
                 errorMessage = '无权删除此对话'
@@ -1102,28 +1119,35 @@ const IntegratedChat: React.FC = () => {
 
   // 渲染对话列表
   const renderConversationList = () => {
-    if (conversations.length === 0) {
+    // 过滤掉无效的对话
+    const validConversations = conversations.filter((conv) => {
+      if (!conv.id) {
+        console.error('对话缺少id字段:', conv)
+        return false
+      }
+      if (typeof conv.id !== 'string') {
+        console.error('对话id类型无效:', conv.id, typeof conv.id, conv)
+        return false
+      }
+      if (conv.id === 'undefined' || conv.id === 'null' || conv.id.trim() === '') {
+        console.error('对话id值无效:', conv.id, conv)
+        return false
+      }
+      if (!conv.title || typeof conv.title !== 'string' || conv.title.trim() === '') {
+        console.error('对话标题无效:', conv.title, conv)
+        return false
+      }
+      return true
+    })
+
+    // 如果过滤后没有有效对话，显示提示
+    if (validConversations.length === 0) {
       return <p className="text-gray-500 text-sm">暂无对话</p>
     }
 
-    return conversations.map((conv) => {
+    return validConversations.map((conv) => {
       // 详细验证对话数据完整性
       console.log('检查对话数据:', conv)
-
-      if (!conv.id) {
-        console.error('对话缺少id字段:', conv)
-        return null // 不渲染无效对话
-      }
-
-      if (typeof conv.id !== 'string') {
-        console.error('对话id类型无效:', conv.id, typeof conv.id, conv)
-        return null
-      }
-
-      if (conv.id === 'undefined' || conv.id === 'null' || conv.id.trim() === '') {
-        console.error('对话id值无效:', conv.id, conv)
-        return null // 不渲染无效对话
-      }
 
       return (
         <div
@@ -1300,8 +1324,8 @@ const IntegratedChat: React.FC = () => {
       console.log('渲染消息时发现加载中的消息:', loadingMessages.map(m => ({ id: m.id, content: m.content.substring(0, 20) })))
     }
 
-    return messages.map(msg => (
-      <div key={msg.id} className={`flex ${msg.role === 'assistant' ? 'justify-start' : 'justify-end'}`}>
+    return messages.map((msg, index) => (
+      <div key={`${msg.id}-${index}`} className={`flex ${msg.role === 'assistant' ? 'justify-start' : 'justify-end'}`}>
         <div className={`message-bubble px-4 py-2 rounded-lg ${
           msg.role === 'assistant'
             ? 'bg-white border border-gray-200 text-gray-900'
