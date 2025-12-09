@@ -38,16 +38,16 @@ const UserManagement: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1)
   const [totalUsers, setTotalUsers] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
-  
+
   // 编辑状态
   const [editingUser, setEditingUser] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
   const [editRole, setEditRole] = useState<'user' | 'admin'>('user')
-  
+
   // 批量选择
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
   const [selectAll, setSelectAll] = useState(false)
-  
+
   // 确认对话框状态
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean
@@ -58,7 +58,7 @@ const UserManagement: React.FC = () => {
   }>({
     isOpen: false,
     message: '',
-    onConfirm: () => {}
+    onConfirm: () => {},
   })
 
   const limit = 20
@@ -80,16 +80,16 @@ const UserManagement: React.FC = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true)
-      
+
       // 检查用户是否为管理员
       if (!isAdmin) {
         console.warn('用户不是管理员，无法获取用户列表')
         setLoading(false)
         return
       }
-      
+
       const token = await getCurrentUserToken()
-      
+
       if (!token) {
         console.error('未找到用户token，用户可能未登录')
         console.log('可能的解决方案：')
@@ -98,7 +98,7 @@ const UserManagement: React.FC = () => {
         console.log('3. 访问 /test-auth 页面进行调试')
         setLoading(false)
         // 显示用户友好的错误信息
-        alert('无法获取用户认证信息，请重新登录或访问 /test-auth 页面进行调试')
+        console.error('无法获取用户认证信息，请重新登录或访问 /test-auth 页面进行调试')
         return
       }
 
@@ -108,13 +108,13 @@ const UserManagement: React.FC = () => {
         ...(searchQuery && { search: searchQuery }),
         ...(roleFilter && { role: roleFilter }),
         ...(sortBy && { sortBy }),
-        ...(sortOrder && { sortOrder })
+        ...(sortOrder && { sortOrder }),
       })
 
       const response = await fetch(`/api/admin/users?${params}`, {
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       })
 
       if (!response.ok) {
@@ -122,7 +122,7 @@ const UserManagement: React.FC = () => {
         console.error('API响应错误:', {
           status: response.status,
           statusText: response.statusText,
-          body: errorText
+          body: errorText,
         })
         throw new Error(`获取用户列表失败: ${response.status} ${response.statusText}`)
       }
@@ -145,62 +145,62 @@ const UserManagement: React.FC = () => {
       console.log('当前用户状态:', {
         hasUser: !!currentUser,
         userEmail: currentUser?.email,
-        isAdmin
+        isAdmin,
       })
-      
+
       // 如果没有用户，直接返回null
       if (!currentUser) {
         console.warn('用户未登录')
         return null
       }
-      
+
       // 直接从Supabase获取当前session
       const { supabase } = await import('@/lib/supabaseClient')
-      
+
       // 首先尝试获取当前用户（这个方法更可靠）
       const { data: { user }, error: userError } = await supabase.auth.getUser()
-      
+
       console.log('getUser结果:', {
         hasUser: !!user,
         userId: user?.id,
         userEmail: user?.email,
-        error: userError?.message
+        error: userError?.message,
       })
-      
+
       if (userError) {
         console.error('获取用户失败:', userError)
       }
-      
+
       // 然后尝试获取session
       const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-      
+
       console.log('getSession结果:', {
         hasSession: !!session,
         hasAccessToken: !!session?.access_token,
         hasUser: !!session?.user,
         sessionUserId: session?.user?.id,
         currentUserId: currentUser?.id,
-        error: sessionError?.message
+        error: sessionError?.message,
       })
-      
+
       if (sessionError) {
         console.error('获取session失败:', sessionError)
       }
-      
+
       // 优先使用session中的token
       if (session?.access_token) {
         console.log('✅ 成功从session获取到token')
         return session.access_token
       }
-      
+
       // 尝试从不同的存储键获取token
       if (typeof window !== 'undefined') {
         const possibleKeys = [
           'supabase.auth.token',
           `sb-${process.env.NEXT_PUBLIC_SUPABASE_URL?.split('//')[1]?.split('.')[0]}-auth-token`,
-          'sb-auth-token'
+          'sb-auth-token',
         ]
-        
+
         for (const key of possibleKeys) {
           const tokenData = localStorage.getItem(key)
           if (tokenData) {
@@ -221,7 +221,7 @@ const UserManagement: React.FC = () => {
           }
         }
       }
-      
+
       console.warn('❌ 未找到有效的用户token')
       return null
     } catch (error) {
@@ -234,19 +234,19 @@ const UserManagement: React.FC = () => {
   const updateUser = async (userId: string) => {
     try {
       const token = await getCurrentUserToken()
-      if (!token) return
+      if (!token) { return }
 
       const response = await fetch('/api/admin/users', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           userId,
           name: editName,
-          role: editRole
-        })
+          role: editRole,
+        }),
       })
 
       if (!response.ok) {
@@ -255,8 +255,8 @@ const UserManagement: React.FC = () => {
 
       const result = await response.json()
       if (result.success) {
-        setUsers(prev => prev.map(u => 
-          u.id === userId ? { ...u, name: editName, role: editRole } : u
+        setUsers(prev => prev.map(u =>
+          u.id === userId ? { ...u, name: editName, role: editRole } : u,
         ))
         setEditingUser(null)
       }
@@ -269,23 +269,30 @@ const UserManagement: React.FC = () => {
   const deleteUser = async (userId: string) => {
     try {
       const token = await getCurrentUserToken()
-      if (!token) return
+      if (!token) { return }
 
-      const response = await fetch(`/api/admin/users?userId=${userId}`, {
+      const response = await fetch(`/api/admin/users/${userId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       })
 
       if (!response.ok) {
-        throw new Error('删除用户失败')
+        const errorData = await response.json()
+        throw new Error(errorData.error || '删除用户失败')
       }
 
-      setUsers(prev => prev.filter(u => u.id !== userId))
-      setTotalUsers(prev => prev - 1)
+      const result = await response.json()
+      if (result.success) {
+        setUsers(prev => prev.filter(u => u.id !== userId))
+        setTotalUsers(prev => prev - 1)
+        // 显示成功消息
+        console.log('✅ 用户删除成功:', result.message)
+      }
     } catch (error) {
       console.error('删除用户失败:', error)
+      console.error(`删除用户失败: ${error instanceof Error ? error.message : '未知错误'}`)
     }
   }
 
@@ -293,19 +300,19 @@ const UserManagement: React.FC = () => {
   const batchOperateUsers = async (action: 'updateRole' | 'delete', role?: 'user' | 'admin') => {
     try {
       const token = await getCurrentUserToken()
-      if (!token) return
+      if (!token) { return }
 
       const response = await fetch('/api/admin/users/batch', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           action,
           userIds: selectedUsers,
-          ...(role && { role })
-        })
+          ...(role && { role }),
+        }),
       })
 
       if (!response.ok) {
@@ -336,10 +343,10 @@ const UserManagement: React.FC = () => {
 
   // 选择/取消选择用户
   const toggleUserSelection = (userId: string) => {
-    setSelectedUsers(prev => 
-      prev.includes(userId) 
+    setSelectedUsers(prev =>
+      prev.includes(userId)
         ? prev.filter(id => id !== userId)
-        : [...prev, userId]
+        : [...prev, userId],
     )
   }
 
@@ -396,7 +403,7 @@ const UserManagement: React.FC = () => {
               type="text"
               placeholder="搜索用户姓名或邮箱..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={e => setSearch(e.target.value)}
               onKeyPress={handleSearchKeyPress}
               className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
@@ -456,7 +463,7 @@ const UserManagement: React.FC = () => {
                       title: '批量更新角色',
                       message: `确定要将选中的 ${selectedUsers.length} 个用户的角色更新为"${e.target.value === 'admin' ? '管理员' : '普通用户'}"吗？`,
                       onConfirm: () => batchOperateUsers('updateRole', e.target.value as 'user' | 'admin'),
-                      type: 'warning'
+                      type: 'warning',
                     })
                     e.target.value = ''
                   }
@@ -474,7 +481,7 @@ const UserManagement: React.FC = () => {
                     title: '批量删除用户',
                     message: `确定要删除选中的 ${selectedUsers.length} 个用户吗？此操作不可撤销！`,
                     onConfirm: () => batchOperateUsers('delete'),
-                    type: 'danger'
+                    type: 'danger',
                   })
                 }}
                 className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
@@ -518,7 +525,7 @@ const UserManagement: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {users.map((user) => (
+              {users.map(user => (
                 <tr key={user.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <input
@@ -540,89 +547,93 @@ const UserManagement: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {editingUser === user.id ? (
-                      <select
-                        value={editRole}
-                        onChange={(e) => setEditRole(e.target.value as 'user' | 'admin')}
-                        className="text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="user">普通用户</option>
-                        <option value="admin">管理员</option>
-                      </select>
-                    ) : (
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        user.role === 'admin' 
-                          ? 'bg-purple-100 text-purple-800' 
-                          : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {user.role === 'admin' ? '管理员' : '普通用户'}
-                      </span>
-                    )}
+                    {editingUser === user.id
+                      ? (
+                        <select
+                          value={editRole}
+                          onChange={e => setEditRole(e.target.value as 'user' | 'admin')}
+                          className="text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="user">普通用户</option>
+                          <option value="admin">管理员</option>
+                        </select>
+                      )
+                      : (
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          user.role === 'admin'
+                            ? 'bg-purple-100 text-purple-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {user.role === 'admin' ? '管理员' : '普通用户'}
+                        </span>
+                      )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {new Date(user.created_at).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {user.last_login_at 
+                    {user.last_login_at
                       ? new Date(user.last_login_at).toLocaleDateString('zh-CN', {
-                          year: 'numeric',
-                          month: '2-digit',
-                          day: '2-digit',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
                       : '从未登录'
                     }
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    {editingUser === user.id ? (
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={editName}
-                          onChange={(e) => setEditName(e.target.value)}
-                          className="text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 px-2 py-1"
-                          placeholder="用户姓名"
-                        />
-                        <button
-                          onClick={() => updateUser(user.id)}
-                          className="text-green-600 hover:text-green-900"
-                        >
-                          保存
-                        </button>
-                        <button
-                          onClick={cancelEdit}
-                          className="text-gray-600 hover:text-gray-900"
-                        >
-                          取消
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => startEdit(user)}
-                          className="text-blue-600 hover:text-blue-900"
-                        >
-                          编辑
-                        </button>
-                        {user.id !== currentUser?.id && (
+                    {editingUser === user.id
+                      ? (
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={editName}
+                            onChange={e => setEditName(e.target.value)}
+                            className="text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 px-2 py-1"
+                            placeholder="用户姓名"
+                          />
                           <button
-                            onClick={() => {
-                              setConfirmDialog({
-                                isOpen: true,
-                                title: '删除用户',
-                                message: `确定要删除用户 "${user.name || user.email}" 吗？此操作不可撤销！`,
-                                onConfirm: () => deleteUser(user.id),
-                                type: 'danger'
-                              })
-                            }}
-                            className="text-red-600 hover:text-red-900"
+                            onClick={() => updateUser(user.id)}
+                            className="text-green-600 hover:text-green-900"
                           >
-                            删除
+                            保存
                           </button>
-                        )}
-                      </div>
-                    )}
+                          <button
+                            onClick={cancelEdit}
+                            className="text-gray-600 hover:text-gray-900"
+                          >
+                            取消
+                          </button>
+                        </div>
+                      )
+                      : (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => startEdit(user)}
+                            className="text-blue-600 hover:text-blue-900"
+                          >
+                            编辑
+                          </button>
+                          {user.id !== currentUser?.id && (
+                            <button
+                              onClick={() => {
+                                setConfirmDialog({
+                                  isOpen: true,
+                                  title: '删除用户',
+                                  message: `确定要删除用户 "${user.name || user.email}" 吗？此操作不可撤销！`,
+                                  onConfirm: () => deleteUser(user.id),
+                                  type: 'danger',
+                                })
+                              }}
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              删除
+                            </button>
+                          )}
+                        </div>
+                      )}
                   </td>
                 </tr>
               ))}

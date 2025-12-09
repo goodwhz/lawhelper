@@ -1,5 +1,5 @@
 'use client'
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import MessageBubble from './MessageBubble'
 import type { ChatMessage } from './types'
 
@@ -18,20 +18,66 @@ const MessageList: React.FC<MessageListProps> = ({
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const [visibleMessageCount, setVisibleMessageCount] = useState(20)
+  const scrollTimeoutRef = useRef<NodeJS.Timeout>()
 
-  // 自动滚动到底部
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
+  // 性能优化：延迟加载消息
+  const visibleMessages = useMemo(() => {
+    return messages.slice(-visibleMessageCount)
+  }, [messages, visibleMessageCount])
 
-  // 监听消息变化，自动滚动
+  // 优化滚动性能
+  const scrollToBottom = useCallback(() => {
+    if (messagesEndRef.current) {
+      // 使用requestAnimationFrame确保流畅滚动
+      requestAnimationFrame(() => {
+        messagesEndRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'end',
+        })
+      })
+    }
+  }, [])
+
+  // 监听消息变化，智能滚动
   useEffect(() => {
-    const timer = setTimeout(() => {
-      scrollToBottom()
-    }, 100) // 延迟滚动，确保内容渲染完成
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current)
+    }
 
-    return () => clearTimeout(timer)
-  }, [messages.length, isStreaming])
+    // 只在有新消息或流式响应时滚动
+    if (messages.length > 0) {
+      scrollTimeoutRef.current = setTimeout(() => {
+        scrollToBottom()
+      }, isStreaming ? 0 : 50) // 流式响应时立即滚动
+    }
+
+    return () => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current)
+      }
+    }
+  }, [messages.length, isStreaming, scrollToBottom])
+
+  // 无限滚动：加载更多消息
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const element = e.currentTarget
+    const scrollTop = element.scrollTop
+    const _scrollHeight = element.scrollHeight
+    const _clientHeight = element.clientHeight
+
+    // 当滚动到顶部附近时加载更多消息
+    if (scrollTop < 100 && visibleMessageCount < messages.length) {
+      const newCount = Math.min(visibleMessageCount + 10, messages.length)
+      setVisibleMessageCount(newCount)
+      console.log(`📱 延迟加载: ${newCount}/${messages.length} 条消息`)
+    }
+  }, [visibleMessageCount, messages.length])
+
+  // 当消息数量变化时重置可见消息数量
+  useEffect(() => {
+    setVisibleMessageCount(Math.min(20, messages.length))
+  }, [messages.length])
 
   // 如果没有消息，显示欢迎界面
   if (messages.length === 0 && !isStreaming) {
@@ -74,22 +120,36 @@ const MessageList: React.FC<MessageListProps> = ({
   }
 
   return (
-    <div 
+    <div
       ref={containerRef}
       className="flex-1 overflow-y-auto bg-gradient-to-br from-gray-50 to-gray-100"
       style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb #f9fafb' }}
+      onScroll={handleScroll}
     >
       <div className="max-w-4xl mx-auto px-4 py-6">
-        {messages.map((message, index) => (
+        {/* 显示加载更多提示 */}
+        {visibleMessageCount < messages.length && (
+          <div className="text-center mb-4">
+            <button
+              onClick={() => setVisibleMessageCount(Math.min(visibleMessageCount + 10, messages.length))}
+              className="text-sm text-gray-500 hover:text-gray-700 bg-white border border-gray-200 rounded-lg px-4 py-2 shadow-sm transition-colors"
+            >
+              加载更多消息 ({visibleMessageCount}/{messages.length})
+            </button>
+          </div>
+        )}
+
+        {/* 渲染可见的消息 */}
+        {visibleMessages.map((message, index) => (
           <MessageBubble
             key={message.id}
             message={message}
             onRate={onRate}
             onRegenerate={onRegenerate}
-            isStreaming={isStreaming && index === messages.length - 1 && message.role === 'assistant'}
+            isStreaming={isStreaming && index === visibleMessages.length - 1 && message.role === 'assistant'}
           />
         ))}
-        
+
         {/* 流式加载状态 */}
         {isStreaming && (
           <div className="flex justify-start mb-4">
@@ -109,7 +169,7 @@ const MessageList: React.FC<MessageListProps> = ({
             </div>
           </div>
         )}
-        
+
         {/* 滚动锚点 */}
         <div ref={messagesEndRef} />
       </div>

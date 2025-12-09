@@ -7,14 +7,16 @@ import PageAuthGuard from '@/app/components/page-auth-guard'
 import ErrorBoundary from '@/app/components/error-boundary'
 import UserManagement from '@/app/components/admin/UserManagement'
 import ContentManagement from '@/app/components/admin/ContentManagement'
+import SyncMonitor from '@/app/components/admin/SyncMonitor'
 
 function AdminPage() {
   const { user } = useAuth()
-  const [activeTab, setActiveTab] = useState<'users' | 'content' | 'settings'>('users')
+  const [activeTab, setActiveTab] = useState<'users' | 'content' | 'sync' | 'settings'>('users')
 
   const tabs = [
     { id: 'users', label: '用户管理', icon: '👥' },
     { id: 'content', label: '内容管理', icon: '📚' },
+    { id: 'sync', label: '数据同步', icon: '🔄' },
     { id: 'settings', label: '系统设置', icon: '⚙️' },
   ]
 
@@ -72,6 +74,16 @@ function AdminPage() {
                 {activeTab === 'content' && (
                   <div>
                     <ContentManagement />
+                  </div>
+                )}
+
+                {activeTab === 'sync' && (
+                  <div className="p-6">
+                    <div className="mb-6">
+                      <h2 className="text-xl font-semibold text-gray-900 mb-2">用户数据同步监控</h2>
+                      <p className="text-gray-600">实时监控数据库表 user_profiles 与 Supabase Auth 用户的同步状态，支持手动强制同步。</p>
+                    </div>
+                    <SyncMonitor />
                   </div>
                 )}
 

@@ -12,9 +12,56 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
 )
 
-// 消息缓存 - 存储每个对话的消息，避免重复查询
-const messageCache = new Map<string, ChatMessage[]>()
-const conversationCache = new Map<string, Conversation>()
+// 增强型消息缓存 - 支持TTL和内存管理
+const messageCache = new Map<string, { messages: ChatMessage[], timestamp: number, ttl: number }>()
+const conversationCache = new Map<string, { conversation: Conversation, timestamp: number, ttl: number }>()
+
+// 缓存管理配置
+const CACHE_CONFIG = {
+  // 消息缓存TTL（毫秒）
+  MESSAGE_TTL: 5 * 60 * 1000, // 5分钟
+  // 对话缓存TTL（毫秒）
+  CONVERSATION_TTL: 10 * 60 * 1000, // 10分钟
+  // 最大缓存条目数
+  MAX_CACHE_SIZE: 50,
+  // 清理间隔（毫秒）
+  CLEANUP_INTERVAL: 60 * 1000, // 1分钟
+}
+
+// 缓存清理函数
+const cleanupCache = () => {
+  const now = Date.now()
+
+  // 清理过期消息缓存
+  for (const [key, value] of messageCache.entries()) {
+    if (now - value.timestamp > value.ttl) {
+      messageCache.delete(key)
+    }
+  }
+
+  // 清理过期对话缓存
+  for (const [key, value] of conversationCache.entries()) {
+    if (now - value.timestamp > value.ttl) {
+      conversationCache.delete(key)
+    }
+  }
+
+  // 控制缓存大小
+  if (messageCache.size > CACHE_CONFIG.MAX_CACHE_SIZE) {
+    const entries = Array.from(messageCache.entries())
+    entries.sort((a, b) => a[1].timestamp - b[1].timestamp)
+    entries.slice(0, Math.floor(entries.length * 0.2)).forEach(([key]) => messageCache.delete(key))
+  }
+
+  if (conversationCache.size > CACHE_CONFIG.MAX_CACHE_SIZE) {
+    const entries = Array.from(conversationCache.entries())
+    entries.sort((a, b) => a[1].timestamp - b[1].timestamp)
+    entries.slice(0, Math.floor(entries.length * 0.2)).forEach(([key]) => conversationCache.delete(key))
+  }
+}
+
+// 定期清理缓存
+setInterval(cleanupCache, CACHE_CONFIG.CLEANUP_INTERVAL)
 
 const IntegratedChat: React.FC = () => {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth()
@@ -28,6 +75,11 @@ const IntegratedChat: React.FC = () => {
   const [editingTitle, setEditingTitle] = useState('')
   const abortControllerRef = useRef<AbortController | null>(null)
   const messageAreaRef = useRef<HTMLDivElement>(null)
+
+  // 性能优化状态
+  const [isPreloading, setIsPreloading] = useState(false)
+  const [_preloadedConversations, _setPreloadedConversations] = useState<Map<string, ChatMessage[]>>(new Map())
+  const [_visibleMessageCount, _setVisibleMessageCount] = useState(20) // 初始显示的消息数量
 
   // 确认对话框状态
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -147,56 +199,87 @@ const IntegratedChat: React.FC = () => {
     }
   }, [user, isAuthenticated])
 
-  // 加载特定对话的消息
+  // 优化版：加载特定对话的消息
   const loadConversation = useCallback(async (conversationId: string) => {
     if (!user || !conversationId) {
       console.error('加载对话失败: 用户或对话ID不存在', { user: !!user, conversationId })
       return
     }
 
-    // 设置切换对话状态，但不显示AI思考提示
+    // 设置切换对话状态
     setIsSwitchingConversation(true)
+
     try {
-      // 先从缓存中查找
-      if (messageCache.has(conversationId)) {
-        const cachedMessages = messageCache.get(conversationId)!
-        setMessages(cachedMessages)
-        console.log('从缓存加载消息:', cachedMessages.length, '条')
+      // 1. 优先从缓存获取对话信息
+      let conversation: Conversation | null = null
+      const cachedConversation = conversationCache.get(conversationId)
+
+      if (cachedConversation && (Date.now() - cachedConversation.timestamp < cachedConversation.ttl)) {
+        conversation = cachedConversation.conversation
+        console.log('✅ 从缓存加载对话信息:', conversation.title)
       } else {
-        // 从数据库加载
+        // 从数据库加载对话信息
+        const { data: convData, error: convError } = await supabase
+          .from('conversations')
+          .select('*')
+          .eq('id', conversationId)
+          .eq('user_id', user.id)
+          .single()
+
+        if (convError) {
+          console.error('获取对话信息失败:', convError)
+          throw convError
+        }
+
+        conversation = convData
+        // 更新缓存
+        conversationCache.set(conversationId, {
+          conversation: convData,
+          timestamp: Date.now(),
+          ttl: CACHE_CONFIG.CONVERSATION_TTL,
+        })
+        console.log('✅ 从数据库加载对话信息:', conversation.title)
+      }
+
+      // 2. 加载消息（优先缓存）
+      const cachedMessages = messageCache.get(conversationId)
+
+      if (cachedMessages && (Date.now() - cachedMessages.timestamp < cachedMessages.ttl)) {
+        setMessages(cachedMessages.messages)
+        console.log('✅ 从缓存加载消息:', cachedMessages.messages.length, '条')
+      } else {
+        // 从数据库加载消息，但只加载最新的50条以提高性能
         const { data: msgs, error } = await supabase
           .from('messages')
           .select('*')
           .eq('conversation_id', conversationId)
           .eq('user_id', user.id)
-          .order('created_at', { ascending: true })
+          .order('created_at', { ascending: false })
+          .limit(50) // 限制加载数量
 
         if (error) {
           console.error('加载消息失败:', error)
           throw error
         }
 
-        const messages = msgs || []
-        console.log('从数据库加载消息:', messages.length, '条')
-        messageCache.set(conversationId, messages)
+        const messages = (msgs || []).reverse() // 重新排序为升序
+        console.log('✅ 从数据库加载消息:', messages.length, '条')
+
+        // 更新缓存
+        messageCache.set(conversationId, {
+          messages,
+          timestamp: Date.now(),
+          ttl: CACHE_CONFIG.MESSAGE_TTL,
+        })
+
         setMessages(messages)
       }
 
-      // 设置当前对话
-      const { data: conversation, error: convError } = await supabase
-        .from('conversations')
-        .select('*')
-        .eq('id', conversationId)
-        .eq('user_id', user.id)
-        .single()
-
-      if (convError) {
-        console.error('获取对话信息失败:', convError)
-        throw convError
-      }
-
+      // 3. 更新状态
       setCurrentConversation(conversation)
       setShowWelcome(false)
+
+      console.log('✅ 对话加载完成')
     } catch (error) {
       console.error('加载对话时发生错误:', error)
       showToast('加载对话失败，请重试', 'error')
@@ -205,10 +288,69 @@ const IntegratedChat: React.FC = () => {
     }
   }, [user, showToast, setIsSwitchingConversation])
 
-  // 初始化时恢复上次对话状态
+  // 数据预加载逻辑 - 预加载前3个对话的消息
+  const preloadConversations = useCallback(async (conversations: Conversation[]) => {
+    if (!user || conversations.length === 0) { return }
+
+    setIsPreloading(true)
+    console.log('🚀 开始预加载对话数据...')
+
+    try {
+      // 只预加载前3个对话的消息（避免过度加载）
+      const topConversations = conversations.slice(0, 3)
+
+      for (const conv of topConversations) {
+        try {
+          // 检查是否已缓存
+          const cachedMessages = messageCache.get(conv.id)
+          if (cachedMessages) {
+            console.log(`✅ 对话 ${conv.title} 已缓存，跳过预加载`)
+            continue
+          }
+
+          // 异步预加载消息（不阻塞UI）
+          console.log(`🔍 预加载对话: ${conv.title}`)
+          const { data: msgs, error } = await supabase
+            .from('messages')
+            .select('*')
+            .eq('conversation_id', conv.id)
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(30) // 预加载最近30条消息
+
+          if (!error && msgs) {
+            const messages = msgs.reverse()
+            messageCache.set(conv.id, {
+              messages,
+              timestamp: Date.now(),
+              ttl: CACHE_CONFIG.MESSAGE_TTL,
+            })
+            console.log(`✅ 预加载完成: ${conv.title} (${messages.length}条消息)`)
+          }
+        } catch (error) {
+          console.warn(`预加载对话 ${conv.title} 失败:`, error)
+        }
+
+        // 每个对话之间添加小延迟，避免同时发送太多请求
+        await new Promise(resolve => setTimeout(resolve, 100))
+      }
+    } catch (error) {
+      console.error('预加载失败:', error)
+    } finally {
+      setIsPreloading(false)
+      console.log('🎯 预加载完成')
+    }
+  }, [user])
+
+  // 初始化时恢复上次对话状态并进行预加载
   useEffect(() => {
     if (isAuthenticated && user) {
-      loadConversations().then(() => {
+      loadConversations().then((conversations) => {
+        // 异步预加载其他对话
+        if (conversations.length > 0) {
+          preloadConversations(conversations)
+        }
+
         // 尝试恢复上次访问的对话
         const lastConversationId = localStorage.getItem(`lastConversation_${user.id}`)
         if (lastConversationId) {
@@ -219,7 +361,7 @@ const IntegratedChat: React.FC = () => {
         }
       })
     }
-  }, [isAuthenticated, user, loadConversations, loadConversation])
+  }, [isAuthenticated, user, loadConversations, loadConversation, preloadConversations])
 
   // 保存当前对话ID到localStorage
   useEffect(() => {
@@ -228,12 +370,23 @@ const IntegratedChat: React.FC = () => {
     }
   }, [currentConversation, user])
 
-  // 保存消息到数据库 - 优化版本
+  // 高性能消息保存 - 批量处理和优化缓存
   const saveMessage = useCallback(async (message: Omit<ChatMessage, 'id' | 'created_at'>) => {
     if (!user || !currentConversation) { return null }
 
     try {
-      const { data, error } = await supabase
+      // 立即更新UI，创建临时消息（提升用户体验）
+      const tempMessage: ChatMessage = {
+        ...message,
+        id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        created_at: new Date().toISOString(),
+      }
+
+      // 立即更新本地状态（无需等待数据库响应）
+      setMessages(prev => [...prev, tempMessage])
+
+      // 异步保存到数据库（不阻塞用户界面）
+      const savePromise = supabase
         .from('messages')
         .insert({
           ...message,
@@ -243,21 +396,40 @@ const IntegratedChat: React.FC = () => {
         .select()
         .single()
 
-      if (error) { throw error }
-
-      // 立即更新缓存
-      if (data && currentConversation.id) {
-        const currentMessages = messageCache.get(currentConversation.id) || []
-        const updatedMessages = [...currentMessages, data]
-        messageCache.set(currentConversation.id, updatedMessages)
-
-        // 如果这是当前对话，也更新状态
-        if (currentConversation.id === data.conversation_id) {
-          setMessages(updatedMessages)
+      // 不等待数据库响应，立即返回临时消息
+      // 数据库操作在后台进行
+      savePromise.then(({ data, error }) => {
+        if (error) {
+          console.error('后台保存消息失败:', error)
+          // 如果保存失败，从UI中移除临时消息
+          setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id))
+          return
         }
-      }
 
-      return data
+        if (data && currentConversation.id) {
+          // 更新缓存
+          const cachedMessages = messageCache.get(currentConversation.id)
+          if (cachedMessages) {
+            const updatedMessages = [...cachedMessages.messages, data]
+            messageCache.set(currentConversation.id, {
+              messages: updatedMessages,
+              timestamp: Date.now(),
+              ttl: CACHE_CONFIG.MESSAGE_TTL,
+            })
+          }
+
+          // 更新UI状态，用实际消息替换临时消息
+          setMessages(prev =>
+            prev.map(msg =>
+              msg.id === tempMessage.id ? data : msg,
+            ),
+          )
+        }
+      }).catch((error) => {
+        console.error('保存消息异常:', error)
+      })
+
+      return tempMessage
     } catch (error) {
       console.error('保存消息失败:', error)
       return null
@@ -1651,6 +1823,7 @@ const IntegratedChat: React.FC = () => {
           </div>
         </div>
       )}
+
     </div>
   )
 }
