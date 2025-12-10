@@ -375,18 +375,8 @@ const IntegratedChat: React.FC = () => {
     if (!user || !currentConversation) { return null }
 
     try {
-      // 立即更新UI，创建临时消息（提升用户体验）
-      const tempMessage: ChatMessage = {
-        ...message,
-        id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        created_at: new Date().toISOString(),
-      }
-
-      // 立即更新本地状态（无需等待数据库响应）
-      setMessages(prev => [...prev, tempMessage])
-
-      // 异步保存到数据库（不阻塞用户界面）
-      const savePromise = supabase
+      // 直接保存到数据库，不创建临时消息
+      const { data, error } = await supabase
         .from('messages')
         .insert({
           ...message,
@@ -396,40 +386,27 @@ const IntegratedChat: React.FC = () => {
         .select()
         .single()
 
-      // 不等待数据库响应，立即返回临时消息
-      // 数据库操作在后台进行
-      savePromise.then(({ data, error }) => {
-        if (error) {
-          console.error('后台保存消息失败:', error)
-          // 如果保存失败，从UI中移除临时消息
-          setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id))
-          return
+      if (error) {
+        console.error('保存消息失败:', error)
+        return null
+      }
+
+      if (data && currentConversation.id) {
+        // 更新缓存
+        const cachedMessages = messageCache.get(currentConversation.id)
+        if (cachedMessages) {
+          const updatedMessages = [...cachedMessages.messages, data]
+          messageCache.set(currentConversation.id, {
+            messages: updatedMessages,
+            timestamp: Date.now(),
+            ttl: CACHE_CONFIG.MESSAGE_TTL,
+          })
         }
 
-        if (data && currentConversation.id) {
-          // 更新缓存
-          const cachedMessages = messageCache.get(currentConversation.id)
-          if (cachedMessages) {
-            const updatedMessages = [...cachedMessages.messages, data]
-            messageCache.set(currentConversation.id, {
-              messages: updatedMessages,
-              timestamp: Date.now(),
-              ttl: CACHE_CONFIG.MESSAGE_TTL,
-            })
-          }
+        return data
+      }
 
-          // 更新UI状态，用实际消息替换临时消息
-          setMessages(prev =>
-            prev.map(msg =>
-              msg.id === tempMessage.id ? data : msg,
-            ),
-          )
-        }
-      }).catch((error) => {
-        console.error('保存消息异常:', error)
-      })
-
-      return tempMessage
+      return null
     } catch (error) {
       console.error('保存消息失败:', error)
       return null
@@ -680,7 +657,19 @@ const IntegratedChat: React.FC = () => {
     let tempAiMessage: ChatMessage | null = null
 
     try {
-      // 先创建临时AI消息用于流式显示
+      // 先保存用户消息到数据库，避免重复显示
+      const userMessage: Omit<ChatMessage, 'id' | 'created_at'> = {
+        content: content.trim(),
+        role: 'user',
+      }
+
+      // 先保存用户消息，获取数据库ID
+      const savedUserMessage = await saveMessage(userMessage)
+      if (!savedUserMessage) {
+        throw new Error('保存用户消息失败')
+      }
+
+      // 创建临时AI消息用于流式显示
       tempAiMessage = {
         id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         content: '',
@@ -689,25 +678,8 @@ const IntegratedChat: React.FC = () => {
         loading: true,
       }
 
-      // 同时显示用户消息和临时AI消息
-      const userMessage: Omit<ChatMessage, 'id' | 'created_at'> = {
-        content: content.trim(),
-        role: 'user',
-      }
-
-      // 立即更新界面显示用户消息和临时AI消息
-      setMessages(prev => [...prev, userMessage, tempAiMessage])
-
-      // 异步保存用户消息到数据库
-      const savedUserMessage = await saveMessage(userMessage)
-      if (savedUserMessage) {
-        // 用数据库保存的消息替换临时显示的消息
-        setMessages(prev => prev.map(msg =>
-          msg.id === tempAiMessage?.id
-            ? tempAiMessage
-            : msg.content === userMessage.content && msg.role === 'user' ? savedUserMessage : msg,
-        ))
-      }
+      // 只显示用户消息和临时AI消息（避免重复）
+      setMessages(prev => [...prev, savedUserMessage, tempAiMessage])
 
       // 调用Dify API进行流式聊天
       const response = await fetch('/api/dify/chat-stream', {
@@ -887,8 +859,11 @@ const IntegratedChat: React.FC = () => {
       console.error('发送消息失败:', error)
       showToast('发送消息失败，请重试', 'error')
 
-      // 移除临时消息
-      setMessages(prev => prev.filter(msg => !msg.id.startsWith('temp-')))
+      // 移除临时消息和可能重复的用户消息
+      setMessages(prev => prev.filter((msg) => {
+        // 保留已经保存的用户消息（通过ID判断），移除临时消息
+        return !msg.id.startsWith('temp-') && !(msg.role === 'user' && msg.content === content.trim() && !msg.id.startsWith('temp-'))
+      }))
     } finally {
       // 确保所有临时消息都被清除
       if (tempAiMessage) {
