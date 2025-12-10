@@ -1,11 +1,11 @@
 'use client'
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useRef, useCallback } from 'react'
 import { createClient } from '@supabase/supabase-js'
 
 // Supabase 客户端
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
 )
 
 interface Message {
@@ -35,6 +35,20 @@ const SimpleChat: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const messageAreaRef = useRef<HTMLDivElement>(null)
 
+  // 确认对话框状态
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean
+    title: string
+    message: string
+    onConfirm: () => void
+    conversationId?: string
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  })
+
   // Toast 通知状态
   const [toast, setToast] = useState<{
     show: boolean
@@ -54,37 +68,9 @@ const SimpleChat: React.FC = () => {
     }, 3000)
   }
 
-  // 初始化
-  const checkAuthStatus = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession()
-    
-    if (session?.user) {
-      setCurrentUser(session.user)
-      setIsAuthenticated(true)
-      await loadConversations()
-    } else {
-      setIsAuthenticated(false)
-    }
-
-    // 监听认证状态变化
-    supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        setCurrentUser(session.user)
-        setIsAuthenticated(true)
-        loadConversations()
-      } else if (event === 'SIGNED_OUT') {
-        setCurrentUser(null)
-        setCurrentConversation(null)
-        setConversations([])
-        setMessages([])
-        setIsAuthenticated(false)
-      }
-    })
-  }, [loadConversations])
-
   // 加载对话列表
   const loadConversations = useCallback(async () => {
-    if (!currentUser) return
+    if (!currentUser) { return }
 
     try {
       const { data, error } = await supabase
@@ -112,9 +98,64 @@ const SimpleChat: React.FC = () => {
     }
   }, [currentUser])
 
+  // 删除对话
+  const deleteConversation = useCallback(async (conversationId: string) => {
+    if (!currentUser || !conversationId) {
+      showToast('删除失败: 用户未登录或对话ID无效', 'error')
+      return false
+    }
+
+    try {
+      console.log('开始删除对话，ID:', conversationId)
+
+      // 使用API删除对话
+      const response = await fetch(`/api/conversations/${conversationId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-ID': currentUser.id,
+          'X-User-Email': currentUser.email || '',
+        },
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('删除失败:', errorText)
+        throw new Error('删除对话失败')
+      }
+
+      // 从本地列表中移除对话
+      setConversations(prev => prev.filter(conv => conv.id !== conversationId))
+
+      // 如果删除的是当前对话，跳转到主界面
+      if (currentConversation?.id === conversationId) {
+        setCurrentConversation(null)
+        setMessages([])
+      }
+
+      showToast('对话删除成功', 'success')
+      return true
+    } catch (error) {
+      console.error('删除对话失败:', error)
+      showToast('删除对话失败', 'error')
+      return false
+    }
+  }, [currentUser, currentConversation])
+
+  // 显示删除确认对话框
+  const showDeleteConfirm = (conversationId: string, conversationTitle: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: '删除确认',
+      message: `确定要删除对话"${conversationTitle}"吗？此操作不可撤销！`,
+      conversationId,
+      onConfirm: () => deleteConversation(conversationId),
+    })
+  }
+
   // 创建新对话
   const createNewConversation = async () => {
-    if (!currentUser) return
+    if (!currentUser) { return }
 
     try {
       const { data, error } = await supabase
@@ -122,14 +163,14 @@ const SimpleChat: React.FC = () => {
         .insert({
           user_id: currentUser.id,
           title: '新对话',
-          status: 'active'
+          status: 'active',
         })
         .select()
         .single()
 
       if (error) {
         console.error('创建对话失败:', error)
-        showToast('创建对话失败: ' + error.message, 'error')
+        showToast(`创建对话失败: ${error.message}`, 'error')
         return
       }
 
@@ -144,7 +185,7 @@ const SimpleChat: React.FC = () => {
 
   // 加载特定对话
   const loadConversation = useCallback(async (conversationId: string) => {
-    if (!currentUser) return
+    if (!currentUser) { return }
 
     try {
       // 获取对话信息
@@ -202,7 +243,7 @@ const SimpleChat: React.FC = () => {
         conversation_id: currentConversation.id,
         user_id: currentUser.id,
         content: content.trim(),
-        role: 'user' as const
+        role: 'user' as const,
       }
 
       const { data: savedUserMessage, error: userError } = await supabase
@@ -213,7 +254,7 @@ const SimpleChat: React.FC = () => {
 
       if (userError) {
         console.error('保存用户消息失败:', userError)
-        showToast('发送失败: ' + userError.message, 'error')
+        showToast(`发送失败: ${userError.message}`, 'error')
         setIsLoading(false)
         return
       }
@@ -224,8 +265,8 @@ const SimpleChat: React.FC = () => {
       const aiMessage = {
         conversation_id: currentConversation.id,
         user_id: currentUser.id,
-        content: '这是一个测试回复。您的消息已成功保存到 Supabase 数据库！时间：' + new Date().toLocaleString(),
-        role: 'assistant' as const
+        content: `这是一个测试回复。您的消息已成功保存到 Supabase 数据库！时间：${new Date().toLocaleString()}`,
+        role: 'assistant' as const,
       }
 
       const { data: savedAiMessage, error: aiError } = await supabase
@@ -242,7 +283,6 @@ const SimpleChat: React.FC = () => {
 
       // 重新加载当前对话的消息
       await loadConversation(currentConversation.id)
-
     } catch (error) {
       console.error('发送消息失败:', error)
       showToast('发送消息失败', 'error')
@@ -260,16 +300,31 @@ const SimpleChat: React.FC = () => {
     return conversations.map(conv => (
       <div
         key={conv.id}
-        onClick={() => loadConversation(conv.id)}
-        className={`p-3 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors ${
-          currentConversation?.id === conv.id 
-            ? 'bg-blue-50 border border-blue-200' 
+        className={`p-3 rounded-lg hover:bg-gray-100 transition-colors ${
+          currentConversation?.id === conv.id
+            ? 'bg-blue-50 border border-blue-200'
             : 'bg-gray-50'
         }`}
       >
-        <div className="font-medium text-sm truncate">{conv.title}</div>
-        <div className="text-xs text-gray-500 mt-1">
-          {new Date(conv.updated_at || conv.created_at || '').toLocaleString()}
+        <div
+          className="cursor-pointer"
+          onClick={() => loadConversation(conv.id)}
+        >
+          <div className="font-medium text-sm truncate">{conv.title}</div>
+          <div className="text-xs text-gray-500 mt-1">
+            {new Date(conv.updated_at || conv.created_at || '').toLocaleString()}
+          </div>
+        </div>
+        <div className="flex justify-end mt-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              showDeleteConfirm(conv.id, conv.title)
+            }}
+            className="text-xs text-red-600 hover:text-red-800 px-2 py-1 rounded border border-red-200 hover:bg-red-50 transition-colors"
+          >
+            删除
+          </button>
         </div>
       </div>
     ))
@@ -289,8 +344,8 @@ const SimpleChat: React.FC = () => {
     return messages.map(msg => (
       <div key={msg.id} className={`flex ${msg.role === 'assistant' ? 'justify-start' : 'justify-end'}`}>
         <div className={`message-bubble px-4 py-2 rounded-lg ${
-          msg.role === 'assistant' 
-            ? 'bg-white border border-gray-200 text-gray-900' 
+          msg.role === 'assistant'
+            ? 'bg-white border border-gray-200 text-gray-900'
             : 'bg-blue-600 text-white'
         }`}>
           {msg.role === 'assistant' && (
@@ -336,106 +391,135 @@ const SimpleChat: React.FC = () => {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* 侧边栏 */}
-      <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
-        <div className="p-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold">对话列表</h2>
-          <button 
-            onClick={createNewConversation} 
-            className="mt-2 w-full px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
-          >
-            新建对话
-          </button>
+    <>
+      <div className="flex h-screen bg-gray-50">
+        {/* 侧边栏 */}
+        <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
+          <div className="p-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold">对话列表</h2>
+            <button
+              onClick={createNewConversation}
+              className="mt-2 w-full px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
+            >
+              新建对话
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 space-y-2">
+            {renderConversationList()}
+          </div>
         </div>
-        <div className="flex-1 overflow-y-auto p-4 space-y-2">
-          {renderConversationList()}
+
+        {/* 主聊天区域 */}
+        <div className="flex-1 flex flex-col">
+          {/* 头部 */}
+          <div className="bg-white border-b border-gray-200 p-4">
+            <div className="flex items-center justify-between">
+              <h1 className="text-xl font-bold">劳动法智能助手 (简化版)</h1>
+              <div className="text-sm text-gray-600">
+                👤 {currentUser?.email}
+                <button
+                  onClick={async () => {
+                    await supabase.auth.signOut()
+                    window.location.href = '/auth/login'
+                  }}
+                  className="ml-2 text-sm text-red-600 hover:text-red-800"
+                >
+                  退出
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* 消息区域 */}
+          <div
+            ref={messageAreaRef}
+            className="flex-1 overflow-y-auto p-4 space-y-4"
+          >
+            {renderMessages()}
+          </div>
+
+          {/* 输入区域 */}
+          <div className="bg-white border-t border-gray-200 p-4">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                const formData = new FormData(e.currentTarget)
+                const message = formData.get('message') as string
+                if (message?.trim()) {
+                  sendMessage(message.trim())
+                  e.currentTarget.reset()
+                }
+              }}
+              className="flex space-x-2"
+            >
+              <input
+                name="message"
+                placeholder="输入您的消息..."
+                disabled={isLoading}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                required
+              />
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
+              >
+                {isLoading ? '发送中...' : '发送'}
+              </button>
+            </form>
+          </div>
         </div>
       </div>
 
-      {/* 主聊天区域 */}
-      <div className="flex-1 flex flex-col">
-        {/* 头部 */}
-        <div className="bg-white border-b border-gray-200 p-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-xl font-bold">劳动法智能助手 (简化版)</h1>
-            <div className="text-sm text-gray-600">
-              👤 {currentUser?.email}
-              <button 
-                onClick={async () => {
-                  await supabase.auth.signOut()
-                  window.location.href = '/auth/login'
-                }}
-                className="ml-2 text-sm text-red-600 hover:text-red-800"
+      {/* 确认对话框 */}
+      {confirmDialog.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-2">{confirmDialog.title}</h3>
+            <p className="text-gray-600 mb-4">{confirmDialog.message}</p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setConfirmDialog({ isOpen: false, title: '', message: '', onConfirm: () => {} })}
+                className="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50 transition-colors"
               >
-                退出
+                取消
+              </button>
+              <button
+                onClick={() => {
+                  confirmDialog.onConfirm()
+                  setConfirmDialog({ isOpen: false, title: '', message: '', onConfirm: () => {} })
+                }}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+              >
+                确认删除
               </button>
             </div>
           </div>
         </div>
+      )}
 
-        {/* 消息区域 */}
-        <div 
-          ref={messageAreaRef}
-          className="flex-1 overflow-y-auto p-4 space-y-4"
+      {/* Toast 通知 */}
+      {toast.show && (
+        <div
+          className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 transform ${
+            toast.show ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'
+          } ${
+            toast.type === 'success'
+              ? 'bg-green-500 text-white'
+              : toast.type === 'error'
+                ? 'bg-red-500 text-white'
+                : toast.type === 'warning'
+                  ? 'bg-yellow-500 text-white'
+                  : 'bg-blue-500 text-white'
+          }`}
         >
-          {renderMessages()}
+          <div className="flex items-center">
+            <span className="text-sm font-medium">{toast.message}</span>
+          </div>
         </div>
-
-        {/* 输入区域 */}
-        <div className="bg-white border-t border-gray-200 p-4">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              const formData = new FormData(e.currentTarget)
-              const message = formData.get('message') as string
-              if (message?.trim()) {
-                sendMessage(message.trim())
-                e.currentTarget.reset()
-              }
-            }}
-            className="flex space-x-2"
-          >
-            <input
-              name="message"
-              placeholder="输入您的消息..."
-              disabled={isLoading}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-              required
-            />
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
-            >
-              {isLoading ? '发送中...' : '发送'}
-            </button>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    {/* Toast 通知 */}
-    {toast.show && (
-      <div
-        className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 transform ${
-          toast.show ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'
-        } ${
-          toast.type === 'success'
-            ? 'bg-green-500 text-white'
-            : toast.type === 'error'
-              ? 'bg-red-500 text-white'
-              : toast.type === 'warning'
-                ? 'bg-yellow-500 text-white'
-                : 'bg-blue-500 text-white'
-        }`}
-      >
-        <div className="flex items-center">
-          <span className="text-sm font-medium">{toast.message}</span>
-        </div>
-      </div>
-    )}
-  </div>
-)
+      )}
+    </>
+  )
+}
 
 export default SimpleChat

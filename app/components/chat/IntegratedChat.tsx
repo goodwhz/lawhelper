@@ -77,7 +77,7 @@ const IntegratedChat: React.FC = () => {
   const messageAreaRef = useRef<HTMLDivElement>(null)
 
   // 性能优化状态
-  const [isPreloading, setIsPreloading] = useState(false)
+  const [_isPreloading, _setIsPreloading] = useState(false)
   const [_preloadedConversations, _setPreloadedConversations] = useState<Map<string, ChatMessage[]>>(new Map())
   const [_visibleMessageCount, _setVisibleMessageCount] = useState(20) // 初始显示的消息数量
 
@@ -115,19 +115,19 @@ const IntegratedChat: React.FC = () => {
   }, [])
 
   // 欢迎界面状态
-  const [showWelcome, setShowWelcome] = useState(false)
+  const [showWelcome, setShowWelcome] = useState(true)
 
   // 加载对话列表 - 优化版本
-  const loadConversations = useCallback(async () => {
+  const loadConversations = useCallback(async (): Promise<Conversation[]> => {
     if (!user) {
       console.error('加载对话失败: 用户不存在')
-      return
+      return []
     }
 
     // 检查用户ID是否存在
     if (!user.id) {
       console.error('加载对话失败: 用户ID不存在', user)
-      return
+      return []
     }
 
     try {
@@ -165,7 +165,7 @@ const IntegratedChat: React.FC = () => {
           console.log('当前session状态:', !!session)
           if (!session) {
             console.error('用户未登录，需要重新认证')
-            return
+            return []
           }
         }
 
@@ -175,27 +175,29 @@ const IntegratedChat: React.FC = () => {
         setShowWelcome(true)
         setCurrentConversation(null)
         setMessages([])
-        return
+        return []
       }
 
       const convs = data || []
       console.log('成功加载对话列表，数量:', convs.length)
       setConversations(convs)
 
-      // 如果没有对话，显示欢迎界面
+      // 只有在没有对话时才显示欢迎界面
       if (convs.length === 0) {
         setShowWelcome(true)
         setCurrentConversation(null)
         setMessages([])
-      } else {
-        setShowWelcome(false)
       }
+      // 不改变当前状态，让用户继续在对话页面
+
+      return convs
     } catch (error) {
       console.error('加载对话列表时发生错误:', error)
       setConversations([])
       setShowWelcome(true)
       setCurrentConversation(null)
       setMessages([])
+      return []
     }
   }, [user, isAuthenticated])
 
@@ -277,6 +279,7 @@ const IntegratedChat: React.FC = () => {
 
       // 3. 更新状态
       setCurrentConversation(conversation)
+      // 用户主动点击对话时，跳转到对话页面
       setShowWelcome(false)
 
       console.log('✅ 对话加载完成')
@@ -292,7 +295,7 @@ const IntegratedChat: React.FC = () => {
   const preloadConversations = useCallback(async (conversations: Conversation[]) => {
     if (!user || conversations.length === 0) { return }
 
-    setIsPreloading(true)
+    _setIsPreloading(true)
     console.log('🚀 开始预加载对话数据...')
 
     try {
@@ -337,31 +340,27 @@ const IntegratedChat: React.FC = () => {
     } catch (error) {
       console.error('预加载失败:', error)
     } finally {
-      setIsPreloading(false)
+      _setIsPreloading(false)
       console.log('🎯 预加载完成')
     }
   }, [user])
 
-  // 初始化时恢复上次对话状态并进行预加载
+  // 初始化时加载对话列表
   useEffect(() => {
     if (isAuthenticated && user) {
-      loadConversations().then((conversations) => {
-        // 异步预加载其他对话
-        if (conversations.length > 0) {
-          preloadConversations(conversations)
-        }
+      const initializeApp = async () => {
+        const loadedConversations = await loadConversations()
 
-        // 尝试恢复上次访问的对话
-        const lastConversationId = localStorage.getItem(`lastConversation_${user.id}`)
-        if (lastConversationId) {
-          // 延迟一点加载，确保对话列表已经设置好
-          setTimeout(() => {
-            loadConversation(lastConversationId).catch(console.error)
-          }, 100)
+        // 异步预加载其他对话（不显示欢迎界面）
+        if (loadedConversations.length > 0) {
+          preloadConversations(loadedConversations)
         }
-      })
+        // 不再自动恢复上次对话，始终显示欢迎界面
+      }
+
+      initializeApp()
     }
-  }, [isAuthenticated, user, loadConversations, loadConversation, preloadConversations])
+  }, [isAuthenticated, user, loadConversations, preloadConversations])
 
   // 保存当前对话ID到localStorage
   useEffect(() => {
@@ -588,7 +587,7 @@ const IntegratedChat: React.FC = () => {
 
   // 发送消息
   const sendMessage = useCallback(async (content: string) => {
-    if (!content.trim() || isLoading || !user) {
+    if (!content || typeof content !== 'string' || !content.trim() || isLoading || !user) {
       showToast('请先登录', 'warning')
       return
     }
@@ -624,6 +623,7 @@ const IntegratedChat: React.FC = () => {
         targetConversation = data
         setCurrentConversation(data)
         setMessages([])
+        // 发送消息时才跳转到对话页面
         setShowWelcome(false)
 
         console.log('新创建的对话:', targetConversation)
@@ -926,7 +926,10 @@ const IntegratedChat: React.FC = () => {
       // 设置为当前对话
       setCurrentConversation(data)
       setMessages([])
-      setShowWelcome(false)
+      // 创建带预设问题的对话时才跳转
+      if (presetQuestion) {
+        setShowWelcome(false)
+      }
 
       // 更新对话列表，将新对话添加到列表开头
       setConversations(prev => [data, ...prev])
@@ -962,7 +965,12 @@ const IntegratedChat: React.FC = () => {
 
   // 创建新对话
   const createNewConversation = useCallback(async () => {
-    return await createNewConversationWithTitle('新对话')
+    const result = await createNewConversationWithTitle('新对话')
+    // 主动点击新建对话时，跳转到空白页面
+    if (result) {
+      setShowWelcome(false)
+    }
+    return result
   }, [createNewConversationWithTitle])
 
   // 开始编辑对话标题
@@ -1076,11 +1084,7 @@ const IntegratedChat: React.FC = () => {
                 errorMessage = '对话不存在'
                 // 如果对话不存在，仍然从本地列表中移除
                 setConversations(prev => prev.filter(conv => conv.id !== conversationId))
-                if (currentConversation?.id === conversationId) {
-                  setCurrentConversation(null)
-                  setMessages([])
-                  setShowWelcome(true)
-                }
+                // 在主页面删除时，不触发任何状态变化
                 return true // 认为删除成功，因为对话已经不存在
                 break
               case 'PERMISSION_DENIED':
@@ -1119,15 +1123,15 @@ const IntegratedChat: React.FC = () => {
 
       console.log('对话删除成功:', result)
 
-      // 如果删除的是当前对话，清空状态并显示欢迎界面
-      if (currentConversation?.id === conversationId) {
+      // 简化逻辑：无论在哪里删除，都只从对话列表中移除
+      setConversations(prev => prev.filter(conv => conv.id !== conversationId))
+
+      // 如果删除的是当前对话，或者没有对话时，跳转到AI-chat主界面
+      if (currentConversation?.id === conversationId || conversations.length <= 1) {
         setCurrentConversation(null)
         setMessages([])
         setShowWelcome(true)
       }
-
-      // 立即从本地对话列表中移除已删除的对话
-      setConversations(prev => prev.filter(conv => conv.id !== conversationId))
 
       // 后台重新加载对话列表确保数据同步
       loadConversations().catch(console.error)
@@ -1138,7 +1142,7 @@ const IntegratedChat: React.FC = () => {
       const errorMessage = error instanceof Error ? error.message : '删除对话失败'
       throw new Error(errorMessage)
     }
-  }, [user, isAuthenticated, currentConversation, loadConversations])
+  }, [user, isAuthenticated, currentConversation, loadConversations, conversations.length])
 
   // 批量删除所有对话
   const deleteAllConversations = useCallback(async () => {
@@ -1540,100 +1544,43 @@ const IntegratedChat: React.FC = () => {
   // 如果显示欢迎界面，返回欢迎屏幕
   if (showWelcome) {
     return (
-      <div className="flex h-screen bg-gray-50">
-        {/* 全局顶部导航栏 */}
-        <div className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <button
-                onClick={() => {
-                  // 返回主页面
-                  window.location.href = '/'
-                }}
-                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-                title="返回主页面"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                </svg>
-              </button>
-              <h1 className="text-xl font-bold">劳动法智能助手</h1>
-            </div>
-            {/* 整个页面的右上角用户信息 */}
-            <div className="text-sm text-gray-600">
-              👤 {user?.name || user?.email}
-            </div>
-          </div>
-        </div>
-
-        {/* 侧边栏 */}
-        <div className="w-64 bg-white border-r border-gray-200 flex flex-col pt-16">
-          <div className="p-4 border-b border-gray-200">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-lg font-semibold">对话列表</h2>
-              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                {conversations.length}
-              </span>
-            </div>
-            <div className="space-y-2">
-              <button
-                onClick={() => createNewConversationWithPreset()}
-                className="w-full px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-              >
-                ➕ 新建对话
-              </button>
-              {conversations.length > 0 && (
-                <button
-                  onClick={deleteAllConversations}
-                  className="w-full px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm flex items-center justify-center"
-                >
-                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                  清空所有对话
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-4 space-y-2">
-            {conversations.length === 0
-              ? (
-                <div className="flex-1 flex items-center justify-center text-gray-500">
-                  <div className="text-center">
-                    <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                      <span className="text-xl">💬</span>
-                    </div>
-                    <p className="text-sm">暂无对话历史</p>
-                    <p className="text-xs mt-1">点击上方按钮开始对话</p>
-                  </div>
-                </div>
-              )
-              : (
-                renderConversationList()
-              )}
-          </div>
-        </div>
-
-        {/* 欢迎界面 */}
-        <WelcomeScreen
-          user={user}
-          onStartNewChat={(presetQuestion) => {
-            createNewConversationWithPreset(presetQuestion)
-          }}
+      <>
+        {/* 确认对话框 - 放在根级别确保在所有界面都能显示 */}
+        <ConfirmDialog
+          isOpen={confirmDialog.isOpen}
+          title={confirmDialog.title}
+          message={confirmDialog.message}
+          onConfirm={confirmDialog.onConfirm}
+          onCancel={() => setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} })}
+          type={confirmDialog.type}
         />
-      </div>
-    )
-  }
 
-  return (
-    <div className="flex h-screen bg-gray-50">
-      {/* 全局顶部导航栏 */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            {!showWelcome && (
-              <>
+        {/* Toast 通知 */}
+        {toast.show && (
+          <div
+            className={`fixed top-20 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 transform ${
+              toast.show ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'
+            } ${
+              toast.type === 'success'
+                ? 'bg-green-500 text-white'
+                : toast.type === 'error'
+                  ? 'bg-red-500 text-white'
+                  : toast.type === 'warning'
+                    ? 'bg-yellow-500 text-white'
+                    : 'bg-blue-500 text-white'
+            }`}
+          >
+            <div className="flex items-center">
+              <span className="text-sm font-medium">{toast.message}</span>
+            </div>
+          </div>
+        )}
+
+        <div className="flex h-screen bg-gray-50">
+          {/* 全局顶部导航栏 */}
+          <div className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
                 <button
                   onClick={() => {
                     // 返回主页面
@@ -1646,129 +1593,88 @@ const IntegratedChat: React.FC = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                   </svg>
                 </button>
-                <button
-                  onClick={() => {
-                    setShowWelcome(true)
-                    setCurrentConversation(null)
-                    setMessages([])
-                  }}
-                  className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-                  title="返回对话主页面"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                  </svg>
-                </button>
-              </>
-            )}
-            <h1 className="text-xl font-bold">劳动法智能助手</h1>
-          </div>
-          {/* 整个页面的右上角用户信息 */}
-          <div className="text-sm text-gray-600">
-            👤 {user?.name || user?.email}
-          </div>
-        </div>
-      </div>
-
-      {/* 侧边栏 */}
-      <div className="w-64 bg-white border-r border-gray-200 flex flex-col pt-16">
-        <div className="p-4 border-b border-gray-200">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-lg font-semibold">对话列表</h2>
-            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-              {conversations.length}
-            </span>
-          </div>
-          <div className="space-y-2">
-            <button
-              onClick={createNewConversation}
-              className="w-full px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
-            >
-              新建对话
-            </button>
-            {conversations.length > 0 && (
-              <button
-                onClick={deleteAllConversations}
-                className="w-full px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm flex items-center justify-center"
-              >
-                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-                清空所有对话
-              </button>
-            )}
-          </div>
-        </div>
-        <div className="flex-1 overflow-y-auto p-4 space-y-2">
-          {renderConversationList()}
-        </div>
-      </div>
-
-      {/* 主聊天区域 */}
-      <div className="flex-1 flex flex-col pt-16">
-        {/* 消息区域 */}
-        <div
-          ref={messageAreaRef}
-          className="flex-1 overflow-y-auto p-4 space-y-4"
-        >
-          {renderMessages()}
-
-          {(isLoading || isStreaming) && (
-            <div className="flex justify-start">
-              <div className="message-bubble bg-white border border-gray-200 px-4 py-2 rounded-lg">
-                <div className="flex items-center">
-                  <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2">
-                    <span className="text-xs">🤖</span>
-                  </div>
-                  <div className="flex items-center space-x-2 text-gray-500">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                    <span>{isStreaming ? 'AI正在回复中...' : 'AI正在思考中...'}</span>
-                    <button
-                      onClick={stopStreaming}
-                      className="ml-4 px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded-full transition-colors"
-                    >
-                      停止
-                    </button>
-                  </div>
-                </div>
+                <h1 className="text-xl font-bold">劳动法智能助手</h1>
+              </div>
+              {/* 整个页面的右上角用户信息 */}
+              <div className="text-sm text-gray-600">
+                👤 {user?.name || user?.email}
               </div>
             </div>
-          )}
-        </div>
+          </div>
 
-        {/* 输入区域 */}
-        <div className="bg-white border-t border-gray-200 p-4">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              const formData = new FormData(e.currentTarget)
-              const message = formData.get('message') as string
-              if (message?.trim()) {
-                sendMessage(message.trim())
-                e.currentTarget.reset()
+          {/* 侧边栏 */}
+          <div className="w-64 bg-white border-r border-gray-200 flex flex-col pt-16">
+            <div className="p-4 border-b border-gray-200">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-lg font-semibold">对话列表</h2>
+                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                  {conversations.length}
+                </span>
+              </div>
+              <div className="space-y-2">
+                <button
+                  onClick={() => createNewConversation()}
+                  className="w-full px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                >
+                  ➕ 新建对话
+                </button>
+                {conversations.length > 0 && (
+                  <button
+                    onClick={deleteAllConversations}
+                    className="w-full px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm flex items-center justify-center"
+                  >
+                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    清空所有对话
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              {conversations.length === 0
+                ? (
+                  <div className="flex-1 flex items-center justify-center text-gray-500">
+                    <div className="text-center">
+                      <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <span className="text-xl">💬</span>
+                      </div>
+                      <p className="text-sm">暂无对话历史</p>
+                      <p className="text-xs mt-1">点击上方按钮开始对话</p>
+                    </div>
+                  </div>
+                )
+                : (
+                  renderConversationList()
+                )}
+            </div>
+          </div>
+
+          {/* 欢迎界面 */}
+          <WelcomeScreen
+            user={user}
+            conversations={conversations}
+            onStartNewChat={(presetQuestion) => {
+              if (presetQuestion) {
+                // 有预设问题时，创建对话并跳转
+                createNewConversationWithPreset(presetQuestion)
+              } else {
+                // 没有预设问题时，创建空白对话并跳转
+                createNewConversation()
               }
             }}
-            className="flex space-x-2"
-          >
-            <input
-              name="message"
-              placeholder="输入您的消息..."
-              disabled={isLoading || isStreaming}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-              required
-            />
-            <button
-              type="submit"
-              disabled={isLoading || isStreaming}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
-            >
-              {isLoading || isStreaming ? '发送中...' : '发送'}
-            </button>
-          </form>
+            onDeleteConversation={deleteConversation}
+            onLoadConversations={loadConversations}
+          />
         </div>
-      </div>
+      </>
+    )
+  }
 
-      {/* 确认对话框 */}
+  return (
+    <>
+      {/* 确认对话框 - 放在根级别确保在所有界面都能显示 */}
       <ConfirmDialog
         isOpen={confirmDialog.isOpen}
         title={confirmDialog.title}
@@ -1799,7 +1705,149 @@ const IntegratedChat: React.FC = () => {
         </div>
       )}
 
-    </div>
+      <div className="flex h-screen bg-gray-50">
+        {/* 全局顶部导航栏 */}
+        <div className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              {!showWelcome && (
+                <>
+                  <button
+                    onClick={() => {
+                    // 返回主页面
+                      window.location.href = '/'
+                    }}
+                    className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                    title="返回主页面"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowWelcome(true)
+                      setCurrentConversation(null)
+                      setMessages([])
+                    }}
+                    className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                    title="返回对话主页面"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                  </button>
+                </>
+              )}
+              <h1 className="text-xl font-bold">劳动法智能助手</h1>
+            </div>
+            {/* 整个页面的右上角用户信息 */}
+            <div className="text-sm text-gray-600">
+              👤 {user?.name || user?.email}
+            </div>
+          </div>
+        </div>
+
+        {/* 侧边栏 */}
+        <div className="w-64 bg-white border-r border-gray-200 flex flex-col pt-16">
+          <div className="p-4 border-b border-gray-200">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-lg font-semibold">对话列表</h2>
+              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                {conversations.length}
+              </span>
+            </div>
+            <div className="space-y-2">
+              <button
+                onClick={createNewConversation}
+                className="w-full px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
+              >
+                新建对话
+              </button>
+              {conversations.length > 0 && (
+                <button
+                  onClick={deleteAllConversations}
+                  className="w-full px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm flex items-center justify-center"
+                >
+                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  清空所有对话
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 space-y-2">
+            {renderConversationList()}
+          </div>
+        </div>
+
+        {/* 主聊天区域 */}
+        <div className="flex-1 flex flex-col pt-16">
+          {/* 消息区域 */}
+          <div
+            ref={messageAreaRef}
+            className="flex-1 overflow-y-auto p-4 space-y-4"
+          >
+            {renderMessages()}
+
+            {(isLoading || isStreaming) && (
+              <div className="flex justify-start">
+                <div className="message-bubble bg-white border border-gray-200 px-4 py-2 rounded-lg">
+                  <div className="flex items-center">
+                    <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2">
+                      <span className="text-xs">🤖</span>
+                    </div>
+                    <div className="flex items-center space-x-2 text-gray-500">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                      <span>{isStreaming ? 'AI正在回复中...' : 'AI正在思考中...'}</span>
+                      <button
+                        onClick={stopStreaming}
+                        className="ml-4 px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded-full transition-colors"
+                      >
+                        停止
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 输入区域 */}
+          <div className="bg-white border-t border-gray-200 p-4">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                const formData = new FormData(e.currentTarget)
+                const message = formData.get('message') as string
+                if (message?.trim()) {
+                  sendMessage(message.trim())
+                  e.currentTarget.reset()
+                }
+              }}
+              className="flex space-x-2"
+            >
+              <input
+                name="message"
+                placeholder="输入您的消息..."
+                disabled={isLoading || isStreaming}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                required
+              />
+              <button
+                type="submit"
+                disabled={isLoading || isStreaming}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
+              >
+                {isLoading || isStreaming ? '发送中...' : '发送'}
+              </button>
+            </form>
+          </div>
+        </div>
+
+      </div>
+    </>
   )
 }
 
