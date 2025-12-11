@@ -12,7 +12,7 @@ const DocumentsPage: FC = () => {
         <div className="min-h-screen bg-gradient-to-br from-purple-50 via-purple-100 to-purple-200">
           <Navigation />
           
-          <div className="max-w-7xl mx-auto px-4 py-8">
+          <div className="max-w-7xl mx-auto px-4 pt-24 pb-8">
             <div className="bg-white rounded-xl shadow-lg">
               <div className="p-6 border-b">
                 <div>

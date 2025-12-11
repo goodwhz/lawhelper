@@ -8,7 +8,7 @@ const AboutPage: FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-law-red-50 via-law-orange-50 to-law-blue-50">
       <Navigation />
 
-      <div className="max-w-4xl mx-auto px-6 py-12">
+      <div className="max-w-4xl mx-auto px-6 pt-24 pb-12">
         <div className="bg-white rounded-xl shadow-lg p-8">
           <h1 className="text-3xl font-bold text-law-red-800 font-hei mb-8">
             《冷静头脑CoolBrain服务协议》

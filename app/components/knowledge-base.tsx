@@ -150,7 +150,7 @@ const KnowledgeBase: React.FC = () => {
   })
 
   return (
-    <div className="min-h-screen bg-white py-8">
+    <div className="min-h-screen bg-white pt-24 pb-8">
       <div className="max-w-6xl mx-auto px-4">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-law-red-800 mb-4">劳动法知识库</h1>

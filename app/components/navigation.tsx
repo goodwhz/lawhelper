@@ -62,7 +62,7 @@ const Navigation: FC = () => {
 
   return (
     <>
-      <nav className="bg-white shadow-lg border-b border-gray-200">
+      <nav className="fixed top-0 left-0 right-0 bg-white shadow-lg border-b border-gray-200 z-50">
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex justify-between items-center py-4">
             {/* 左侧区域 - Logo */}

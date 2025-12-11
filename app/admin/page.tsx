@@ -27,7 +27,7 @@ function AdminPage() {
           <Navigation />
 
           <div className="bg-white shadow">
-            <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-7xl mx-auto pt-24 pb-6 px-4 sm:px-6 lg:px-8">
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">后台管理系统</h1>
                 <p className="mt-1 text-sm text-gray-600">

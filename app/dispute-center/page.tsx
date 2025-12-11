@@ -4,6 +4,9 @@ import React, { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import LaborDisputeProcess from '@/app/components/tools/labor-dispute-process'
 import PersonnelDisputeProcess from '@/app/components/tools/personnel-dispute-process'
+import Navigation from '@/app/components/navigation'
+import PageAuthGuard from '@/app/components/page-auth-guard'
+import ErrorBoundary from '@/app/components/error-boundary'
 
 const DisputeCenterPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'labor' | 'personnel'>('labor')
@@ -26,11 +29,14 @@ const DisputeCenterPage: React.FC = () => {
     }
   ]
 
-
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-8">
-      <div className="max-w-7xl mx-auto px-4">
+    <ErrorBoundary>
+      <PageAuthGuard requireAuth={true}>
+        <div className="min-h-screen bg-white">
+          <Navigation />
+          
+          <div className="bg-gradient-to-br from-gray-50 to-blue-50 pt-24 pb-8">
+            <div className="max-w-7xl mx-auto px-4">
         {/* 页面标题 */}
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
@@ -113,8 +119,11 @@ const DisputeCenterPage: React.FC = () => {
             <li>• 复杂案件建议咨询专业律师</li>
           </ul>
         </div>
-      </div>
-    </div>
+            </div>
+          </div>
+        </div>
+      </PageAuthGuard>
+    </ErrorBoundary>
   )
 }
 

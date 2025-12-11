@@ -57,7 +57,7 @@ const ToolsSection: FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white py-8">
+    <div className="min-h-screen bg-white pt-24 pb-8">
       <div className="max-w-7xl mx-auto px-4">
         <div className="bg-white rounded-xl shadow-lg">
           <div className="p-6 border-b">
