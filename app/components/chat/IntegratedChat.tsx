@@ -893,6 +893,229 @@ const IntegratedChat: React.FC = () => {
     }
   }, [user, currentConversation, isLoading, saveMessage, updateConversationTitle, showToast])
 
+  // 为特定对话发送消息 - 用于快速开始功能，避免依赖currentConversation状态
+  const sendMessageForConversation = useCallback(async (conversation: Conversation, content: string) => {
+    if (!content || typeof content !== 'string' || !content.trim() || isLoading || !user) {
+      showToast('请先登录', 'warning')
+      return
+    }
+
+    setIsLoading(true)
+    setIsStreaming(true)
+
+    // 声明临时消息变量，确保在整个函数范围内可访问
+    let tempAiMessage: ChatMessage | null = null
+
+    try {
+      // 先保存用户消息到数据库
+      const userMessage: Omit<ChatMessage, 'id' | 'created_at'> = {
+        content: content.trim(),
+        role: 'user',
+      }
+
+      const { data: savedUserMessage, error: userMessageError } = await supabase
+        .from('messages')
+        .insert({
+          ...userMessage,
+          conversation_id: conversation.id,
+          user_id: user.id,
+        })
+        .select()
+        .single()
+
+      if (userMessageError || !savedUserMessage) {
+        throw new Error('保存用户消息失败')
+      }
+
+      // 创建临时AI消息用于流式显示
+      tempAiMessage = {
+        id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        content: '',
+        role: 'assistant',
+        created_at: new Date().toISOString(),
+        loading: true,
+      }
+
+      // 显示消息
+      setMessages([savedUserMessage, tempAiMessage])
+
+      // 调用Dify API进行流式聊天
+      const response = await fetch('/api/dify/chat-stream', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: content.trim(),
+          conversation_id: conversation.dify_conversation_id,
+          user_id: user.id,
+        }),
+      })
+
+      if (!response.ok) {
+        let errorMessage = `API调用失败: ${response.status}`
+        try {
+          const errorText = await response.text()
+          if (errorText) {
+            try {
+              const errorData = JSON.parse(errorText)
+              errorMessage += ` - ${errorData.error || errorData.message || errorData.details || '未知错误'}`
+            } catch {
+              errorMessage += ` - ${errorText.substring(0, 200)}`
+            }
+          }
+        } catch (e) {
+          console.error('获取错误信息失败:', e)
+        }
+        throw new Error(errorMessage)
+      }
+
+      // 处理流式响应
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+      let aiResponse = ''
+      let difyConversationId = ''
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read()
+
+          if (done) {
+            console.log('流读取完成，退出循环')
+            break
+          }
+
+          const chunk = decoder.decode(value, { stream: true })
+          const lines = chunk.split('\n')
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6)
+
+              if (data === '[DONE]') {
+                // 流结束
+                console.log('收到[DONE]标记，设置loading为false')
+
+                if (tempAiMessage) {
+                  setMessages((prev) => {
+                    const updated = prev.map(msg =>
+                      msg.id === tempAiMessage.id
+                        ? { ...msg, loading: false }
+                        : msg,
+                    )
+                    return updated
+                  })
+                  tempAiMessage = null
+                }
+                break
+              }
+
+              try {
+                const parsed = JSON.parse(data)
+
+                if (parsed.answer) {
+                  aiResponse += parsed.answer
+
+                  // 更新临时消息的内容
+                  setMessages(prev => prev.map(msg =>
+                    msg.id === tempAiMessage?.id
+                      ? { ...msg, content: aiResponse }
+                      : msg,
+                  ))
+                }
+
+                if (parsed.conversation_id) {
+                  difyConversationId = parsed.conversation_id
+                }
+              } catch (e) {
+                console.error('解析流式数据失败:', e)
+              }
+            }
+          }
+        }
+      }
+
+      // 保存AI响应到数据库
+      if (aiResponse.trim()) {
+        const aiMessage: Omit<ChatMessage, 'id' | 'created_at'> = {
+          content: aiResponse.trim(),
+          role: 'assistant',
+        }
+
+        const { data: savedAiMessage, error: aiMessageError } = await supabase
+          .from('messages')
+          .insert({
+            ...aiMessage,
+            conversation_id: conversation.id,
+            user_id: user.id,
+          })
+          .select()
+          .single()
+
+        if (!aiMessageError && savedAiMessage) {
+          // 替换临时消息为保存的消息
+          setMessages((prev) => {
+            const updated = prev.map(msg =>
+              msg.id === tempAiMessage?.id ? savedAiMessage : msg,
+            )
+            return updated
+          })
+          tempAiMessage = null
+        }
+      } else {
+        // 如果没有响应内容，清除临时消息
+        if (tempAiMessage) {
+          setMessages(prev => prev.filter(msg => msg.id !== tempAiMessage.id))
+          tempAiMessage = null
+        }
+      }
+
+      // 如果有新的Dify对话ID，更新对话记录
+      if (difyConversationId && difyConversationId !== conversation.dify_conversation_id) {
+        await supabase
+          .from('conversations')
+          .update({ dify_conversation_id: difyConversationId })
+          .eq('id', conversation.id)
+
+        // 更新当前对话状态
+        setCurrentConversation(prev => prev
+          ? {
+            ...prev,
+            dify_conversation_id: difyConversationId,
+          }
+          : null)
+      }
+    } catch (error) {
+      console.error('发送消息失败:', error)
+      showToast('发送消息失败，请重试', 'error')
+
+      // 移除临时消息
+      setMessages(prev => prev.filter((msg) => {
+        return !msg.id.startsWith('temp-') && !(msg.role === 'user' && msg.content === content.trim() && !msg.id.startsWith('temp-'))
+      }))
+    } finally {
+      // 确保所有临时消息都被清除
+      if (tempAiMessage) {
+        setMessages((prev) => {
+          const filtered = prev.filter(msg => msg.id !== tempAiMessage.id)
+          return filtered
+        })
+      }
+
+      // 确保加载状态被重置
+      setIsLoading(false)
+      setIsStreaming(false)
+
+      // 确保没有消息处于加载状态
+      setMessages((prev) => {
+        const updated = prev.map(msg =>
+          msg.loading ? { ...msg, loading: false } : msg,
+        )
+        return updated
+      })
+    }
+  }, [user, isLoading, showToast, setCurrentConversation])
+
   // 创建带标题的新对话
   const createNewConversationWithTitle = useCallback(async (title: string, presetQuestion?: string) => {
     if (!user) {
@@ -934,11 +1157,15 @@ const IntegratedChat: React.FC = () => {
       // 更新对话列表，将新对话添加到列表开头
       setConversations(prev => [data, ...prev])
 
-      // 如果有预设问题，发送消息
+      // 如果有预设问题，直接发送消息（不使用setTimeout避免时序问题）
       if (presetQuestion) {
-        setTimeout(() => {
-          sendMessage(presetQuestion)
-        }, 500)
+        try {
+          // 使用新创建的对话直接发送消息，避免依赖currentConversation状态
+          await sendMessageForConversation(data, presetQuestion)
+        } catch (error) {
+          console.error('发送预设问题失败:', error)
+          showToast('发送预设问题失败，请重试', 'error')
+        }
       }
 
       return data
