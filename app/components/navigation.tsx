@@ -32,7 +32,11 @@ const Navigation: FC = () => {
     return () => window.removeEventListener('storage', handleStorageChange)
   }, [])
 
-  const navItems = []
+  const navItems: Array<{ href: string; label: string; icon?: string }> = [
+    { href: '/chat', label: '智能对话', icon: '💬' },
+    { href: '/tools', label: '法律工具', icon: '⚖️' },
+    { href: '/profile', label: '个人中心', icon: '👤' }
+  ]
 
   const isActive = (href: string) => {
     if (href === '/') { return pathname === '/' }

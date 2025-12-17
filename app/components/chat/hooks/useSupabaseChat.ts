@@ -152,7 +152,7 @@ export const useSupabaseChat = (): ChatState & ChatActions => {
       message_files: [],
       agent_thoughts: [],
       citation: [],
-      feedback: null,
+      // feedback: null, // 注释掉，因为feedback是可选的
       more: {},
       annotation: null,
       is_opening_statement: false,
@@ -193,7 +193,7 @@ export const useSupabaseChat = (): ChatState & ChatActions => {
         message_files: [],
         agent_thoughts: [],
         citation: [],
-        feedback: null,
+        // feedback: null, // 注释掉，因为feedback是可选的
         more: {},
         annotation: null,
         is_opening_statement: false,

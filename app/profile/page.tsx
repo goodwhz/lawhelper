@@ -64,8 +64,8 @@ function ProfilePage() {
         console.log('加载用户资料:', userProfile)
         setProfile(userProfile)
         setFormData({
-          name: userProfile.name,
-          email: userProfile.email,
+          name: userProfile.name || '',
+          email: userProfile.email || '',
         })
       }
     } catch (error) {

@@ -48,7 +48,7 @@ async function verifyAdmin(request: NextRequest) {
 // DELETE - 删除单个用户（通过路径参数）
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const admin = await verifyAdmin(request)
@@ -56,7 +56,8 @@ export async function DELETE(
       return NextResponse.json({ error: '需要管理员权限' }, { status: 403 })
     }
 
-    const userId = params.id
+    const resolvedParams = await params
+    const userId = resolvedParams.id
 
     if (!userId) {
       return NextResponse.json({ error: '用户ID不能为空' }, { status: 400 })

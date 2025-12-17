@@ -661,6 +661,7 @@ const IntegratedChat: React.FC = () => {
       const userMessage: Omit<ChatMessage, 'id' | 'created_at'> = {
         content: content.trim(),
         role: 'user',
+        updated_at: new Date().toISOString(),
       }
 
       // 先保存用户消息，获取数据库ID
@@ -675,6 +676,7 @@ const IntegratedChat: React.FC = () => {
         content: '',
         role: 'assistant',
         created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
         loading: true,
       }
 
@@ -798,6 +800,7 @@ const IntegratedChat: React.FC = () => {
         const aiMessage: Omit<ChatMessage, 'id' | 'created_at'> = {
           content: aiResponse.trim(),
           role: 'assistant',
+          updated_at: new Date().toISOString(),
         }
 
         const savedAiMessage = await saveMessage(aiMessage)
@@ -911,6 +914,7 @@ const IntegratedChat: React.FC = () => {
       const userMessage: Omit<ChatMessage, 'id' | 'created_at'> = {
         content: content.trim(),
         role: 'user',
+        updated_at: new Date().toISOString(),
       }
 
       const { data: savedUserMessage, error: userMessageError } = await supabase
@@ -933,6 +937,7 @@ const IntegratedChat: React.FC = () => {
         content: '',
         role: 'assistant',
         created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
         loading: true,
       }
 
@@ -1040,6 +1045,7 @@ const IntegratedChat: React.FC = () => {
         const aiMessage: Omit<ChatMessage, 'id' | 'created_at'> = {
           content: aiResponse.trim(),
           role: 'assistant',
+          updated_at: new Date().toISOString(),
         }
 
         const { data: savedAiMessage, error: aiMessageError } = await supabase

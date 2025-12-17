@@ -95,23 +95,23 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-4 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md sm:max-w-lg">
         {/* 页面头部 */}
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-6">
+        <div className="text-center mb-6 sm:mb-8">
+          <div className="flex justify-center mb-4 sm:mb-6">
             <img
               src="/logo.jpeg"
               alt="法律助手Logo"
-              className="h-16 w-auto rounded-lg object-contain"
+              className="h-12 sm:h-16 w-auto rounded-lg object-contain"
             />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">欢迎回来</h1>
-          <p className="text-gray-600">登录到您的冷静头脑账户</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">欢迎回来</h1>
+          <p className="text-sm sm:text-base text-gray-600">登录到您的冷静头脑账户</p>
         </div>
 
         {/* 登录表单 */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg animate-fade-in">
@@ -208,7 +208,7 @@ export default function LoginPage() {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-law-red-500 text-white px-4 py-2 rounded-lg hover:bg-law-red-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-200 font-medium flex items-center justify-center min-h-[44px]"
+                  className="w-full bg-law-red-500 text-white px-4 py-3 sm:py-2 rounded-lg hover:bg-law-red-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-200 font-medium flex items-center justify-center min-h-[44px] sm:min-h-[48px]"
                 >
                   {isLoading ? (
                     <>

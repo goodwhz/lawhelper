@@ -132,12 +132,24 @@ module.exports = {
         },
       },
       screens: {
+        // 移动端断点
+        xs: '320px',    // 小屏手机
+        // => @media (min-width: 320px) { ... }
+        sm: '375px',    // iPhone SE
+        // => @media (min-width: 375px) { ... }
+        md: '414px',    // iPhone Pro
+        // => @media (min-width: 414px) { ... }
+        lg: '640px',    // 平板竖屏
+        // => @media (min-width: 640px) { ... }
+        xl: '768px',    // 平板横屏/小屏笔记本
+        // => @media (min-width: 768px) { ... }
+        '2xl': '1024px', // 桌面
+        // => @media (min-width: 1024px) { ... }
+        
+        // 保持向后兼容
         mobile: '100px',
-        // => @media (min-width: 100px) { ... }
-        tablet: '640px', // 391
-        // => @media (min-width: 600px) { ... }
+        tablet: '640px', 
         pc: '769px',
-        // => @media (min-width: 769px) { ... }
       },
     },
   },

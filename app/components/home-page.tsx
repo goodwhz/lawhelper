@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Header from '@/app/components/header'
 import Navigation from '@/app/components/navigation'
+import MobileNavigation from '@/app/components/mobile-navigation'
 import { useProtectedAction } from './auth-guard'
 
 const HomePage: FC = () => {
@@ -194,6 +195,7 @@ const HomePage: FC = () => {
       />
 
       <Navigation />
+      <MobileNavigation />
 
       {/* 红色间隔带 - 通过修改spacerConfig.height直观调整粗细 */}
       <div className="w-full" style={{ height: spacerConfig.height, backgroundColor: spacerConfig.color }}></div>
@@ -210,27 +212,27 @@ const HomePage: FC = () => {
           <div className="absolute inset-0 bg-black/40"></div>
         </div>
 
-        <div className="relative text-center py-20 px-4 max-w-6xl mx-auto">
-          <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight drop-shadow-lg">
+        <div className="relative text-center py-12 sm:py-16 lg:py-20 px-4 max-w-6xl mx-auto">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 sm:mb-6 leading-tight drop-shadow-lg">
             CoolBrain-LaborLawhelper
           </h1>
-          <h2 className="text-2xl md:text-3xl font-semibold text-white mb-8 leading-relaxed drop-shadow-md">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold text-white mb-6 sm:mb-8 leading-relaxed drop-shadow-md">
             专为劳动者打造的法律智能助手
           </h2>
 
-          <p className="text-lg md:text-xl text-white/90 mb-8 max-w-4xl mx-auto leading-relaxed drop-shadow-sm">
-            CoolBrain-LaborLawhelperjpeg基于新一代法律大模型，深度融合各种真实业务流程，集AI智能问答、法律计算工具、法规知识库于一体的综合性劳动法服务平台
+          <p className="text-base sm:text-lg md:text-xl text-white/90 mb-6 sm:mb-8 max-w-4xl mx-auto leading-relaxed drop-shadow-sm">
+            CoolBrain-LaborLawhelper基于新一代法律大模型，深度融合各种真实业务流程，集AI智能问答、法律计算工具、法规知识库于一体的综合性劳动法服务平台
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
             <button 
               onClick={() => executeProtectedAction(() => router.push('/ai-chat'), { requireAuth: true })}
-              className="bg-white text-law-red-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
+              className="bg-white text-law-red-600 px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg font-semibold hover:bg-gray-100 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 text-sm sm:text-base"
             >
               🚀 立即体验
             </button>
             <button 
               onClick={() => executeProtectedAction(() => router.push('/tools'), { requireAuth: true })}
-              className="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-law-red-600 transition-all duration-300"
+              className="border-2 border-white text-white px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg font-semibold hover:bg-white hover:text-law-red-600 transition-all duration-300 text-sm sm:text-base"
             >
               🔧 探索工具
             </button>
@@ -247,7 +249,7 @@ const HomePage: FC = () => {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6 lg:gap-8">
           {features.map((feature, index) => (
             <div 
               key={index} 
@@ -258,17 +260,17 @@ const HomePage: FC = () => {
                 {/* 顶部装饰条 */}
                 <div className={`h-2 bg-gradient-to-r ${feature.color}`}></div>
 
-                <div className="p-8 flex-1 flex flex-col">
+                <div className="p-4 sm:p-6 lg:p-8 flex-1 flex flex-col">
                   {/* 图标区域 */}
-                  <div className={`inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-r ${feature.color} text-white text-2xl mb-6 group-hover:scale-110 transition-transform duration-300`}>
+                  <div className={`inline-flex items-center justify-center w-12 sm:w-16 h-12 sm:h-16 rounded-xl sm:rounded-2xl bg-gradient-to-r ${feature.color} text-white text-lg sm:text-2xl mb-4 sm:mb-6 group-hover:scale-110 transition-transform duration-300`}>
                     {feature.icon}
                   </div>
 
                   {/* 标题和描述 */}
-                  <h3 className="text-2xl font-bold text-gray-800 mb-3 group-hover:text-law-red-600 transition-colors">
+                  <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-800 mb-2 sm:mb-3 group-hover:text-law-red-600 transition-colors">
                     {feature.title}
                   </h3>
-                  <p className="text-gray-600 mb-6 leading-relaxed">
+                  <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6 leading-relaxed">
                     {feature.description}
                   </p>
 

@@ -21,7 +21,6 @@ interface WelcomeScreenProps {
 
 const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   user,
-  _conversations = [],
   onStartNewChat,
   onDeleteConversation,
   onLoadConversations,
@@ -257,7 +256,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
             <button
-              onClick={onStartNewChat}
+              onClick={() => onStartNewChat()}
               className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300"
             >
               💬 开始对话
