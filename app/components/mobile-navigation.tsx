@@ -17,7 +17,8 @@ const MobileNavigation: FC = () => {
   const authState = useAuth()
   const protectedAction = useProtectedAction()
 
-  const { user, isAuthenticated, isAdmin, isLoading, setShowLoginModal } = authState
+  const { user, isAuthenticated, isAdmin, setShowLoginModal } = authState
+  // const isLoading = authState.isLoading // 暂时未使用
   const { executeProtectedAction } = protectedAction
   const [isWeChatModalOpen, setIsWeChatModalOpen] = useState(false)
 
@@ -50,7 +51,7 @@ const MobileNavigation: FC = () => {
   }
 
   // 检查是否为主页
-  const isHomePage = pathname === '/'
+  // const isHomePage = pathname === '/' // 暂时未使用
 
   // 关闭菜单
   const closeMenu = () => setIsMenuOpen(false)
@@ -90,11 +91,13 @@ const MobileNavigation: FC = () => {
                 aria-label="菜单"
               >
                 <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  {isMenuOpen ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                  )}
+                  {isMenuOpen
+                    ? (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    )
+                    : (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    )}
                 </svg>
               </button>
             </div>
@@ -106,7 +109,7 @@ const MobileNavigation: FC = () => {
       {isMenuOpen && (
         <div className="lg:hidden fixed inset-0 z-40 flex">
           {/* 背景遮罩 */}
-          <div 
+          <div
             className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
             onClick={closeMenu}
           />
@@ -212,53 +215,55 @@ const MobileNavigation: FC = () => {
               <div className="p-4 border-t border-gray-200">
                 <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">账户</h3>
                 <div className="space-y-2">
-                  {!isAuthenticated ? (
-                    <>
-                      <button
-                        onClick={() => {
-                          setShowLoginModal(true)
-                          closeMenu()
-                        }}
-                        className="w-full bg-law-red-500 text-white px-3 py-2 rounded-md hover:bg-law-red-600 transition-colors font-medium"
-                      >
-                        登录
-                      </button>
-                      <Link
-                        href="/about"
-                        className="block w-full text-center bg-gray-100 text-gray-700 px-3 py-2 rounded-md hover:bg-gray-200 transition-colors font-medium"
-                        onClick={closeMenu}
-                      >
-                        关于我们
-                      </Link>
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        onClick={() => {
-                          setIsWeChatModalOpen(true)
-                          closeMenu()
-                        }}
-                        className="w-full bg-law-red-500 text-white px-3 py-2 rounded-md hover:bg-law-red-600 transition-colors font-medium"
-                      >
-                        在线咨询
-                      </button>
-                      {isAdmin && (
+                  {!isAuthenticated
+                    ? (
+                      <>
+                        <button
+                          onClick={() => {
+                            setShowLoginModal(true)
+                            closeMenu()
+                          }}
+                          className="w-full bg-law-red-500 text-white px-3 py-2 rounded-md hover:bg-law-red-600 transition-colors font-medium"
+                        >
+                          登录
+                        </button>
                         <Link
-                          href="/admin"
-                          className="block w-full text-center bg-law-orange-500 text-white px-3 py-2 rounded-md hover:bg-law-orange-600 transition-colors font-medium"
+                          href="/about"
+                          className="block w-full text-center bg-gray-100 text-gray-700 px-3 py-2 rounded-md hover:bg-gray-200 transition-colors font-medium"
                           onClick={closeMenu}
                         >
-                          管理后台
+                          关于我们
                         </Link>
-                      )}
-                      <button
-                        onClick={handleLogout}
-                        className="w-full bg-gray-100 text-gray-700 px-3 py-2 rounded-md hover:bg-gray-200 transition-colors font-medium"
-                      >
-                        退出登录
-                      </button>
-                    </>
-                  )}
+                      </>
+                    )
+                    : (
+                      <>
+                        <button
+                          onClick={() => {
+                            setIsWeChatModalOpen(true)
+                            closeMenu()
+                          }}
+                          className="w-full bg-law-red-500 text-white px-3 py-2 rounded-md hover:bg-law-red-600 transition-colors font-medium"
+                        >
+                          在线咨询
+                        </button>
+                        {isAdmin && (
+                          <Link
+                            href="/admin"
+                            className="block w-full text-center bg-law-orange-500 text-white px-3 py-2 rounded-md hover:bg-law-orange-600 transition-colors font-medium"
+                            onClick={closeMenu}
+                          >
+                            管理后台
+                          </Link>
+                        )}
+                        <button
+                          onClick={handleLogout}
+                          className="w-full bg-gray-100 text-gray-700 px-3 py-2 rounded-md hover:bg-gray-200 transition-colors font-medium"
+                        >
+                          退出登录
+                        </button>
+                      </>
+                    )}
                 </div>
               </div>
             </div>

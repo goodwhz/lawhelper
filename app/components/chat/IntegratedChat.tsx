@@ -1186,7 +1186,7 @@ const IntegratedChat: React.FC = () => {
       }
       return null
     }
-  }, [user, showToast, sendMessage])
+  }, [user, showToast, sendMessageForConversation])
 
   // 创建带标题的新对话
   const createNewConversationWithPreset = useCallback(async (_presetQuestion?: string) => {

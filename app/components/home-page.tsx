@@ -1,7 +1,6 @@
 'use client'
 import type { FC } from 'react'
 import React, { useState, useEffect } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Header from '@/app/components/header'
 import Navigation from '@/app/components/navigation'
@@ -10,37 +9,13 @@ import { useProtectedAction } from './auth-guard'
 
 const HomePage: FC = () => {
   const router = useRouter()
-  let executeProtectedAction: any = () => {}
-  
-  try {
-    const { executeProtectedAction: protectedAction } = useProtectedAction()
-    executeProtectedAction = protectedAction
-  } catch (error) {
-    console.warn('useProtectedAction not available, using fallback')
-    executeProtectedAction = (action: Function) => action()
-  }
+  const { executeProtectedAction } = useProtectedAction()
   const [isVisible, setIsVisible] = useState(false)
-  const [scrolled, setScrolled] = useState(false)
+  // const [scrolled, setScrolled] = useState(false) // 暂时未使用
 
   useEffect(() => {
     setIsVisible(true)
-
-    // 滚动监听效果
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 100)
-    }
-
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
   }, [])
-
-  // 滚动到指定元素
-  const scrollToSection = (id: string) => {
-    const element = document.getElementById(id)
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' })
-    }
-  }
 
   // 间隔带配置 - 可直观调整这些值
   const spacerConfig = {
@@ -224,13 +199,13 @@ const HomePage: FC = () => {
             CoolBrain-LaborLawhelper基于新一代法律大模型，深度融合各种真实业务流程，集AI智能问答、法律计算工具、法规知识库于一体的综合性劳动法服务平台
           </p>
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
-            <button 
+            <button
               onClick={() => executeProtectedAction(() => router.push('/ai-chat'), { requireAuth: true })}
               className="bg-white text-law-red-600 px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg font-semibold hover:bg-gray-100 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 text-sm sm:text-base"
             >
               🚀 立即体验
             </button>
-            <button 
+            <button
               onClick={() => executeProtectedAction(() => router.push('/tools'), { requireAuth: true })}
               className="border-2 border-white text-white px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg font-semibold hover:bg-white hover:text-law-red-600 transition-all duration-300 text-sm sm:text-base"
             >
@@ -251,8 +226,8 @@ const HomePage: FC = () => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6 lg:gap-8">
           {features.map((feature, index) => (
-            <div 
-              key={index} 
+            <div
+              key={index}
               onClick={() => executeProtectedAction(() => router.push(feature.href), { requireAuth: true })}
               className="cursor-pointer"
             >
@@ -410,7 +385,7 @@ const HomePage: FC = () => {
                   ))}
                 </div>
 
-                <button 
+                <button
                   onClick={() => executeProtectedAction(() => router.push(feature.href), { requireAuth: true })}
                   className={`bg-gradient-to-r ${
                     feature.color === 'law-red'
@@ -516,13 +491,13 @@ const HomePage: FC = () => {
             亲身感受智能法律助手带来的专业升级和效率飞跃，开启更轻松、更精准、更有保障的法律服务之路。
           </p>
           <div className="flex flex-col sm:flex-row gap-6 justify-center">
-            <button 
+            <button
               onClick={() => executeProtectedAction(() => router.push('/ai-chat'), { requireAuth: true })}
               className="bg-white text-law-red-600 px-10 py-4 rounded-xl font-semibold hover:bg-gray-100 transition-all duration-300 transform hover:-translate-y-1 shadow-lg"
             >
               💬 开始咨询
             </button>
-            <button 
+            <button
               onClick={() => executeProtectedAction(() => router.push('/tools'), { requireAuth: true })}
               className="border-2 border-white text-white px-10 py-4 rounded-xl font-semibold hover:bg-white hover:text-law-red-600 transition-all duration-300 transform hover:-translate-y-1"
             >
