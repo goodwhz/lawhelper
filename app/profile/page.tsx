@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { withAuth } from '@/app/components/auth-guard'
 import { signOut, getCurrentUser, updateUserProfile, getUserProfile, resetPassword } from '@/lib/auth'
 import Navigation from '@/app/components/navigation'
+import MobilePageHeader from '@/app/components/ui/MobilePageHeader'
 
 interface UserProfile {
   id: string
@@ -314,7 +315,11 @@ function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* 桌面端导航 */}
       <Navigation />
+      
+      {/* 移动端页面头部 */}
+      <MobilePageHeader title="个人资料" />
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-8">
         {/* 页面头部 */}

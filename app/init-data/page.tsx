@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import Navigation from '@/app/components/navigation'
+import MobilePageHeader from '@/app/components/ui/MobilePageHeader'
 
 export default function InitDataPage() {
   const [loading, setLoading] = useState(false)
@@ -128,7 +129,11 @@ export default function InitDataPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* 桌面端导航 */}
       <Navigation />
+      
+      {/* 移动端页面头部 */}
+      <MobilePageHeader title="初始化数据" />
 
       <div className="max-w-4xl mx-auto pt-24 pb-8 px-4">
         <div className="bg-white rounded-lg shadow p-6">

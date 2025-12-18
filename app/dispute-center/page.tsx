@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import LaborDisputeProcess from '@/app/components/tools/labor-dispute-process'
 import PersonnelDisputeProcess from '@/app/components/tools/personnel-dispute-process'
 import Navigation from '@/app/components/navigation'
+import MobilePageHeader from '@/app/components/ui/MobilePageHeader'
 import PageAuthGuard from '@/app/components/page-auth-guard'
 import ErrorBoundary from '@/app/components/error-boundary'
 
@@ -33,7 +34,11 @@ const DisputeCenterPage: React.FC = () => {
     <ErrorBoundary>
       <PageAuthGuard requireAuth={true}>
         <div className="min-h-screen bg-white">
+          {/* 桌面端导航 */}
           <Navigation />
+          
+          {/* 移动端页面头部 */}
+          <MobilePageHeader title="争议解决中心" />
           
           <div className="bg-gradient-to-br from-gray-50 to-blue-50 pt-24 pb-8">
             <div className="max-w-7xl mx-auto px-4">

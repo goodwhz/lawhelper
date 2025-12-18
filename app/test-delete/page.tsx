@@ -5,9 +5,10 @@ import { useConversationDelete } from '@/hooks/use-conversation-delete'
 import useConversation from '@/hooks/use-conversation'
 import DeleteConfirmationDialog from '@/app/components/delete-confirmation-dialog'
 import type { ConversationItem } from '@/types/app'
+import MobilePageHeader from '@/app/components/ui/MobilePageHeader'
 
 export default function TestDeletePage() {
-  const { removeConversationFromList, clearDeletedConversationCache } = useConversation()
+  const { removeConversationFromList: _removeConversationFromList, clearDeletedConversationCache: _clearDeletedConversationCache } = useConversation()
   const {
     deleteConversationWithConfirmation,
     isDeleting,
@@ -49,232 +50,304 @@ export default function TestDeletePage() {
       },
       {
         id: 'conv_002',
-        name: '劳动法相关问题',
+        name: '劳动争议咨询',
         created_at: new Date('2024-01-16').toISOString(),
         updated_at: new Date('2024-01-16').toISOString(),
         user_id: 'test_user_001',
-        message_count: 12,
-        last_message: '工资拖欠的解决方案',
+        message_count: 8,
+        last_message: '关于加班费的法律问题',
       },
       {
         id: 'conv_003',
-        name: '房产交易咨询',
+        name: '房产纠纷对话',
         created_at: new Date('2024-01-17').toISOString(),
         updated_at: new Date('2024-01-17').toISOString(),
         user_id: 'test_user_001',
-        message_count: 8,
-        last_message: '购房合同注意事项',
-      },
+        message_count: 3,
+        last_message: '关于房屋买卖合同的咨询',
+      }
     ]
     setMockConversations(testConversations)
   }, [])
 
-  const handleDeleteClick = (conversation: ConversationItem) => {
-    setSelectedConversation(conversation)
-    setShowConfirmDialog(true)
-  }
-
-  const handleConfirmDelete = async () => {
-    if (!selectedConversation) { return }
-
-    const result = await deleteConversationWithConfirmation(
-      selectedConversation.id,
-      selectedConversation.name,
-    )
-
-    if (result?.success) {
-      // 从列表中移除删除的对话
-      removeConversationFromList(selectedConversation.id)
-
-      // 清除相关缓存
-      clearDeletedConversationCache(selectedConversation.id)
-
-      console.log('对话删除成功:', {
-        conversationId: selectedConversation.id,
-        deletedMessages: result.deleted_messages,
-      })
-
-      // 显示成功消息
-      const successMessage = result.deleted_messages > 0
-        ? `成功删除对话"${selectedConversation.name}"和${result.deleted_messages}条消息`
-        : `成功删除对话"${selectedConversation.name}"`
-
-      showToast(successMessage, 'success')
-    }
-
-    // 关闭对话框
-    setShowConfirmDialog(false)
-    setSelectedConversation(null)
-  }
-
-  const handleCancelDelete = () => {
-    setShowConfirmDialog(false)
-    setSelectedConversation(null)
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-6xl mx-auto">
-        {/* 页面标题 */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            🗑️ 对话删除功能测试
-          </h1>
-          <p className="text-gray-600">
-            测试单个对话删除功能，验证权限验证、数据一致性和用户体验
-          </p>
-        </div>
-
-        {/* 状态显示 */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">删除状态监控</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className={`p-4 rounded-lg ${
-              isDeleting ? 'bg-yellow-50 border-yellow-200' : 'bg-gray-50 border-gray-200'
-            }`}>
-              <div className="text-sm font-medium text-gray-600 mb-1">删除状态</div>
-              <div className={`text-lg font-semibold ${
-                isDeleting ? 'text-yellow-700' : 'text-gray-900'
-              }`}>
-                {isDeleting ? '正在删除...' : '空闲'}
-              </div>
+  if (!selectedConversation) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        {/* 移动端页面头部 */}
+        <MobilePageHeader title="删除功能测试" />
+        
+        <div className="p-8">
+          <div className="max-w-6xl mx-auto">
+            {/* 页面标题 */}
+            <div className="mb-8">
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                🗑️ 对话删除功能测试
+              </h1>
+              <p className="text-gray-600">
+                测试单个对话删除功能，验证权限验证、数据一致性和用户体验
+              </p>
             </div>
 
-            <div className={`p-4 rounded-lg ${
-              deleteSuccess ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'
-            }`}>
-              <div className="text-sm font-medium text-gray-600 mb-1">上次操作</div>
-              <div className={`text-lg font-semibold ${
-                deleteSuccess ? 'text-green-700' : 'text-gray-900'
-              }`}>
-                {deleteSuccess ? '删除成功' : '等待操作'}
+            {/* 测试对话列表 */}
+            <div className="bg-white rounded-lg shadow">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  测试对话列表
+                </h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  点击任意对话测试删除功能
+                </p>
               </div>
-            </div>
-
-            <div className={`p-4 rounded-lg ${
-              deleteError ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200'
-            }`}>
-              <div className="text-sm font-medium text-gray-600 mb-1">错误状态</div>
-              <div className={`text-lg font-semibold ${
-                deleteError ? 'text-red-700' : 'text-gray-900'
-              }`}>
-                {deleteError || '无错误'}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* 对话列表 */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900">测试对话列表</h2>
-          </div>
-
-          <div className="divide-y divide-gray-200">
-            {mockConversations.map(conversation => (
-              <div
-                key={conversation.id}
-                className="p-6 hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">
-                      {conversation.name}
-                    </h3>
-                    <div className="space-y-1 text-sm text-gray-600">
-                      <p>对话ID: {conversation.id}</p>
-                      <p>消息数量: {conversation.message_count}</p>
-                      <p>最后消息: {conversation.last_message}</p>
-                      <p>创建时间: {new Date(conversation.created_at).toLocaleString('zh-CN')}</p>
+              
+              <div className="divide-y divide-gray-200">
+                {mockConversations.map((conversation) => (
+                  <div
+                    key={conversation.id}
+                    className="px-6 py-4 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <h3 className="text-lg font-medium text-gray-900">
+                          {conversation.name}
+                        </h3>
+                        <div className="mt-1 flex items-center space-x-4 text-sm text-gray-500">
+                          <span>消息: {conversation.message_count}</span>
+                          <span>更新: {new Date(conversation.updated_at).toLocaleDateString()}</span>
+                        </div>
+                        <p className="mt-2 text-gray-600">
+                          {conversation.last_message}
+                        </p>
+                      </div>
+                      
+                      <div className="ml-4 flex space-x-2">
+                        <button
+                          onClick={() => setSelectedConversation(conversation)}
+                          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+                        >
+                          删除测试
+                        </button>
+                      </div>
                     </div>
                   </div>
+                ))}
+              </div>
+            </div>
 
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => handleDeleteClick(conversation)}
-                      disabled={!canDelete || (deletedConversationId === conversation.id)}
-                      className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                        deletedConversationId === conversation.id
-                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                          : 'bg-red-600 text-white hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed'
-                      }`}
-                    >
-                      {deletedConversationId === conversation.id
-                        ? (
-                          <span className="flex items-center">
-                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            删除中...
-                          </span>
-                        )
-                        : (
-                          '删除对话'
-                        )}
-                    </button>
+            {/* 功能测试说明 */}
+            <div className="mt-8 bg-white rounded-lg shadow">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  功能测试说明
+                </h2>
+              </div>
+              
+              <div className="p-6 space-y-4">
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                    <span className="text-blue-600 font-semibold">1</span>
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-gray-900">权限验证</h3>
+                    <p className="text-gray-600">验证只有对话所有者才能删除自己的对话</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                    <span className="text-green-600 font-semibold">2</span>
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-gray-900">确认对话框</h3>
+                    <p className="text-gray-600">删除前显示确认对话框，防止误操作</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0 w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                    <span className="text-yellow-600 font-semibold">3</span>
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-gray-900">数据一致性</h3>
+                    <p className="text-gray-600">删除后更新对话列表，清除相关缓存</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0 w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                    <span className="text-red-600 font-semibold">4</span>
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-gray-900">错误处理</h3>
+                    <p className="text-gray-600">优雅处理删除失败的情况，显示错误信息</p>
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* 使用说明 */}
-        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-blue-900 mb-4">📋 测试说明</h3>
-          <div className="space-y-3 text-sm text-blue-800">
-            <ol className="list-decimal list-inside space-y-2">
-              <li>点击"删除对话"按钮会弹出确认对话框</li>
-              <li>确认后系统会删除对话及其所有消息</li>
-              <li>删除成功后会自动从列表中移除</li>
-              <li>状态监控面板会显示实时删除状态</li>
-              <li>支持错误处理和重试机制</li>
-            </ol>
-
-            <div className="mt-4 p-4 bg-blue-100 rounded-lg">
-              <p className="font-medium text-blue-900 mb-2">🔍 验证要点：</p>
-              <ul className="list-disc list-inside space-y-1 text-blue-700">
-                <li>权限验证：只能删除自己的对话</li>
-                <li>数据一致性：消息和对话同步删除</li>
-                <li>用户体验：友好的确认和反馈</li>
-                <li>错误处理：清晰的错误提示和状态</li>
-              </ul>
             </div>
+
+            {/* 删除状态显示 */}
+            {(deleteError || deleteSuccess || deletedConversationId) && (
+              <div className="mt-6 bg-white rounded-lg shadow">
+                <div className="px-6 py-4 border-b border-gray-200">
+                  <h2 className="text-xl font-semibold text-gray-900">
+                    删除操作状态
+                  </h2>
+                </div>
+                
+                <div className="p-6 space-y-4">
+                  {deleteError && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                      <h3 className="font-medium text-red-800">删除失败</h3>
+                      <p className="text-red-700 text-sm mt-1">{deleteError}</p>
+                    </div>
+                  )}
+                  
+                  {deleteSuccess && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <h3 className="font-medium text-green-800">删除成功</h3>
+                      <p className="text-green-700 text-sm mt-1">
+                        对话 {deletedConversationId} 已成功删除
+                      </p>
+                    </div>
+                  )}
+                  
+                  {isDeleting && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <h3 className="font-medium text-blue-800">正在删除...</h3>
+                      <p className="text-blue-700 text-sm mt-1">
+                        请稍候，正在处理删除请求
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
-
-        {/* 删除确认对话框 */}
-        <DeleteConfirmationDialog
-          isOpen={showConfirmDialog}
-          onClose={handleCancelDelete}
-          onConfirm={handleConfirmDelete}
-          conversationTitle={selectedConversation?.name}
-          messageCount={selectedConversation?.message_count}
-          isDeleting={deletedConversationId === selectedConversation?.id}
-        />
 
         {/* Toast 通知 */}
         {toast.show && (
-          <div
-            className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 transform ${
-              toast.show ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'
-            } ${
-              toast.type === 'success'
-                ? 'bg-green-500 text-white'
-                : toast.type === 'error'
-                  ? 'bg-red-500 text-white'
-                  : toast.type === 'warning'
-                    ? 'bg-yellow-500 text-white'
-                    : 'bg-blue-500 text-white'
-            }`}
-          >
-            <div className="flex items-center">
-              <span className="text-sm font-medium">{toast.message}</span>
+          <div className="fixed bottom-4 right-4 z-50">
+            <div className={`max-w-sm rounded-lg shadow-lg p-4 ${
+              toast.type === 'success' ? 'bg-green-500' :
+              toast.type === 'error' ? 'bg-red-500' :
+              toast.type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
+            } text-white`}>
+              <div className="flex items-center">
+                <span className="text-sm font-medium">{toast.message}</span>
+              </div>
             </div>
           </div>
         )}
       </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        {/* 返回按钮 */}
+        <div className="mb-6">
+          <button
+            onClick={() => setSelectedConversation(null)}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+          >
+            ← 返回测试列表
+          </button>
+        </div>
+
+        {/* 对话详情 */}
+        <div className="bg-white rounded-lg shadow">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-900">
+                {selectedConversation.name}
+              </h2>
+              <div className="flex items-center space-x-2">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  {selectedConversation.message_count} 条消息
+                </span>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                  {new Date(selectedConversation.updated_at).toLocaleDateString()}
+                </span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="p-6">
+            <div className="space-y-4">
+              <div className="border-l-4 border-blue-500 pl-4">
+                <h3 className="font-semibold text-gray-900 mb-2">对话信息</h3>
+                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">对话ID</dt>
+                    <dd className="mt-1 text-sm text-gray-900 font-mono">{selectedConversation.id}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">用户ID</dt>
+                    <dd className="mt-1 text-sm text-gray-900 font-mono">{selectedConversation.user_id}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">创建时间</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{new Date(selectedConversation.created_at).toLocaleString()}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">最后更新</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{new Date(selectedConversation.updated_at).toLocaleString()}</dd>
+                  </div>
+                </dl>
+              </div>
+              
+              <div className="border-l-4 border-yellow-500 pl-4">
+                <h3 className="font-semibold text-gray-900 mb-2">最后消息</h3>
+                <p className="text-gray-600">{selectedConversation.last_message}</p>
+              </div>
+              
+              <div className="border-l-4 border-red-500 pl-4">
+                <h3 className="font-semibold text-gray-900 mb-2">删除操作</h3>
+                <p className="text-gray-600 mb-4">
+                  点击下方按钮将删除此对话。此操作不可撤销，请谨慎操作。
+                </p>
+                
+                <div className="flex items-center space-x-4">
+                  <button
+                    onClick={() => deleteConversationWithConfirmation(selectedConversation.id, () => {
+                      showToast('删除成功', 'success')
+                      setSelectedConversation(null)
+                      // 从模拟数据中移除
+                      setMockConversations(prev => 
+                        prev.filter(conv => conv.id !== selectedConversation.id)
+                      )
+                    })}
+                    disabled={isDeleting || !canDelete}
+                    className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                  >
+                    {isDeleting ? '正在删除...' : '删除此对话'}
+                  </button>
+                  
+                  {!canDelete && (
+                    <span className="text-sm text-gray-500">
+                      您没有权限删除此对话
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 删除确认对话框 */}
+      {showConfirmDialog && selectedConversation && (
+        <DeleteConfirmationDialog
+          conversationName={selectedConversation.name}
+          onConfirm={() => {
+            // 这里会触发实际的删除操作
+            setShowConfirmDialog(false)
+            showToast('删除操作已确认', 'info')
+          }}
+          onCancel={() => setShowConfirmDialog(false)}
+        />
+      )}
     </div>
   )
 }

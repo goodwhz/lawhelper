@@ -1,7 +1,8 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
+import MobilePageHeader from '@/app/components/ui/MobilePageHeader'
 
 export default function PreviewPage() {
   const searchParams = useSearchParams()
@@ -12,17 +13,7 @@ export default function PreviewPage() {
   const [error, setError] = useState<string | null>(null)
   const [htmlContent, setHtmlContent] = useState<string>('')
 
-  useEffect(() => {
-    if (!fileName) {
-      setError('未指定要预览的文件')
-      setIsLoading(false)
-      return
-    }
-
-    loadAndConvertDocument()
-  }, [fileName])
-
-  const loadAndConvertDocument = async () => {
+  const loadAndConvertDocument = useCallback(async () => {
     try {
       setIsLoading(true)
       setError(null)
@@ -49,7 +40,17 @@ export default function PreviewPage() {
       setError('文档预览功能暂时不可用，请下载后查看。')
       setIsLoading(false)
     }
-  }
+  }, [fileName])
+
+  useEffect(() => {
+    if (!fileName) {
+      setError('未指定要预览的文件')
+      setIsLoading(false)
+      return
+    }
+
+    loadAndConvertDocument()
+  }, [fileName, loadAndConvertDocument])
 
   const handleDownload = () => {
     if (fileName) {
@@ -113,6 +114,7 @@ export default function PreviewPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* 桌面端头部 */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
@@ -134,6 +136,9 @@ export default function PreviewPage() {
           </div>
         </div>
       </div>
+
+      {/* 移动端页面头部 */}
+      <MobilePageHeader title={title} />
 
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="bg-white rounded-lg shadow-sm border">
