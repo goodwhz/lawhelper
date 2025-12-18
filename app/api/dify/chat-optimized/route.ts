@@ -203,8 +203,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// 导出配置
-export const config = {
-  runtime: 'edge',
-  regions: ['auto'],
-}
+// 导出运行时配置 - 使用新的导出方式
+export const runtime = 'edge'
+export const dynamic = 'force-dynamic'
