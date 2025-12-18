@@ -10,6 +10,7 @@ import WeChatModal from './wechat-modal'
 const MobileNavigation = () => {
   const router = useRouter()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
 
   // 始终在组件顶层调用hooks，保持调用顺序
   const authState = useAuth()
@@ -43,9 +44,16 @@ const MobileNavigation = () => {
     try {
       await signOut()
       setIsMenuOpen(false)
+      setIsUserMenuOpen(false)
     } catch (error) {
       console.error('登出失败:', error)
     }
+  }
+
+  // 处理个人资料点击
+  const handleProfileClick = () => {
+    router.push('/profile')
+    setIsUserMenuOpen(false)
   }
 
   // 检查是否为主页
@@ -77,16 +85,51 @@ const MobileNavigation = () => {
               {/* 登录/用户状态 */}
               {isAuthenticated
                 ? (
-                  <button
-                    onClick={() => setIsMenuOpen(!isMenuOpen)}
-                    className="mobile-ripple flex items-center space-x-1 bg-law-orange-500 text-white px-3 py-1.5 rounded-md hover:bg-law-orange-600 transition-all duration-200 text-sm font-medium transform active:scale-95 touch-target"
-                    aria-label="用户菜单"
-                  >
-                    <span className="w-5 h-5 bg-white rounded-full flex items-center justify-center text-xs text-law-orange-500 font-bold">
-                      {user?.name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase()}
-                    </span>
-                    <span className="hidden xs:inline">我的</span>
-                  </button>
+                  <div className="relative">
+                    <button
+                      onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                      className="mobile-ripple flex items-center space-x-1 bg-law-orange-500 text-white px-3 py-1.5 rounded-md hover:bg-law-orange-600 transition-all duration-200 text-sm font-medium transform active:scale-95 touch-target"
+                      aria-label="用户菜单"
+                    >
+                      <span className="w-5 h-5 bg-white rounded-full flex items-center justify-center text-xs text-law-orange-500 font-bold">
+                        {user?.name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase()}
+                      </span>
+                      <span className="hidden xs:inline">我的</span>
+                      <svg className={`w-4 h-4 ml-1 transition-transform duration-200 ${isUserMenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    {/* 用户下拉菜单 */}
+                    {isUserMenuOpen && (
+                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 animate-in fade-in slide-in-from-top-1 duration-200">
+                        <div className="px-4 py-2 border-b border-gray-100">
+                          <p className="text-sm font-medium text-gray-900 truncate">{user?.name || user?.email}</p>
+                          <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+                          {isAdmin && (
+                            <p className="text-xs text-law-orange-500 font-medium">管理员</p>
+                          )}
+                        </div>
+
+                        <button
+                          onClick={handleProfileClick}
+                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center space-x-2"
+                        >
+                          <span>👤</span>
+                          <span>个人资料</span>
+                        </button>
+
+                        <div className="border-t border-gray-100">
+                          <button
+                            onClick={handleLogout}
+                            className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center space-x-2"
+                          >
+                            <span>🚪</span>
+                            <span>退出登录</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )
                 : (
                   <button
@@ -262,6 +305,14 @@ const MobileNavigation = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 用户菜单背景遮罩 */}
+      {isUserMenuOpen && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setIsUserMenuOpen(false)}
+        />
       )}
 
       {/* WeChat弹窗 */}

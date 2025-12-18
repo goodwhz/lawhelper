@@ -477,10 +477,11 @@ export default function ContentManagement() {
 
   return (
     <div className="space-y-6">
-      {/* 高级搜索栏 */}
-      <div className="bg-white p-4 rounded-lg shadow">
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row gap-4">
+      {/* 高级搜索栏 - 移动端优化 */}
+      <div className="bg-white p-3 lg:p-4 rounded-lg shadow">
+        <div className="space-y-3 lg:space-y-4">
+          {/* 搜索框 */}
+          <div className="flex flex-col sm:flex-row gap-2 lg:gap-4">
             <div className="flex-1">
               <div className="relative">
                 <input
@@ -489,7 +490,7 @@ export default function ContentManagement() {
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
                   onKeyPress={handleSearchKeyPress}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full pl-10 pr-4 py-2 text-base mobile-text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 touch-target"
                 />
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -500,20 +501,20 @@ export default function ContentManagement() {
             </div>
             <button
               onClick={handleSearch}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+              className="mobile-ripple px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors touch-target font-medium"
             >
               搜索
             </button>
           </div>
 
-          {/* 高级过滤选项 */}
-          <div className="flex flex-wrap gap-4">
+          {/* 高级过滤选项 - 移动端网格布局 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
             {activeTab === 'documents' && (
               <>
                 <select
                   value={categoryFilter}
                   onChange={e => setCategoryFilter(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="px-3 py-2 text-base mobile-text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 touch-target"
                 >
                   <option value="">所有分类</option>
                   {categories.map(category => (
@@ -526,7 +527,7 @@ export default function ContentManagement() {
                 <select
                   value={tagFilter}
                   onChange={e => setTagFilter(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="px-3 py-2 text-base mobile-text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 touch-target"
                 >
                   <option value="">所有标签</option>
                   {allTags.map(tag => (
@@ -545,7 +546,7 @@ export default function ContentManagement() {
                 setSortBy(sortBy)
                 setSortOrder(sortOrder as 'asc' | 'desc')
               }}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 text-base mobile-text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 touch-target"
             >
               {activeTab === 'documents' && (
                 <>
@@ -578,14 +579,14 @@ export default function ContentManagement() {
         </div>
       </div>
 
-      {/* 批量操作栏 */}
+      {/* 批量操作栏 - 移动端优化 */}
       {selectedItems.length > 0 && (
-        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-          <div className="flex items-center justify-between">
-            <span className="text-blue-800">
+        <div className="bg-blue-50 p-3 lg:p-4 rounded-lg border border-blue-200">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <span className="text-blue-800 mobile-text-base font-medium">
               已选择 {selectedItems.length} 个{activeTab === 'documents' ? '文档' : activeTab === 'categories' ? '分类' : '对话'}
             </span>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               {activeTab === 'documents' && (
                 <>
                   <select
@@ -596,7 +597,7 @@ export default function ContentManagement() {
                         e.target.value = ''
                       }
                     }}
-                    className="px-3 py-1 border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="px-3 py-2 text-base mobile-text-base border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 touch-target"
                   >
                     <option value="">批量添加标签...</option>
                     {allTags.map(tag => (
@@ -605,13 +606,13 @@ export default function ContentManagement() {
                   </select>
                   <button
                     onClick={() => handleBatchOperation('publish')}
-                    className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                    className="mobile-ripple px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors touch-target font-medium"
                   >
                     批量发布
                   </button>
                   <button
                     onClick={() => handleBatchOperation('unpublish')}
-                    className="px-3 py-1 bg-yellow-600 text-white rounded hover:bg-yellow-700 transition-colors"
+                    className="mobile-ripple px-3 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 transition-colors touch-target font-medium"
                   >
                     批量取消发布
                   </button>
@@ -619,7 +620,7 @@ export default function ContentManagement() {
               )}
               <button
                 onClick={() => handleBatchOperation('delete')}
-                className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                className="mobile-ripple px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors touch-target font-medium"
               >
                 批量删除
               </button>
@@ -628,9 +629,87 @@ export default function ContentManagement() {
         </div>
       )}
 
-      {/* Tab导航 */}
+      {/* Tab导航 - 移动端优化 */}
       <div className="bg-white rounded-lg shadow">
-        <div className="border-b border-gray-200">
+        {/* 移动端Tab - 垂直卡片布局 */}
+        <div className="lg:hidden p-3">
+          <div className="grid grid-cols-1 gap-2">
+            <button
+              onClick={() => setActiveTab('documents')}
+              className={`mobile-ripple p-4 rounded-lg border-2 text-left touch-target ${
+                activeTab === 'documents'
+                  ? 'border-law-blue-500 bg-law-blue-50 text-law-blue-600'
+                  : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="text-2xl">📄</div>
+                  <div>
+                    <div className="font-medium">文档管理</div>
+                    <div className="text-sm opacity-75">{filteredDocuments.length} 个文档</div>
+                  </div>
+                </div>
+                <div className="text-gray-400">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </div>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('categories')}
+              className={`mobile-ripple p-4 rounded-lg border-2 text-left touch-target ${
+                activeTab === 'categories'
+                  ? 'border-law-blue-500 bg-law-blue-50 text-law-blue-600'
+                  : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="text-2xl">🏷️</div>
+                  <div>
+                    <div className="font-medium">分类管理</div>
+                    <div className="text-sm opacity-75">{filteredCategories.length} 个分类</div>
+                  </div>
+                </div>
+                <div className="text-gray-400">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </div>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('conversations')}
+              className={`mobile-ripple p-4 rounded-lg border-2 text-left touch-target ${
+                activeTab === 'conversations'
+                  ? 'border-law-blue-500 bg-law-blue-50 text-law-blue-600'
+                  : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="text-2xl">💬</div>
+                  <div>
+                    <div className="font-medium">对话记录</div>
+                    <div className="text-sm opacity-75">{filteredConversations.length} 个对话</div>
+                  </div>
+                </div>
+                <div className="text-gray-400">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        {/* 桌面端Tab - 水平布局 */}
+        <div className="hidden lg:block border-b border-gray-200">
           <nav className="flex -mb-px">
             <button
               onClick={() => setActiveTab('documents')}
@@ -1030,13 +1109,13 @@ function DocumentForm({
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <h3 className="text-lg font-semibold mb-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg p-4 lg:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto mobile-scrollbar-hide">
+        <h3 className="text-lg lg:text-lg font-semibold mb-4">
           {document ? '编辑文档' : '添加文档'}
         </h3>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3 lg:space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               标题
@@ -1045,7 +1124,7 @@ function DocumentForm({
               type="text"
               value={formData.title}
               onChange={e => setFormData({ ...formData, title: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 text-base mobile-text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 touch-target"
               required
             />
           </div>
@@ -1058,12 +1137,12 @@ function DocumentForm({
               value={formData.content}
               onChange={e => setFormData({ ...formData, content: e.target.value })}
               rows={6}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 text-base mobile-text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 touch-target"
               required
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-3 lg:gap-4 lg:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 分类
@@ -1071,7 +1150,7 @@ function DocumentForm({
               <select
                 value={formData.category_id}
                 onChange={e => setFormData({ ...formData, category_id: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 text-base mobile-text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 touch-target"
                 required
               >
                 <option value="">选择分类</option>
@@ -1092,12 +1171,12 @@ function DocumentForm({
                 value={formData.document_type}
                 onChange={e => setFormData({ ...formData, document_type: e.target.value })}
                 placeholder="例如: 法律条文、案例解析"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 text-base mobile-text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 touch-target"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-3 lg:gap-4 lg:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 文档编号
@@ -1107,7 +1186,7 @@ function DocumentForm({
                 value={formData.document_number}
                 onChange={e => setFormData({ ...formData, document_number: e.target.value })}
                 placeholder="例如: GB-2024-001"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 text-base mobile-text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 touch-target"
               />
             </div>
 
@@ -1120,7 +1199,7 @@ function DocumentForm({
                 value={formData.tags}
                 onChange={e => setFormData({ ...formData, tags: e.target.value })}
                 placeholder="例如: 民法, 合同, 侵权"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 text-base mobile-text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 touch-target"
               />
             </div>
           </div>
@@ -1134,11 +1213,11 @@ function DocumentForm({
               value={formData.keywords}
               onChange={e => setFormData({ ...formData, keywords: e.target.value })}
               placeholder="例如: 合同纠纷, 民事责任, 侵权责任"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 text-base mobile-text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 touch-target"
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-3 lg:gap-4 lg:grid-cols-2">
             <div className="flex items-center">
               <input
                 type="checkbox"
@@ -1166,19 +1245,19 @@ function DocumentForm({
             </div>
           </div>
 
-          <div className="flex justify-end space-x-3 pt-4">
+          <div className="flex flex-col sm:flex-row-reverse gap-2 pt-4">
+            <button
+              type="submit"
+              className="mobile-ripple px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 touch-target font-medium"
+            >
+              保存
+            </button>
             <button
               type="button"
               onClick={onCancel}
-              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+              className="mobile-ripple px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 touch-target font-medium"
             >
               取消
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              保存
             </button>
           </div>
         </form>
@@ -1213,14 +1292,14 @@ function CategoryForm({
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md">
-        <h3 className="text-lg font-semibold mb-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg p-4 lg:p-6 w-full max-w-md">
+        <h3 className="text-lg lg:text-lg font-semibold mb-4">
           {category ? '编辑分类' : '添加分类'}
         </h3>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="space-y-3 lg:space-y-4">
+          <div className="grid grid-cols-1 gap-3 lg:gap-4 lg:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 分类名称
@@ -1229,7 +1308,7 @@ function CategoryForm({
                 type="text"
                 value={formData.name}
                 onChange={e => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 text-base mobile-text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 touch-target"
                 required
               />
             </div>
@@ -1243,7 +1322,7 @@ function CategoryForm({
                 value={formData.sort_order}
                 onChange={e => setFormData({ ...formData, sort_order: parseInt(e.target.value) || 0 })}
                 placeholder="数字越小排序越靠前"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 text-base mobile-text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 touch-target"
               />
             </div>
           </div>
@@ -1256,11 +1335,11 @@ function CategoryForm({
               value={formData.description}
               onChange={e => setFormData({ ...formData, description: e.target.value })}
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 text-base mobile-text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 touch-target"
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-3 lg:gap-4 lg:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 父分类
@@ -1268,7 +1347,7 @@ function CategoryForm({
               <select
                 value={formData.parent_id}
                 onChange={e => setFormData({ ...formData, parent_id: e.target.value || '' })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 text-base mobile-text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 touch-target"
               >
                 <option value="">无 (主分类)</option>
                 {categories
@@ -1295,19 +1374,19 @@ function CategoryForm({
             </div>
           </div>
 
-          <div className="flex justify-end space-x-3 pt-4">
+          <div className="flex flex-col sm:flex-row-reverse gap-2 pt-4">
+            <button
+              type="submit"
+              className="mobile-ripple px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 touch-target font-medium"
+            >
+              保存
+            </button>
             <button
               type="button"
               onClick={onCancel}
-              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+              className="mobile-ripple px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 touch-target font-medium"
             >
               取消
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              保存
             </button>
           </div>
         </form>
