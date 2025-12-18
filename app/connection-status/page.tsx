@@ -91,6 +91,7 @@ export default function ConnectionStatus() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* 移动端页面头部 */}
       <MobilePageHeader title="连接状态" />
       
       <div className="p-4">
@@ -98,6 +99,7 @@ export default function ConnectionStatus() {
           <div className="bg-white rounded-lg shadow-md p-6 mb-6">
             <h1 className="text-2xl font-bold mb-6">前后端连接状态</h1>
           
+          {/* 连接测试按钮 */}
           <div className="mb-6 text-center">
             <button
               onClick={testConnection}
@@ -120,8 +122,10 @@ export default function ConnectionStatus() {
             )}
           </div>
 
+          {/* 状态详情 */}
           {status && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* 服务器状态 */}
               <div className="border rounded-lg p-4">
                 <h3 className="font-semibold mb-3 text-lg">服务器状态</h3>
                 <div className="space-y-2">
@@ -144,6 +148,7 @@ export default function ConnectionStatus() {
                 </div>
               </div>
 
+              {/* 数据库状态 */}
               <div className="border rounded-lg p-4">
                 <h3 className="font-semibold mb-3 text-lg">数据库状态</h3>
                 <div className="space-y-2">
@@ -160,9 +165,46 @@ export default function ConnectionStatus() {
                   </div>
                 </div>
               </div>
+
+              {/* 环境变量状态 */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold mb-3 text-lg">环境配置</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span>状态:</span>
+                    <span className={`px-2 py-1 rounded text-sm ${
+                      status.environment.status === 'ok' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                      {status.environment.status === 'ok' ? '✅ 正常' : '❌ 异常'}
+                    </span>
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    {status.environment.error || status.environment.data || '未知状态'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Dify状态 */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold mb-3 text-lg">Dify AI 状态</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span>状态:</span>
+                    <span className={`px-2 py-1 rounded text-sm ${
+                      status.dify.status === 'ok' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                      {status.dify.status === 'ok' ? '✅ 正常' : '❌ 异常'}
+                    </span>
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    {status.dify.error || status.dify.data || '未知状态'}
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
+          {/* 总体状态 */}
           {status && (
             <div className="mt-6 p-4 rounded-lg text-center">
               <h3 className="font-semibold mb-2">总体状态</h3>
@@ -185,6 +227,7 @@ export default function ConnectionStatus() {
             </div>
           )}
 
+          {/* 导航按钮 */}
           <div className="mt-6 flex justify-center space-x-4">
             <button
               onClick={() => router.push('/ai-chat')}
@@ -204,3 +247,5 @@ export default function ConnectionStatus() {
     </div>
   )
 }
+
+export default ConnectionStatusPage
