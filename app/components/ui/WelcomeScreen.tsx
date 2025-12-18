@@ -233,37 +233,38 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   }
 
   return (
-    <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      <div className="max-w-7xl w-full px-6 py-8">
+    <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 overflow-y-auto">
+      <div className="w-full max-w-7xl px-4 sm:px-6 py-4 sm:py-8">
         {/* 主要欢迎区域 */}
-        <div className="text-center mb-12">
-          <div className="mb-6">
-            <div className="inline-flex items-center justify-center w-40 h-40 mb-3">
+        <div className="text-center mb-8 sm:mb-12">
+          <div className="mb-4 sm:mb-6">
+            <div className="inline-flex items-center justify-center w-32 h-32 sm:w-40 sm:h-40 mb-2 sm:mb-3">
               <img
                 src="/logo.jpeg"
                 alt="劳动法助手"
                 className="w-full h-full object-contain"
               />
             </div>
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-3 sm:mb-4">
               欢迎使用劳动法智能助手
             </h1>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-base sm:text-lg text-gray-600 max-w-xl sm:max-w-2xl mx-auto leading-relaxed px-4">
               {user ? `你好，${user.name || user.email}！` : '你好！'}
+              <br className="hidden sm:block" />
               我是您的专业劳动法咨询助手，随时为您提供专业的法律建议和解决方案。
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center mb-6 sm:mb-8 px-4">
             <button
               onClick={() => onStartNewChat()}
-              className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300"
+              className="w-full sm:w-auto px-6 sm:px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300"
             >
               💬 开始对话
             </button>
             <button
               onClick={() => router.push('/tools')}
-              className="px-8 py-3 bg-white text-gray-700 font-semibold rounded-xl border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-300"
+              className="w-full sm:w-auto px-6 sm:px-8 py-3 bg-white text-gray-700 font-semibold rounded-xl border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-300"
             >
               🛠️ 使用工具
             </button>
@@ -273,24 +274,24 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
         {/* 对话历史现在只在侧边栏显示，不在此处显示 */}
 
         {/* 快速开始 */}
-        <div>
-          <h2 className="text-2xl font-bold text-center text-gray-900 mb-8">
+        <div className="px-4">
+          <h2 className="text-xl sm:text-2xl font-bold text-center text-gray-900 mb-6 sm:mb-8">
             快速开始
           </h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {quickActions.map((action, index) => (
               <button
                 key={index}
                 onClick={() => handleQuickAction(action.question)}
-                className="bg-white rounded-xl p-4 text-left shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border border-gray-100"
+                className="bg-white rounded-xl p-3 sm:p-4 text-left shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border border-gray-100"
               >
-                <div className="flex items-start space-x-3">
-                  <span className="text-2xl flex-shrink-0">{action.icon}</span>
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-gray-900 mb-1">
+                <div className="flex items-start space-x-2 sm:space-x-3">
+                  <span className="text-xl sm:text-2xl flex-shrink-0">{action.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-semibold text-gray-900 mb-1 text-sm sm:text-base">
                       {action.title}
                     </h4>
-                    <p className="text-sm text-gray-600 line-clamp-2">
+                    <p className="text-xs sm:text-sm text-gray-600 line-clamp-2">
                       {action.question}
                     </p>
                   </div>
@@ -301,9 +302,9 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
         </div>
 
         {/* 底部提示 */}
-        <div className="text-center mt-12">
-          <div className="inline-flex items-center px-4 py-2 bg-blue-50 rounded-full">
-            <span className="text-blue-600 text-sm">
+        <div className="text-center mt-8 sm:mt-12 px-4">
+          <div className="inline-flex items-center px-3 sm:px-4 py-2 bg-blue-50 rounded-full">
+            <span className="text-blue-600 text-xs sm:text-sm">
               💡 点击"开始对话"立即咨询，或选择上方的问题开始对话
             </span>
           </div>
@@ -311,8 +312,8 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 
         {/* 删除确认对话框 */}
         {confirmDialog.isOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full sm:w-auto sm:mx-4">
               <div className="p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
                   {confirmDialog.title}
@@ -343,8 +344,8 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 
         {/* Toast 通知 */}
         {toast.show && (
-          <div className="fixed top-8 right-8 z-50">
-            <div className={`px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2 ${
+          <div className="fixed top-4 sm:top-8 right-4 sm:right-8 z-50 left-4 sm:left-auto">
+            <div className={`px-4 sm:px-6 py-2 sm:py-3 rounded-lg shadow-lg flex items-center space-x-2 w-full sm:w-auto max-w-sm ${
               toast.type === 'success'
                 ? 'bg-green-500 text-white'
                 : 'bg-red-500 text-white'
@@ -365,8 +366,8 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 
         {/* 复制成功提示 */}
         {_showCopyToast && (
-          <div className="fixed top-8 left-1/2 transform -translate-x-1/2 z-50">
-            <div className="bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2">
+          <div className="fixed top-4 sm:top-8 left-1/2 transform -translate-x-1/2 z-50 px-4">
+            <div className="bg-green-500 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg shadow-lg flex items-center space-x-2 w-full max-w-sm">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
               </svg>
