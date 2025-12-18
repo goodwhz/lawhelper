@@ -361,7 +361,7 @@ const IntegratedChat: React.FC = () => {
     checkMobile()
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
-  }, [isSidebarCollapsed])
+  }, [])
 
   // 初始化时加载对话列表
   useEffect(() => {
@@ -1906,9 +1906,9 @@ const IntegratedChat: React.FC = () => {
           {/* 侧边栏 */}
           <div className={`
             ${isMobile
-        ? `fixed left-0 top-0 h-full z-50 bg-white border-r border-gray-200 flex flex-col transform transition-transform duration-300 ${
+        ? `fixed left-0 top-0 h-full z-50 bg-white border-r border-gray-200 flex flex-col transform transition-transform duration-300 w-64 ${
           isSidebarCollapsed ? '-translate-x-full' : 'translate-x-0'
-        } ${isSidebarCollapsed ? 'w-64' : 'w-64'}`
+        }`
         : `${isSidebarCollapsed ? 'w-16' : 'w-64'} bg-white border-r border-gray-200 flex flex-col transition-all duration-300`
       }
             ${isMobile ? 'pt-16' : 'pt-16'}
@@ -1917,7 +1917,7 @@ const IntegratedChat: React.FC = () => {
               <div className="flex items-center justify-between mb-2">
                 {!isSidebarCollapsed && <h2 className="text-lg font-semibold">对话列表</h2>}
                 <div className="flex items-center space-x-2">
-                  {!isSidebarCollapsed && (
+                  {(!isSidebarCollapsed || !isMobile) && (
                     <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
                       {conversations.length}
                     </span>
@@ -2137,9 +2137,9 @@ const IntegratedChat: React.FC = () => {
         {/* 侧边栏 */}
         <div className={`
           ${isMobile
-      ? `fixed left-0 top-0 h-full z-50 bg-white border-r border-gray-200 flex flex-col transform transition-transform duration-300 ${
+      ? `fixed left-0 top-0 h-full z-50 bg-white border-r border-gray-200 flex flex-col transform transition-transform duration-300 w-64 ${
         isSidebarCollapsed ? '-translate-x-full' : 'translate-x-0'
-      } ${isSidebarCollapsed ? 'w-64' : 'w-64'}`
+      }`
       : `${isSidebarCollapsed ? 'w-16' : 'w-64'} bg-white border-r border-gray-200 flex flex-col transition-all duration-300`
     }
           ${isMobile ? 'pt-16' : 'pt-16'}
@@ -2148,7 +2148,7 @@ const IntegratedChat: React.FC = () => {
             <div className="flex items-center justify-between mb-2">
               {!isSidebarCollapsed && <h2 className="text-lg font-semibold">对话列表</h2>}
               <div className="flex items-center space-x-2">
-                {!isSidebarCollapsed && (
+                {(!isSidebarCollapsed || !isMobile) && (
                   <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
                     {conversations.length}
                   </span>
