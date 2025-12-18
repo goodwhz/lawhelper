@@ -73,7 +73,8 @@ const IntegratedChat: React.FC = () => {
   const [isSwitchingConversation, setIsSwitchingConversation] = useState(false)
   const [editingConversationId, setEditingConversationId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true)
+  const [isMobile, setIsMobile] = useState(false)
   const abortControllerRef = useRef<AbortController | null>(null)
   const messageAreaRef = useRef<HTMLDivElement>(null)
 
@@ -345,6 +346,22 @@ const IntegratedChat: React.FC = () => {
       console.log('🎯 预加载完成')
     }
   }, [user])
+
+  // 检测移动端屏幕大小
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768
+      setIsMobile(mobile)
+      // 移动端默认收起侧边栏
+      if (mobile && !isSidebarCollapsed) {
+        setIsSidebarCollapsed(true)
+      }
+    }
+
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [isSidebarCollapsed])
 
   // 初始化时加载对话列表
   useEffect(() => {
@@ -1841,14 +1858,33 @@ const IntegratedChat: React.FC = () => {
           </div>
         )}
 
-        <div className="flex h-screen bg-gray-50">
+        <div className="flex h-screen bg-gray-50 relative">
+          {/* 移动端侧边栏遮罩层 */}
+          {isMobile && !isSidebarCollapsed && (
+            <div
+              className="fixed inset-0 bg-black bg-opacity-50 z-40"
+              onClick={() => setIsSidebarCollapsed(true)}
+            />
+          )}
+
           {/* 全局顶部导航栏 */}
           <div className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
+                {isMobile && (
+                  <button
+                    onClick={() => setIsSidebarCollapsed(false)}
+                    className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                    title="打开侧边栏"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                  </button>
+                )}
                 <button
                   onClick={() => {
-                    // 返回主页面
+                  // 返回主页面
                     window.location.href = '/'
                   }}
                   className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
@@ -1868,7 +1904,15 @@ const IntegratedChat: React.FC = () => {
           </div>
 
           {/* 侧边栏 */}
-          <div className={`${isSidebarCollapsed ? 'w-16' : 'w-64'} bg-white border-r border-gray-200 flex flex-col pt-16 transition-all duration-300`}>
+          <div className={`
+            ${isMobile
+        ? `fixed left-0 top-0 h-full z-50 bg-white border-r border-gray-200 flex flex-col transform transition-transform duration-300 ${
+          isSidebarCollapsed ? '-translate-x-full' : 'translate-x-0'
+        } ${isSidebarCollapsed ? 'w-64' : 'w-64'}`
+        : `${isSidebarCollapsed ? 'w-16' : 'w-64'} bg-white border-r border-gray-200 flex flex-col transition-all duration-300`
+      }
+            ${isMobile ? 'pt-16' : 'pt-16'}
+          `}>
             <div className="p-4 border-b border-gray-200">
               <div className="flex items-center justify-between mb-2">
                 {!isSidebarCollapsed && <h2 className="text-lg font-semibold">对话列表</h2>}
@@ -2028,11 +2072,30 @@ const IntegratedChat: React.FC = () => {
         </div>
       )}
 
-      <div className="flex h-screen bg-gray-50">
+      <div className="flex h-screen bg-gray-50 relative">
+        {/* 移动端侧边栏遮罩层 */}
+        {isMobile && !isSidebarCollapsed && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-40"
+            onClick={() => setIsSidebarCollapsed(true)}
+          />
+        )}
+
         {/* 全局顶部导航栏 */}
         <div className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
+              {isMobile && (
+                <button
+                  onClick={() => setIsSidebarCollapsed(false)}
+                  className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                  title="打开侧边栏"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
+              )}
               {!showWelcome && (
                 <>
                   <button
@@ -2072,7 +2135,15 @@ const IntegratedChat: React.FC = () => {
         </div>
 
         {/* 侧边栏 */}
-        <div className={`${isSidebarCollapsed ? 'w-16' : 'w-64'} bg-white border-r border-gray-200 flex flex-col pt-16 transition-all duration-300`}>
+        <div className={`
+          ${isMobile
+      ? `fixed left-0 top-0 h-full z-50 bg-white border-r border-gray-200 flex flex-col transform transition-transform duration-300 ${
+        isSidebarCollapsed ? '-translate-x-full' : 'translate-x-0'
+      } ${isSidebarCollapsed ? 'w-64' : 'w-64'}`
+      : `${isSidebarCollapsed ? 'w-16' : 'w-64'} bg-white border-r border-gray-200 flex flex-col transition-all duration-300`
+    }
+          ${isMobile ? 'pt-16' : 'pt-16'}
+        `}>
           <div className="p-4 border-b border-gray-200">
             <div className="flex items-center justify-between mb-2">
               {!isSidebarCollapsed && <h2 className="text-lg font-semibold">对话列表</h2>}
