@@ -222,6 +222,61 @@ button {
   }
 }
 
+@keyframes mobileSlideExpand {
+  0% {
+    width: 0;
+    opacity: 0;
+  }
+  100% {
+    width: 100%;
+    opacity: 1;
+  }
+}
+
+.animate-slide-expand {
+  animation: mobileSlideExpand 0.3s ease-out;
+}
+
+/* 移动端侧边栏动画 */
+@keyframes slideInFromLeft {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.slide-in-from-left {
+  animation: slideInFromLeft 0.3s ease-out;
+}
+
+/* 移动端按钮涟漪效果 */
+.mobile-ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.mobile-ripple::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.3s, height 0.3s;
+}
+
+.mobile-ripple:active::before {
+  width: 200%;
+  height: 200%;
+}
+
 .mobile-slide-in {
   animation: mobileSlideIn 0.3s ease-out;
 }

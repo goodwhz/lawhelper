@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { signIn, signUp, resetPassword, LoginCredentials, RegisterCredentials } from '@/lib/auth'
+import type { LoginCredentials, RegisterCredentials } from '@/lib/auth'
+import { signIn, signUp, resetPassword } from '@/lib/auth'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { validatePassword, getPasswordRequirements } from '@/utils/password-validation'
@@ -16,14 +17,14 @@ type AuthMode = 'login' | 'register' | 'forgot'
 export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const { refreshUser } = useAuth()
   const router = useRouter()
-  
+
   // 表单状态
   const [mode, setMode] = useState<AuthMode>('login')
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     name: '',
-    confirmPassword: ''
+    confirmPassword: '',
   })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
@@ -49,7 +50,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       email: '',
       password: '',
       name: '',
-      confirmPassword: ''
+      confirmPassword: '',
     })
     setError('')
     setSuccess('')
@@ -67,7 +68,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   // 处理输入变化
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
+    setFormData((prev: typeof formData) => ({ ...prev, [name]: value }))
     setError('')
     setSuccess('')
   }
@@ -101,8 +102,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   // 处理登录
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    if (!validateForm()) return
+
+    if (!validateForm()) { return }
 
     setIsLoading(true)
     setError('')
@@ -110,17 +111,17 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     try {
       const credentials: LoginCredentials = {
         email: formData.email,
-        password: formData.password
+        password: formData.password,
       }
 
       const result = await signIn(credentials)
-      
+
       if (result.success) {
         setSuccess('登录成功！')
-        
+
         // 刷新用户信息
         await refreshUser()
-        
+
         // 管理员跳转到后台
         if (result.isAdmin) {
           setTimeout(() => {
@@ -145,8 +146,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   // 处理注册
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    if (!validateForm()) return
+
+    if (!validateForm()) { return }
 
     setIsLoading(true)
     setError('')
@@ -155,18 +156,17 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       const credentials: RegisterCredentials = {
         email: formData.email,
         password: formData.password,
-        name: formData.name
+        name: formData.name,
       }
 
       const result = await signUp(credentials)
-      
+
       if (result.success) {
         setSuccess('注册成功！请查收邮件确认账户')
-        setIsAdmin(result.isAdmin || false)
-        
+
         // 刷新用户信息
         await refreshUser()
-        
+
         // 注册后切换到登录模式
         setTimeout(() => {
           setMode('login')
@@ -185,7 +185,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   // 处理忘记密码
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!formData.email || !formData.email.includes('@')) {
       setError('请输入有效的邮箱地址')
       return
@@ -197,7 +197,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     try {
       await resetPassword(formData.email)
       setSuccess('密码重置邮件已发送，请查收邮件')
-      
+
       // 2秒后切换回登录模式
       setTimeout(() => {
         setMode('login')
@@ -220,7 +220,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     }
   }
 
-  if (!isOpen) return null
+  if (!isOpen) { return null }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -242,9 +242,11 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
             {mode === 'login' ? '登录账号' : mode === 'register' ? '注册账号' : '重置密码'}
           </h2>
           <p className="text-gray-600 text-sm">
-            {mode === 'login' ? '登录后使用所有功能' : 
-             mode === 'register' ? '创建新账号开始使用' :
-             '输入邮箱地址，我们将发送重置链接'}
+            {mode === 'login'
+              ? '登录后使用所有功能'
+              : mode === 'register'
+                ? '创建新账号开始使用'
+                : '输入邮箱地址，我们将发送重置链接'}
           </p>
         </div>
 
@@ -297,26 +299,26 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 onBlur={() => setShowPasswordRequirements(false)}
                 className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
                   mode === 'register' && formData.password && !passwordValidation.isValid
-                    ? 'border-red-300 focus:ring-red-500' 
+                    ? 'border-red-300 focus:ring-red-500'
                     : mode === 'register' && formData.password && passwordValidation.isValid
-                    ? 'border-green-300 focus:ring-green-500'
-                    : 'border-gray-300 focus:ring-law-red-500 focus:border-transparent'
+                      ? 'border-green-300 focus:ring-green-500'
+                      : 'border-gray-300 focus:ring-law-red-500 focus:border-transparent'
                 }`}
                 placeholder={mode === 'login' ? '请输入密码' : '请设置密码'}
                 disabled={isLoading}
                 required
               />
-              
+
               {mode === 'register' && showPasswordRequirements && (
                 <div className="mt-2 p-3 bg-gray-50 border border-gray-200 rounded-md">
                   <h4 className="text-sm font-medium text-gray-700 mb-2">密码要求：</h4>
                   <ul className="space-y-1">
                     {passwordRequirements.map((requirement, index) => {
                       const isMet = (
-                        (index === 0 && passwordValidation.requirements.length) ||
-                        (index === 1 && passwordValidation.requirements.hasLowercase) ||
-                        (index === 2 && passwordValidation.requirements.hasUppercase) ||
-                        (index === 3 && passwordValidation.requirements.hasNumber)
+                        (index === 0 && passwordValidation.requirements.length)
+                        || (index === 1 && passwordValidation.requirements.hasLowercase)
+                        || (index === 2 && passwordValidation.requirements.hasUppercase)
+                        || (index === 3 && passwordValidation.requirements.hasNumber)
                       )
                       return (
                         <li key={index} className={`text-xs flex items-center ${
@@ -332,7 +334,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                   </ul>
                 </div>
               )}
-              
+
               {mode === 'register' && formData.password && !passwordValidation.isValid && (
                 <p className="mt-1 text-sm text-red-600">
                   {passwordValidation.errors.join('；')}
@@ -379,17 +381,19 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
             disabled={isLoading || !!success}
             className="w-full bg-law-red-500 text-white py-2 px-4 rounded-lg hover:bg-law-red-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium"
           >
-            {isLoading ? (
-              <span className="flex items-center justify-center">
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                {mode === 'login' ? '登录中...' : mode === 'register' ? '注册中...' : '发送中...'}
-              </span>
-            ) : (
-              (mode === 'login' ? '登录' : mode === 'register' ? '注册' : '发送重置邮件')
-            )}
+            {isLoading
+              ? (
+                <span className="flex items-center justify-center">
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  {mode === 'login' ? '登录中...' : mode === 'register' ? '注册中...' : '发送中...'}
+                </span>
+              )
+              : (
+                (mode === 'login' ? '登录' : mode === 'register' ? '注册' : '发送重置邮件')
+              )}
           </button>
         </form>
 
@@ -399,7 +403,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
             <>
               <button
                 type="button"
-                onClick={() => { setMode('forgot'); resetForm(); }}
+                onClick={() => { setMode('forgot'); resetForm() }}
                 className="text-law-red-500 hover:text-law-red-600 transition-colors"
                 disabled={isLoading}
               >
@@ -409,7 +413,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 还没有账号？
                 <button
                   type="button"
-                  onClick={() => { setMode('register'); resetForm(); }}
+                  onClick={() => { setMode('register'); resetForm() }}
                   className="ml-1 text-law-red-500 hover:text-law-red-600 transition-colors"
                   disabled={isLoading}
                 >
@@ -418,13 +422,13 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
               </div>
             </>
           )}
-          
+
           {mode === 'register' && (
             <div className="text-gray-600">
               已有账号？
               <button
                 type="button"
-                onClick={() => { setMode('login'); resetForm(); }}
+                onClick={() => { setMode('login'); resetForm() }}
                 className="ml-1 text-law-red-500 hover:text-law-red-600 transition-colors"
                 disabled={isLoading}
               >
@@ -432,13 +436,13 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
               </button>
             </div>
           )}
-          
+
           {mode === 'forgot' && (
             <div className="text-gray-600">
               记起密码了？
               <button
                 type="button"
-                onClick={() => { setMode('login'); resetForm(); }}
+                onClick={() => { setMode('login'); resetForm() }}
                 className="ml-1 text-law-red-500 hover:text-law-red-600 transition-colors"
                 disabled={isLoading}
               >

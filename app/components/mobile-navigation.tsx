@@ -1,15 +1,13 @@
 'use client'
-import type { FC } from 'react'
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { useProtectedAction } from './auth-guard'
 import { signOut } from '@/lib/auth'
 import WeChatModal from './wechat-modal'
 
-const MobileNavigation: FC = () => {
-  const pathname = usePathname()
+const MobileNavigation = () => {
   const router = useRouter()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
@@ -59,7 +57,7 @@ const MobileNavigation: FC = () => {
   return (
     <>
       {/* 移动端导航栏 */}
-      <nav className="lg:hidden fixed top-0 left-0 right-0 bg-white shadow-lg border-b border-gray-200 z-50">
+      <nav className="lg:hidden fixed top-0 left-0 right-0 bg-white shadow-lg border-b border-gray-200 z-50 mobile-safe-top">
         <div className="px-4">
           <div className="flex justify-between items-center py-3">
             {/* Logo区域 */}
@@ -67,7 +65,7 @@ const MobileNavigation: FC = () => {
               <img
                 src="/logo.jpeg"
                 alt="法律助手Logo"
-                className="h-10 w-auto rounded-lg object-contain"
+                className="h-8 w-auto rounded-lg object-contain"
               />
               <div>
                 <h1 className="text-lg font-bold text-gray-900">冷静头脑</h1>
@@ -76,10 +74,33 @@ const MobileNavigation: FC = () => {
 
             {/* 右侧操作区域 */}
             <div className="flex items-center space-x-2">
+              {/* 登录/用户状态 */}
+              {isAuthenticated
+                ? (
+                  <button
+                    onClick={() => setIsMenuOpen(!isMenuOpen)}
+                    className="mobile-ripple flex items-center space-x-1 bg-law-orange-500 text-white px-3 py-1.5 rounded-md hover:bg-law-orange-600 transition-all duration-200 text-sm font-medium transform active:scale-95 touch-target"
+                    aria-label="用户菜单"
+                  >
+                    <span className="w-5 h-5 bg-white rounded-full flex items-center justify-center text-xs text-law-orange-500 font-bold">
+                      {user?.name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase()}
+                    </span>
+                    <span className="hidden xs:inline">我的</span>
+                  </button>
+                )
+                : (
+                  <button
+                    onClick={() => setShowLoginModal(true)}
+                    className="mobile-ripple bg-law-orange-500 text-white px-3 py-1.5 rounded-md hover:bg-law-orange-600 transition-all duration-200 text-sm font-medium transform active:scale-95 touch-target"
+                  >
+                    登录
+                  </button>
+                )}
+
               {/* 在线咨询按钮 */}
               <button
                 onClick={() => setIsWeChatModalOpen(true)}
-                className="bg-law-red-500 text-white px-3 py-1.5 rounded-md hover:bg-law-red-600 transition-colors text-sm font-medium"
+                className="mobile-ripple bg-law-red-500 text-white px-3 py-1.5 rounded-md hover:bg-law-red-600 transition-all duration-200 text-sm font-medium transform active:scale-95 touch-target"
               >
                 咨询
               </button>
@@ -87,7 +108,7 @@ const MobileNavigation: FC = () => {
               {/* 菜单按钮 */}
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="p-2 rounded-md hover:bg-gray-100 transition-colors"
+                className="mobile-ripple p-2 rounded-md hover:bg-gray-100 transition-all duration-200 transform active:scale-95 touch-target"
                 aria-label="菜单"
               >
                 <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -107,15 +128,17 @@ const MobileNavigation: FC = () => {
 
       {/* 移动端侧边菜单 */}
       {isMenuOpen && (
-        <div className="lg:hidden fixed inset-0 z-40 flex">
+        <div className="lg:hidden fixed inset-0 z-50 flex">
           {/* 背景遮罩 */}
           <div
-            className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
             onClick={closeMenu}
           />
 
           {/* 侧边栏内容 */}
-          <div className="relative flex flex-col w-80 max-w-full bg-white shadow-xl">
+          <div className="relative flex flex-col w-80 max-w-[85vw] bg-white shadow-2xl slide-in-from-left ios-safari-fix">
+            {/* 顶部装饰条 */}
+            <div className="absolute left-0 top-0 h-1 w-full bg-gradient-to-r from-law-red-500 to-law-orange-500 animate-slide-expand"></div>
             {/* 头部 */}
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
               <div className="flex items-center space-x-2">
@@ -128,7 +151,7 @@ const MobileNavigation: FC = () => {
               </div>
               <button
                 onClick={closeMenu}
-                className="p-2 rounded-md hover:bg-gray-100 transition-colors"
+                className="mobile-ripple p-2 rounded-md hover:bg-gray-100 transition-all duration-200 transform active:scale-95 touch-target"
                 aria-label="关闭菜单"
               >
                 <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -167,7 +190,7 @@ const MobileNavigation: FC = () => {
                 <div className="space-y-2">
                   <button
                     onClick={() => handleFeatureClick('/ai-chat')}
-                    className="w-full flex items-center space-x-3 px-3 py-2 rounded-md hover:bg-gray-50 transition-colors text-left"
+                    className="mobile-ripple w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-50 transition-all duration-200 text-left transform active:scale-98 touch-target"
                   >
                     <span className="text-xl">🤖</span>
                     <div className="flex-1">
@@ -178,7 +201,7 @@ const MobileNavigation: FC = () => {
 
                   <button
                     onClick={() => handleFeatureClick('/tools')}
-                    className="w-full flex items-center space-x-3 px-3 py-2 rounded-md hover:bg-gray-50 transition-colors text-left"
+                    className="mobile-ripple w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-50 transition-all duration-200 text-left transform active:scale-98 touch-target"
                   >
                     <span className="text-xl">🛠️</span>
                     <div className="flex-1">
@@ -189,7 +212,7 @@ const MobileNavigation: FC = () => {
 
                   <button
                     onClick={() => handleFeatureClick('/knowledge-base')}
-                    className="w-full flex items-center space-x-3 px-3 py-2 rounded-md hover:bg-gray-50 transition-colors text-left"
+                    className="mobile-ripple w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-50 transition-all duration-200 text-left transform active:scale-98 touch-target"
                   >
                     <span className="text-xl">📚</span>
                     <div className="flex-1">
@@ -200,7 +223,7 @@ const MobileNavigation: FC = () => {
 
                   <button
                     onClick={() => handleFeatureClick('/dispute-center')}
-                    className="w-full flex items-center space-x-3 px-3 py-2 rounded-md hover:bg-gray-50 transition-colors text-left"
+                    className="mobile-ripple w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-50 transition-all duration-200 text-left transform active:scale-98 touch-target"
                   >
                     <span className="text-xl">⚖️</span>
                     <div className="flex-1">
@@ -211,59 +234,29 @@ const MobileNavigation: FC = () => {
                 </div>
               </div>
 
-              {/* 用户操作区域 */}
+              {/* 其他功能区域 */}
               <div className="p-4 border-t border-gray-200">
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">账户</h3>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">其他</h3>
                 <div className="space-y-2">
-                  {!isAuthenticated
-                    ? (
-                      <>
-                        <button
-                          onClick={() => {
-                            setShowLoginModal(true)
-                            closeMenu()
-                          }}
-                          className="w-full bg-law-red-500 text-white px-3 py-2 rounded-md hover:bg-law-red-600 transition-colors font-medium"
-                        >
-                          登录
-                        </button>
-                        <Link
-                          href="/about"
-                          className="block w-full text-center bg-gray-100 text-gray-700 px-3 py-2 rounded-md hover:bg-gray-200 transition-colors font-medium"
-                          onClick={closeMenu}
-                        >
-                          关于我们
-                        </Link>
-                      </>
-                    )
-                    : (
-                      <>
-                        <button
-                          onClick={() => {
-                            setIsWeChatModalOpen(true)
-                            closeMenu()
-                          }}
-                          className="w-full bg-law-red-500 text-white px-3 py-2 rounded-md hover:bg-law-red-600 transition-colors font-medium"
-                        >
-                          在线咨询
-                        </button>
-                        {isAdmin && (
-                          <Link
-                            href="/admin"
-                            className="block w-full text-center bg-law-orange-500 text-white px-3 py-2 rounded-md hover:bg-law-orange-600 transition-colors font-medium"
-                            onClick={closeMenu}
-                          >
-                            管理后台
-                          </Link>
-                        )}
-                        <button
-                          onClick={handleLogout}
-                          className="w-full bg-gray-100 text-gray-700 px-3 py-2 rounded-md hover:bg-gray-200 transition-colors font-medium"
-                        >
-                          退出登录
-                        </button>
-                      </>
-                    )}
+                  {/* 已登录用户的管理后台 */}
+                  {isAuthenticated && isAdmin && (
+                    <Link
+                      href="/admin"
+                      className="mobile-ripple block w-full text-center bg-law-orange-500 text-white px-4 py-3 rounded-lg hover:bg-law-orange-600 transition-all duration-200 font-medium transform active:scale-98 touch-target"
+                      onClick={closeMenu}
+                    >
+                      管理后台
+                    </Link>
+                  )}
+
+                  {/* 所有用户都可用的关于我们 */}
+                  <Link
+                    href="/about"
+                    className="mobile-ripple block w-full text-center bg-gray-100 text-gray-700 px-4 py-3 rounded-lg hover:bg-gray-200 transition-all duration-200 font-medium transform active:scale-98 touch-target"
+                    onClick={closeMenu}
+                  >
+                    关于我们
+                  </Link>
                 </div>
               </div>
             </div>

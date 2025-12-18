@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
-import { useProtectedAction } from './auth-guard'
 import { signOut } from '@/lib/auth'
 import WeChatModal from './wechat-modal'
 
@@ -14,10 +13,8 @@ const Navigation: FC = () => {
 
   // 始终在组件顶层调用hooks，保持调用顺序
   const authState = useAuth()
-  const protectedAction = useProtectedAction()
 
   const { user, isAuthenticated, isAdmin, isLoading, setShowLoginModal } = authState
-  const { executeProtectedAction } = protectedAction
   const [isWeChatModalOpen, setIsWeChatModalOpen] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
 
@@ -31,24 +28,6 @@ const Navigation: FC = () => {
     window.addEventListener('storage', handleStorageChange)
     return () => window.removeEventListener('storage', handleStorageChange)
   }, [])
-
-  const navItems: Array<{ href: string; label: string; icon?: string }> = [
-    { href: '/chat', label: '智能对话', icon: '💬' },
-    { href: '/tools', label: '法律工具', icon: '⚖️' },
-    { href: '/profile', label: '个人中心', icon: '👤' }
-  ]
-
-  const isActive = (href: string) => {
-    if (href === '/') { return pathname === '/' }
-    return pathname.startsWith(href)
-  }
-
-  // 处理功能点击
-  const handleFeatureClick = (href: string) => {
-    executeProtectedAction(() => {
-      router.push(href)
-    }, { requireAuth: true })
-  }
 
   // 处理登出
   const handleLogout = async () => {
@@ -66,7 +45,7 @@ const Navigation: FC = () => {
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 bg-white shadow-lg border-b border-gray-200 z-50">
+      <nav className="fixed top-0 left-0 right-0 bg-white shadow-lg border-b border-gray-200 z-50 hidden lg:block">
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex justify-between items-center py-4">
             {/* 左侧区域 - Logo */}
@@ -174,29 +153,8 @@ const Navigation: FC = () => {
             )}
           </div>
 
-          {/* 移动端导航 - 暂时隐藏，因为navItems为空 */}
-          {navItems.length > 0 && (
-            <div className="md:hidden border-t border-gray-200 mt-2 pt-4">
-              <div className="grid grid-cols-2 gap-2">
-                {navItems.map((item: any) => (
-                  <button
-                    key={item.id}
-                    onClick={() => handleFeatureClick(item.href)}
-                    className={`
-                      flex items-center justify-center py-3 px-4 rounded-lg transition-all duration-300
-                      ${isActive(item.href)
-                    ? 'bg-law-red-50 text-law-red-600 font-semibold'
-                    : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-                  }
-                    `}
-                  >
-                    <span className="text-lg mr-2">{item.icon}</span>
-                    <span className="font-medium">{item.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* 移动端导航已由MobileNavigation组件处理，这里不再显示 */}
+          {/* 注释：为了避免重复导航栏，移动端导航已移至MobileNavigation组件 */}
         </div>
       </nav>
 

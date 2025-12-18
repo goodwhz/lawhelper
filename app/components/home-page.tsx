@@ -6,11 +6,13 @@ import Header from '@/app/components/header'
 import Navigation from '@/app/components/navigation'
 import MobileNavigation from '@/app/components/mobile-navigation'
 import { useProtectedAction } from './auth-guard'
+import { useIsMobile } from '@/hooks/use-is-mobile'
 
 const HomePage: FC = () => {
   const router = useRouter()
   const { executeProtectedAction } = useProtectedAction()
   const [isVisible, setIsVisible] = useState(false)
+  const isMobile = useIsMobile()
   // const [scrolled, setScrolled] = useState(false) // 暂时未使用
 
   useEffect(() => {
@@ -164,13 +166,13 @@ const HomePage: FC = () => {
     <div className="min-h-screen bg-white">
       <Header
         title="CoolBrain Labor Law"
-        isMobile={false}
+        isMobile={isMobile}
         onShowSideBar={() => {}}
         onCreateNewChat={() => {}}
       />
 
-      <Navigation />
-      <MobileNavigation />
+      {/* 根据设备类型显示对应的导航栏 */}
+      {isMobile ? <MobileNavigation /> : <Navigation />}
 
       {/* 红色间隔带 - 通过修改spacerConfig.height直观调整粗细 */}
       <div className="w-full" style={{ height: spacerConfig.height, backgroundColor: spacerConfig.color }}></div>
