@@ -83,12 +83,14 @@ button {
 }
 
 /* 移动端隐藏滚动条 */
-.mobile-scrollbar-hide {
+.mobile-scrollbar-hide,
+.scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
 
-.mobile-scrollbar-hide::-webkit-scrollbar {
+.mobile-scrollbar-hide::-webkit-scrollbar,
+.scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
 
@@ -173,33 +175,41 @@ button {
   .mobile-hidden {
     display: none !important;
   }
-  
+
   .mobile-block {
     display: block !important;
   }
-  
+
   .mobile-flex {
     display: flex !important;
   }
-  
+
   .mobile-w-full {
     width: 100% !important;
   }
-  
+
   .mobile-p-2 {
     padding: 0.5rem !important;
   }
-  
+
   .mobile-p-4 {
     padding: 1rem !important;
   }
-  
+
   .mobile-m-2 {
     margin: 0.5rem !important;
   }
-  
+
   .mobile-m-4 {
     margin: 1rem !important;
+  }
+}
+
+/* 强制统计数据网格在移动端显示2列 */
+@media (max-width: 1023px) {
+  .stats-grid-2-columns {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
   }
 }
 

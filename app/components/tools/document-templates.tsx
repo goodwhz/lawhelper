@@ -122,22 +122,22 @@ const DocumentTemplates: React.FC = () => {
 
       {/* 搜索和筛选 */}
       <div className="mb-6">
-        <div className="flex flex-col md:flex-row gap-4 mb-4">
-          <div className="flex-1">
+        <div className="flex flex-col gap-4 mb-4">
+          <div className="w-full">
             <input
               type="text"
               placeholder="搜索文书模板..."
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
             />
           </div>
-          <div className="flex gap-2 overflow-x-auto">
+          <div className="flex gap-2 overflow-x-auto pb-2">
             {categories.map(category => (
               <button
                 key={category}
                 onClick={() => setSelectedCategory(category)}
-                className={`px-4 py-2 rounded-lg transition-colors whitespace-nowrap ${
+                className={`px-4 py-2 rounded-lg transition-colors whitespace-nowrap text-sm ${
                   selectedCategory === category
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -153,20 +153,22 @@ const DocumentTemplates: React.FC = () => {
       {/* 模板列表 */}
       <div className="grid gap-4 md:grid-cols-2">
         {filteredTemplates.map(template => (
-          <div key={template.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+          <div key={template.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow flex flex-col h-full">
             <div className="flex items-start justify-between mb-3">
               <span className={`px-2 py-1 text-xs rounded-full ${getCategoryColor(template.category)}`}>
                 {template.category}
               </span>
             </div>
             <h4 className="font-semibold text-lg mb-2">{template.title}</h4>
-            <p className="text-gray-600 text-sm mb-4">{template.description}</p>
-            <button
-              onClick={() => handleDownload(template)}
-              className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors text-sm"
-            >
-              下载模板
-            </button>
+            <p className="text-gray-600 text-sm mb-4 flex-1">{template.description}</p>
+            <div className="mt-auto">
+              <button
+                onClick={() => handleDownload(template)}
+                className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors text-sm"
+              >
+                下载模板
+              </button>
+            </div>
           </div>
         ))}
       </div>

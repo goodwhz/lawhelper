@@ -150,30 +150,32 @@ const KnowledgeBase: React.FC = () => {
   })
 
   return (
-    <div className="min-h-screen bg-white pt-24 pb-8">
-      <div className="max-w-6xl mx-auto px-4">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-law-red-800 mb-4">劳动法知识库</h1>
-          <p className="text-lg text-law-blue-700">收录最新、最全的劳动相关法律法规原文</p>
+    <div className="min-h-screen bg-white lg:pt-24 md:pt-20 pt-16 pb-8">
+      <div className="max-w-6xl mx-auto px-3 sm:px-4">
+        <div className="text-center mb-6">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-law-red-800 mb-2 sm:mb-3 md:mb-4">劳动法知识库</h1>
+          <p className="text-sm sm:text-base md:text-lg text-law-blue-700">收录最新、最全的劳动相关法律法规原文</p>
         </div>
 
         {/* 搜索和筛选 */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <div className="flex flex-col md:flex-row gap-4">
+        <div className="bg-white rounded-lg shadow-md p-4 md:p-6 mb-6">
+          <div className="flex flex-col gap-4">
+            {/* 搜索框 */}
             <div className="flex-1">
               <input
                 type="text"
                 placeholder="搜索法律法规..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-law-red-500"
+                className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-law-red-500 text-sm sm:text-base"
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
               />
             </div>
-            <div className="flex gap-2 flex-wrap">
+            {/* 筛选按钮 - 移动端横向滚动，桌面端网格 */}
+            <div className="flex gap-2 overflow-x-auto pb-1 md:pb-0 md:flex-wrap scrollbar-hide">
               <button
                 key="all"
                 onClick={() => setSelectedCategory('all')}
-                className={`px-4 py-2 rounded-lg transition-colors text-sm ${
+                className={`px-3 sm:px-4 py-2 rounded-lg transition-colors text-xs sm:text-sm whitespace-nowrap flex-shrink-0 ${
                   selectedCategory === 'all'
                     ? 'bg-law-red-600 text-white'
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -185,7 +187,7 @@ const KnowledgeBase: React.FC = () => {
                 <button
                   key={category.id}
                   onClick={() => setSelectedCategory(category.id)}
-                  className={`px-4 py-2 rounded-lg transition-colors text-sm ${
+                  className={`px-3 sm:px-4 py-2 rounded-lg transition-colors text-xs sm:text-sm whitespace-nowrap flex-shrink-0 ${
                     selectedCategory === category.id
                       ? 'bg-law-red-600 text-white'
                       : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -259,22 +261,22 @@ const KnowledgeBase: React.FC = () => {
         {/* 文档列表 */}
         {!loading && !error && (
           <>
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
               {filteredDocuments.map(doc => (
                 <div key={doc.id} className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow h-full flex flex-col">
-                  <div className="p-6 flex-1 flex flex-col">
+                  <div className="p-4 sm:p-6 flex-1 flex flex-col">
                     <div className="flex items-center justify-between mb-3">
-                      <span className="px-2 py-1 bg-law-blue-100 text-law-blue-800 text-sm rounded-full">
+                      <span className="px-2 py-1 bg-law-blue-100 text-law-blue-800 text-xs sm:text-sm rounded-full">
                         {doc.category_name}
                       </span>
                     </div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">{doc.title}</h3>
-                    <p className="text-gray-600 mb-4 flex-1 text-sm line-clamp-3">
+                    <h3 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 mb-2">{doc.title}</h3>
+                    <p className="text-gray-600 mb-3 sm:mb-4 flex-1 text-xs sm:text-sm line-clamp-3">
                       {doc.content.length > 150 ? `${doc.content.substring(0, 150)}...` : doc.content}
                     </p>
                     <button
                       onClick={() => handleViewDocument(doc)}
-                      className="w-full bg-law-red-600 text-white py-2 px-4 rounded-lg hover:bg-law-red-700 transition-colors"
+                      className="w-full bg-law-red-600 text-white py-2 px-3 sm:px-4 rounded-lg hover:bg-law-red-700 transition-colors text-sm sm:text-base"
                     >
                       查看文档
                     </button>
@@ -284,17 +286,17 @@ const KnowledgeBase: React.FC = () => {
             </div>
 
             {filteredDocuments.length === 0 && (
-              <div className="text-center py-12">
-                <div className="max-w-md mx-auto">
+              <div className="text-center py-8 sm:py-12">
+                <div className="max-w-md mx-auto px-4">
                   <div className="mb-4">
-                    <svg className="mx-auto h-16 w-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="mx-auto h-12 w-12 sm:h-16 sm:w-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                     </svg>
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-600 mb-2">
+                  <h3 className="text-base sm:text-lg md:text-xl font-semibold text-gray-600 mb-2">
                     {searchTerm.trim() ? '未找到相关法律法规' : '暂无可用文档'}
                   </h3>
-                  <p className="text-gray-500 mb-4">
+                  <p className="text-xs sm:text-sm text-gray-500 mb-4">
                     {searchTerm.trim()
                       ? `没有找到包含"${searchTerm}"的法律法规，请尝试其他关键词`
                       : '当前分类下暂无法律法规文档，请选择其他分类查看'
@@ -303,7 +305,7 @@ const KnowledgeBase: React.FC = () => {
                   {searchTerm.trim() && (
                     <button
                       onClick={() => setSearchTerm('')}
-                      className="bg-law-red-600 text-white px-4 py-2 rounded-lg hover:bg-law-red-700 transition-colors"
+                      className="bg-law-red-600 text-white px-4 py-2 rounded-lg hover:bg-law-red-700 transition-colors text-sm sm:text-base"
                     >
                       清除搜索条件
                     </button>

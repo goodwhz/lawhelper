@@ -226,30 +226,34 @@ const HomePage: FC = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6 lg:gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-5 gap-4 md:gap-6 lg:gap-8">
           {features.map((feature, index) => (
             <div
               key={index}
               onClick={() => executeProtectedAction(() => router.push(feature.href), { requireAuth: true })}
               className="cursor-pointer"
             >
-              <div className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-3 h-full flex flex-col border border-gray-100 overflow-hidden">
+              <div className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-3 h-full flex flex-col border border-gray-100 overflow-hidden max-w-sm mx-auto">
                 {/* 顶部装饰条 */}
                 <div className={`h-2 bg-gradient-to-r ${feature.color}`}></div>
 
                 <div className="p-4 sm:p-6 lg:p-8 flex-1 flex flex-col">
                   {/* 图标区域 */}
-                  <div className={`inline-flex items-center justify-center w-12 sm:w-16 h-12 sm:h-16 rounded-xl sm:rounded-2xl bg-gradient-to-r ${feature.color} text-white text-lg sm:text-2xl mb-4 sm:mb-6 group-hover:scale-110 transition-transform duration-300`}>
-                    {feature.icon}
+                  <div className="flex items-center justify-center mb-4 sm:mb-6">
+                    <div className={`w-12 sm:w-16 h-12 sm:h-16 rounded-xl sm:rounded-2xl bg-gradient-to-r ${feature.color} text-white text-lg sm:text-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
+                      {feature.icon}
+                    </div>
                   </div>
 
                   {/* 标题和描述 */}
-                  <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-800 mb-2 sm:mb-3 group-hover:text-law-red-600 transition-colors">
-                    {feature.title}
-                  </h3>
-                  <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6 leading-relaxed">
-                    {feature.description}
-                  </p>
+                  <div className="text-center mb-4 sm:mb-6">
+                    <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-800 mb-2 sm:mb-3 group-hover:text-law-red-600 transition-colors">
+                      {feature.title}
+                    </h3>
+                    <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
+                      {feature.description}
+                    </p>
+                  </div>
 
                   {/* 功能列表 */}
                   <ul className="space-y-3 mb-8 flex-1">
@@ -275,9 +279,9 @@ const HomePage: FC = () => {
       </div>
 
       {/* 统计数据 - 带动画效果 */}
-      <div className="bg-gradient-to-br from-law-red-50 via-law-orange-50 to-law-blue-50 py-20 w-full">
+      <div className="bg-gradient-to-br from-law-red-50 via-law-orange-50 to-law-blue-50 py-8 sm:py-12 md:py-16 lg:py-20 w-full">
         <div className="w-full max-w-7xl mx-auto px-4">
-          <div className="grid md:grid-cols-4 gap-8 text-center">
+          <div className="grid stats-grid-2-columns md:grid-cols-4 gap-3 sm:gap-4 md:gap-6 lg:gap-8 text-center">
             {[
               { number: '1000+', label: '法律咨询案例', color: 'law-red' },
               { number: '10000+', label: '工具使用次数', color: 'law-orange' },
@@ -286,21 +290,21 @@ const HomePage: FC = () => {
             ].map((stat, index) => (
               <div
                 key={index}
-                className={`bg-white rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 ${
+                className={`bg-white rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-6 lg:p-8 shadow-md hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 ${
                   isVisible ? 'animate-fade-in-up' : 'opacity-0 translate-y-10'
                 }`}
                 style={{ animationDelay: `${index * 200}ms` }}
               >
-                <div className={`text-4xl font-bold ${
+                <div className={`text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold break-words leading-tight ${
                   stat.color === 'law-red'
                     ? 'text-law-red-600'
                     : stat.color === 'law-orange'
                       ? 'text-law-orange-600'
                       : 'text-law-blue-600'
-                } mb-3 animate-pulse`}>
+                } mb-1 sm:mb-2 md:mb-3 animate-pulse`}>
                   {stat.number}
                 </div>
-                <div className="text-gray-600 font-medium">{stat.label}</div>
+                <div className="text-[10px] sm:text-xs md:text-sm lg:text-base text-gray-600 font-medium leading-tight whitespace-normal">{stat.label}</div>
               </div>
             ))}
           </div>
@@ -489,7 +493,7 @@ const HomePage: FC = () => {
         <div className="absolute inset-0 bg-black/10"></div>
         <div className="relative w-full max-w-5xl mx-auto text-center px-4">
           <h2 className="text-4xl font-bold mb-6">现在，诚邀您加入CoolBrain-Laborlawhelper体验</h2>
-          <p className="text-xl mb-8 text-white/90 mx-auto whitespace-nowrap">
+          <p className="text-lg md:text-xl mb-8 text-white/90 mx-auto max-w-3xl px-4 break-words">
             亲身感受智能法律助手带来的专业升级和效率飞跃，开启更轻松、更精准、更有保障的法律服务之路。
           </p>
           <div className="flex flex-col sm:flex-row gap-6 justify-center">

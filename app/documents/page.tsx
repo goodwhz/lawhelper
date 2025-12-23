@@ -20,7 +20,7 @@ const DocumentsPage: FC = () => {
           <div className="max-w-7xl mx-auto px-4 pt-24 pb-8">
             <div className="bg-white rounded-xl shadow-lg">
               <div className="p-6 border-b">
-                <div>
+                <div className="text-center">
                   <h2 className="text-3xl font-bold text-purple-800 mb-2">
                     📄 文书模板库
                   </h2>
