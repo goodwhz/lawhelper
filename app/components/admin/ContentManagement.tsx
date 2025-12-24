@@ -82,6 +82,11 @@ export default function ContentManagement() {
   const [selectedItems, setSelectedItems] = useState<string[]>([])
   const [selectAll, setSelectAll] = useState(false)
 
+  // 对话详情查看状态
+  const [viewingConversation, setViewingConversation] = useState<Conversation | null>(null)
+  const [conversationMessages, setConversationMessages] = useState<any[]>([])
+  const [loadingMessages, setLoadingMessages] = useState(false)
+
   // 确认对话框状态
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean
@@ -112,8 +117,8 @@ export default function ContentManagement() {
         supabase.from('law_categories').select('*'),
         // 从 conversations 表读取数据
         supabase.from('conversations').select('*'),
-        // 从 auth.users 表读取用户数据
-        supabase.from('user_profiles').select('id, email, created_at, full_name, role'),
+        // 从 user_profiles 表读取用户数据
+        supabase.from('user_profiles').select('*'),
       ])
 
       console.log('数据库查询结果:', {
@@ -157,7 +162,23 @@ export default function ContentManagement() {
         console.error('对话查询错误:', conversationsRes.error)
       } else {
         console.log(`成功加载 ${conversationsRes.data?.length || 0} 个对话`)
-        setConversations(conversationsRes.data || [])
+        
+        // 为每个对话获取消息数量
+        const conversationsWithCount = await Promise.all(
+          (conversationsRes.data || []).map(async (conv) => {
+            const { count, error } = await supabase
+              .from('messages')
+              .select('*', { count: 'exact', head: true })
+              .eq('conversation_id', conv.id)
+            
+            return {
+              ...conv,
+              message_count: error ? 0 : (count || 0)
+            }
+          })
+        )
+        
+        setConversations(conversationsWithCount)
       }
 
       if (usersRes.error) {
@@ -183,6 +204,36 @@ export default function ContentManagement() {
     if (e.key === 'Enter') {
       handleSearch()
     }
+  }
+
+  // 查看对话详情
+  const viewConversationDetail = async (conversation: Conversation) => {
+    setLoadingMessages(true)
+    setViewingConversation(conversation)
+    try {
+      // 加载对话消息
+      const { data: messages, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', conversation.id)
+        .order('created_at', { ascending: true })
+      
+      if (error) {
+        console.error('加载消息失败:', error)
+      } else {
+        setConversationMessages(messages || [])
+      }
+    } catch (error) {
+      console.error('查看对话详情失败:', error)
+    } finally {
+      setLoadingMessages(false)
+    }
+  }
+
+  // 关闭对话详情
+  const closeConversationDetail = () => {
+    setViewingConversation(null)
+    setConversationMessages([])
   }
 
   // 获取所有标签
@@ -967,16 +1018,7 @@ export default function ContentManagement() {
               <h3 className="text-lg font-semibold mb-6">用户对话记录</h3>
 
               <div className="space-y-4">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      checked={selectAll}
-                      onChange={toggleSelectAll}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="text-sm text-gray-600">全选</span>
-                  </div>
+                <div className="flex justify-end mb-4">
                   <span className="text-sm text-gray-500">
                     共 {filteredConversations.length} 个对话
                   </span>
@@ -987,40 +1029,26 @@ export default function ContentManagement() {
                   return (
                     <div key={conv.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
                       <div className="flex justify-between items-start">
-                        <div className="flex items-start space-x-3 flex-1">
-                          <input
-                            type="checkbox"
-                            checked={selectedItems.includes(conv.id)}
-                            onChange={() => toggleItemSelection(conv.id)}
-                            className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                          />
-                          <div className="flex-1">
-                            <h4 className="font-medium text-gray-900">{conv.title || '未命名对话'}</h4>
-                            <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-600">
-                              <span>
-                                用户: {user?.email || '未知用户'}
-                              </span>
-                              <span>
-                                姓名: {user?.user_profiles?.full_name || '未设置'}
-                              </span>
-                              <span>
-                                消息数: {conv.message_count || 0}
-                              </span>
-                              <span className="text-xs text-gray-500">
-                                创建时间: {new Date(conv.created_at).toLocaleDateString()}
-                              </span>
-                              <span className="text-xs text-gray-500">
-                                更新时间: {new Date(conv.updated_at).toLocaleDateString()}
-                              </span>
-                            </div>
+                        <div className="flex-1">
+                          <h4 className="font-medium text-gray-900">{conv.title || '未命名对话'}</h4>
+                          <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-600">
+                            <span>
+                              用户: {user?.email || '未知用户'}
+                            </span>
+                            <span>
+                              消息数: {conv.message_count || 0}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              创建时间: {new Date(conv.created_at).toLocaleDateString()}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              更新时间: {new Date(conv.updated_at).toLocaleDateString()}
+                            </span>
                           </div>
                         </div>
                         <div className="flex space-x-2 ml-4">
                           <button
-                            onClick={() => {
-                              // 可以实现查看对话详情的功能
-                              window.open(`/ai-chat?conversation=${conv.id}`, '_blank')
-                            }}
+                            onClick={() => viewConversationDetail(conv)}
                             className="text-blue-600 hover:text-blue-800"
                           >
                             查看详情
@@ -1060,6 +1088,85 @@ export default function ContentManagement() {
             setEditingCategory(null)
           }}
         />
+      )}
+
+      {/* 对话详情弹窗 */}
+      {viewingConversation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <div className="flex justify-between items-center p-4 border-b">
+              <h3 className="text-lg font-semibold">对话详情</h3>
+              <button
+                onClick={closeConversationDetail}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="p-4 border-b bg-gray-50">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <span className="font-medium">对话标题：</span>
+                  <span>{viewingConversation.title || '未命名对话'}</span>
+                </div>
+                <div>
+                  <span className="font-medium">用户：</span>
+                  <span>{users.find(u => u.id === viewingConversation.user_id)?.email || '未知用户'}</span>
+                </div>
+                <div>
+                  <span className="font-medium">消息数量：</span>
+                  <span>{viewingConversation.message_count || 0}</span>
+                </div>
+                <div>
+                  <span className="font-medium">创建时间：</span>
+                  <span>{new Date(viewingConversation.created_at).toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-4 max-h-96 overflow-y-auto">
+              {loadingMessages ? (
+                <div className="text-center py-8">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <p className="mt-2 text-gray-600">加载消息中...</p>
+                </div>
+              ) : conversationMessages.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  暂无消息记录
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {conversationMessages.map((message, index) => (
+                    <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`max-w-xs md:max-w-md lg:max-w-lg rounded-lg p-3 ${
+                        message.role === 'user' 
+                          ? 'bg-blue-600 text-white' 
+                          : 'bg-gray-200 text-gray-900'
+                      }`}>
+                        <div className="text-sm">
+                          {message.content || '无内容'}
+                        </div>
+                        <div className={`text-xs mt-1 ${message.role === 'user' ? 'text-blue-100' : 'text-gray-500'}`}>
+                          {new Date(message.created_at).toLocaleTimeString()}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <div className="p-4 border-t bg-gray-50">
+              <button
+                onClick={closeConversationDetail}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                关闭
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* 确认对话框 */}

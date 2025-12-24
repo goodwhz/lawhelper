@@ -28,10 +28,48 @@ import { TransferMethod } from '@/types/app'
 import { formatFileSize } from '@/utils/format'
 
 const uploadRemoteFileInfo = async (url: string, hasToken: boolean) => {
-  console.log('TODO: upload remote file info', url, hasToken)
-  return {
-    mime_type: 'application/octet-stream',
-    size: 0,
+  try {
+    // 验证URL格式
+    if (!url || !url.startsWith('http')) {
+      throw new Error('无效的URL格式')
+    }
+    
+    // 发起HEAD请求获取文件信息
+    const response = await fetch(url, {
+      method: 'HEAD',
+      headers: hasToken ? {
+        'Authorization': `Bearer ${hasToken}`
+      } : {}
+    })
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+    
+    // 获取文件信息
+    const contentLength = response.headers.get('content-length')
+    const contentType = response.headers.get('content-type') || 'application/octet-stream'
+    const contentDisposition = response.headers.get('content-disposition')
+    
+    // 从Content-Disposition中提取文件名
+    let fileName = url.split('/').pop() || 'unknown'
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)
+      if (filenameMatch && filenameMatch[1]) {
+        fileName = filenameMatch[1].replace(/['"]/g, '')
+      }
+    }
+    
+    return {
+      id: url, // 使用URL作为临时ID
+      name: fileName,
+      mime_type: contentType,
+      size: contentLength ? parseInt(contentLength) : 0,
+      url: url,
+    }
+  } catch (error) {
+    console.error('远程文件信息获取失败:', error)
+    throw error
   }
 }
 

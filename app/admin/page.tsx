@@ -9,7 +9,6 @@ import PageAuthGuard from '@/app/components/page-auth-guard'
 import ErrorBoundary from '@/app/components/error-boundary'
 import UserManagement from '@/app/components/admin/UserManagement'
 import ContentManagement from '@/app/components/admin/ContentManagement'
-import SyncMonitor from '@/app/components/admin/SyncMonitor'
 
 function AdminPage() {
   const { user } = useAuth()
@@ -18,8 +17,6 @@ function AdminPage() {
   const tabs = [
     { id: 'users', label: '用户管理', icon: '👥' },
     { id: 'content', label: '内容管理', icon: '📚' },
-    { id: 'sync', label: '数据同步', icon: '🔄' },
-    { id: 'settings', label: '系统设置', icon: '⚙️' },
   ]
 
   return (
@@ -105,51 +102,6 @@ function AdminPage() {
               {activeTab === 'content' && (
                 <div>
                   <ContentManagement />
-                </div>
-              )}
-
-              {activeTab === 'sync' && (
-                <div className="p-4 lg:p-6">
-                  <div className="mb-4 lg:mb-6">
-                    <h2 className="text-lg lg:text-xl font-semibold text-gray-900 mb-2">用户数据同步监控</h2>
-                    <p className="text-gray-600 text-sm lg:text-base">实时监控数据库表 user_profiles 与 Supabase Auth 用户的同步状态，支持手动强制同步。</p>
-                  </div>
-                  <SyncMonitor />
-                </div>
-              )}
-
-              {activeTab === 'settings' && (
-                <div className="p-4 lg:p-6">
-                  <div className="mb-4 lg:mb-6">
-                    <h2 className="text-lg lg:text-xl font-semibold text-gray-900 mb-2">系统设置</h2>
-                    <p className="text-gray-600 text-sm lg:text-base">配置系统参数和选项，包括系统配置、权限设置、日志管理等。</p>
-                  </div>
-
-                  <div className="border-4 border-dashed border-gray-200 rounded-lg p-4 lg:p-8 text-center">
-                    <div className="text-4xl lg:text-6xl mb-4">⚙️</div>
-                    <h3 className="text-base lg:text-lg font-medium text-gray-900 mb-2">系统设置功能</h3>
-                    <p className="text-gray-600 mb-4 text-sm lg:text-base">
-                      此功能正在开发中，敬请期待。<br />
-                      将包括：系统配置、权限管理、日志查看、备份恢复等功能。
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4 mt-6">
-                      <div className="bg-gray-50 p-3 lg:p-4 rounded-lg">
-                        <div className="text-xl lg:text-2xl mb-2">🔧</div>
-                        <h4 className="font-medium text-gray-900 mb-1 text-sm lg:text-base">系统配置</h4>
-                        <p className="text-xs lg:text-sm text-gray-600">基本系统参数设置</p>
-                      </div>
-                      <div className="bg-gray-50 p-3 lg:p-4 rounded-lg">
-                        <div className="text-xl lg:text-2xl mb-2">📋</div>
-                        <h4 className="font-medium text-gray-900 mb-1 text-sm lg:text-base">日志管理</h4>
-                        <p className="text-xs lg:text-sm text-gray-600">系统日志查看和分析</p>
-                      </div>
-                      <div className="bg-gray-50 p-3 lg:p-4 rounded-lg">
-                        <div className="text-xl lg:text-2xl mb-2">💾</div>
-                        <h4 className="font-medium text-gray-900 mb-1 text-sm lg:text-base">数据备份</h4>
-                        <p className="text-xs lg:text-sm text-gray-600">数据备份和恢复功能</p>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               )}
             </div>
