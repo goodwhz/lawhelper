@@ -66,6 +66,14 @@ const HomePage: FC = () => {
       color: 'from-green-500 to-green-600',
       features: ['劳动争议解决', '人事争议处理', '风险评估', '专业指导'],
     },
+    {
+      title: '牛马测评仪',
+      description: '职场处境评估',
+      icon: '🐂🐴',
+      href: '/niu-ma-evaluator',
+      color: 'from-pink-500 to-pink-600',
+      features: ['职场处境分析', 'AI精准评估', '改善建议', '客观评价'],
+    },
   ]
 
   // 详细功能介绍
@@ -119,6 +127,16 @@ const HomePage: FC = () => {
       benefits: ['智能争议分析', '风险评估预警', '多路径解决方案', '85%调解成功率'],
       buttonText: '进入争议中心',
       image: '/dispute-preview.jpg',
+    },
+    {
+      title: '牛马测评仪',
+      description: '基于讯飞星辰AI技术，全方位评估职场处境，提供专业改善建议',
+      icon: '🐂🐴',
+      href: '/niu-ma-evaluator',
+      color: 'pink',
+      benefits: ['多维度职场分析', 'AI智能评估', '个性化建议', '客观第三方视角'],
+      buttonText: '开始测评',
+      image: '/evaluator-preview.jpg',
     },
   ]
 

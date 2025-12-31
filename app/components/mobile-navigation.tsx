@@ -274,6 +274,17 @@ const MobileNavigation = () => {
                       <p className="text-xs text-gray-500">专业争议处理指导</p>
                     </div>
                   </button>
+
+                  <button
+                    onClick={() => handleFeatureClick('/niu-ma-evaluator')}
+                    className="mobile-ripple w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-50 transition-all duration-200 text-left transform active:scale-98 touch-target"
+                  >
+                    <span className="text-xl">🐂🐴</span>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">牛马测评仪</p>
+                      <p className="text-xs text-gray-500">职场处境评估</p>
+                    </div>
+                  </button>
                 </div>
               </div>
 
