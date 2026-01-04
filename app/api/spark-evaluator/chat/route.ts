@@ -2,9 +2,9 @@ import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 
 // Coze API 配置
-const COZE_API_URL = 'https://qz6hgwr9c2.coze.site/stream_run'
-const COZE_API_TOKEN = 'eyJhbGciOiJSUzI1NiIsImtpZCI6IjEzZGVmNTgyLWE1MGQtNDQ4OC04MmY1LTQ5N2I3N2JjMGRhYiJ9.eyJpc3MiOiJodHRwczovL2FwaS5jb3plLmNuIiwiYXVkIjpbIkVZdE5SRm9vRkl0bXR2SjBOT0hlbGQxdXRjSFJOeFBWIl0sImV4cCI6ODIxMDI2Njg3Njc5OSwiaWF0IjoxNzY3MTcxMTI0LCJzdWIiOiJzcGlmZmU6Ly9hcGkuY296ZS5jbi93b3JrbG9hZF9pZGVudGl0eS9pZDo3NTg5OTM0NDk0ODIwMzM1NjM1Iiwic3JjIjoiaW5ib3VuZF9hdXRoX2FjY2Vzc190b2tlbl9pZDo3NTg5OTQyMTg3ODgyNzA5MDI2In0.EeA18D3oK-Fqeo6pyjLIA-KIg2Og0yQavxImY058fyVLrsU-3BSmeXOpW9cPM3ex61Af27sCiFp_lZZQGKlPeoxGcx_RB6JtSUZK0vrKEllXpiTIn8ZMCa84BjhJE5jp044aepimB58OAnNTTd3eZvAA6guM2CilSXB74lCzE3WjZGqmsH_muWjQzl9m12ZYLlRxKfWnio47i4VFqciZO0d-dj_F0qkoT1r-YwI8N7owz8vnaQ_-SnekXVpjUnYidCz1nNz03BH4GhCOMU7ln1Hj6YlkIb-omlB9gHMoR6YviF5ItkOZ5-W6bz_r48j8Q37SEGoHaC0ydLbov-W2xw'
-const COZE_PROJECT_ID = '7589925531894808617'
+const COZE_API_URL = process.env.NIUMA_COZE_API_URL || 'https://qz6hgwr9c2.coze.site/stream_run'
+const COZE_API_TOKEN = process.env.NIUMA_COZE_API_TOKEN
+const COZE_PROJECT_ID = process.env.NIUMA_COZE_PROJECT_ID || '7589925531894808617'
 
 // 调用 Coze API
 async function callCozeAPI(message: string): Promise<string> {
@@ -65,20 +65,43 @@ async function callCozeAPI(message: string): Promise<string> {
           }
           try {
             const parsed = JSON.parse(data)
+            console.log('解析的 SSE 数据:', JSON.stringify(parsed))
+
             // 根据实际响应结构提取内容
-            if (parsed.content || parsed.message || parsed.answer) {
-              fullResponse += parsed.content || parsed.message || parsed.answer || ''
+            let textToAdd = ''
+
+            if (parsed.content && typeof parsed.content.answer === 'string') {
+              textToAdd = parsed.content.answer
+            } else if (parsed.answer && typeof parsed.answer === 'string') {
+              textToAdd = parsed.answer
+            } else if (parsed.message && typeof parsed.message === 'string') {
+              textToAdd = parsed.message
+            } else if (parsed.content && typeof parsed.content === 'string') {
+              textToAdd = parsed.content
+            } else if (parsed.content && parsed.content.answer) {
+              // 如果 content.answer 存在，确保它是字符串
+              textToAdd = String(parsed.content.answer)
             }
-          } catch (e) {
+
+            if (textToAdd) {
+              fullResponse += textToAdd
+            }
+          } catch {
             // 忽略解析错误
-            console.warn('解析 SSE 数据失败:', e)
+            console.warn('解析 SSE 数据失败:', line.substring(0, 100))
           }
         }
       }
     }
 
     console.log('Coze API 响应成功,响应长度:', fullResponse.length)
-    return fullResponse || '抱歉，没有收到响应。'
+    console.log('响应内容前200字:', fullResponse.substring(0, 200))
+    console.log('完整响应:', fullResponse)
+
+    // 清理响应中的 [object Object]
+    const cleanedResponse = fullResponse.replace(/\[object Object\]/g, '')
+
+    return cleanedResponse || '抱歉，没有收到响应。'
   } catch (error) {
     console.error('调用 Coze API 失败:', error)
     throw error
@@ -102,6 +125,22 @@ export async function POST(request: NextRequest) {
           error: '缺少消息内容',
         },
         { status: 400 },
+      )
+    }
+
+    // 检查是否配置了 Token
+    if (!COZE_API_TOKEN) {
+      console.log('NIUMA_COZE_API_TOKEN 未配置，使用模拟响应')
+      const mockResponse = generateMockResponse()
+      return NextResponse.json(
+        {
+          success: true,
+          data: {
+            message: mockResponse,
+          },
+          isMock: true,
+        },
+        { status: 200 },
       )
     }
 

@@ -15,6 +15,7 @@ const NiMaEvaluatorChat: React.FC = () => {
   const [isInitializing, setIsInitializing] = useState(true)
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting')
   const [retryCount, setRetryCount] = useState(0)
+  const [shouldScrollToBottom, setShouldScrollToBottom] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const initializationRef = useRef(false)
 
@@ -23,8 +24,12 @@ const NiMaEvaluatorChat: React.FC = () => {
   }
 
   useEffect(() => {
-    scrollToBottom()
-  }, [messages])
+    // 只在非初始化阶段且需要滚动时才滚动
+    if (shouldScrollToBottom && !isInitializing) {
+      scrollToBottom()
+      setShouldScrollToBottom(false)
+    }
+  }, [messages, shouldScrollToBottom, isInitializing])
 
   // 组件加载时获取开场白
   useEffect(() => {
@@ -61,6 +66,7 @@ const NiMaEvaluatorChat: React.FC = () => {
           ])
           setConnectionStatus('connected')
           setRetryCount(0)
+          // 初始化时不滚动
         } else {
           throw new Error(data.error || '获取开场白失败')
         }
@@ -74,6 +80,7 @@ const NiMaEvaluatorChat: React.FC = () => {
             timestamp: new Date(),
           },
         ])
+        // 初始化时不滚动
       } finally {
         setIsInitializing(false)
       }
@@ -95,6 +102,7 @@ const NiMaEvaluatorChat: React.FC = () => {
     setInput('')
     setIsLoading(true)
     setConnectionStatus('connecting')
+    setShouldScrollToBottom(true) // 用户发送消息后滚动
 
     try {
       const response = await fetch('/api/spark-evaluator/chat', {
@@ -117,6 +125,7 @@ const NiMaEvaluatorChat: React.FC = () => {
         }
         setMessages(prev => [...prev, assistantMessage])
         setConnectionStatus('connected')
+        setShouldScrollToBottom(true) // AI 回复后滚动
       } else {
         throw new Error(data.error || '获取AI回复失败')
       }
@@ -129,6 +138,7 @@ const NiMaEvaluatorChat: React.FC = () => {
         timestamp: new Date(),
       }
       setMessages(prev => [...prev, errorMessage])
+      setShouldScrollToBottom(true) // 错误消息后滚动
     } finally {
       setIsLoading(false)
     }
@@ -176,6 +186,7 @@ const NiMaEvaluatorChat: React.FC = () => {
           ])
           setConnectionStatus('connected')
           setRetryCount(0)
+          // 初始化时不滚动
         } else {
           throw new Error(data.error || '获取开场白失败')
         }

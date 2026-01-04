@@ -15,6 +15,7 @@ const CozeDisputeChat: React.FC = () => {
   const [isInitializing, setIsInitializing] = useState(true)
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting')
   const [retryCount, setRetryCount] = useState(0)
+  const [shouldScrollToBottom, setShouldScrollToBottom] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const initializationRef = useRef(false)
 
@@ -23,8 +24,12 @@ const CozeDisputeChat: React.FC = () => {
   }
 
   useEffect(() => {
-    scrollToBottom()
-  }, [messages])
+    // 只在非初始化阶段且需要滚动时才滚动
+    if (shouldScrollToBottom && !isInitializing) {
+      scrollToBottom()
+      setShouldScrollToBottom(false)
+    }
+  }, [messages, shouldScrollToBottom, isInitializing])
 
   // 组件加载时从 Coze 获取开场白
   useEffect(() => {
@@ -60,6 +65,7 @@ const CozeDisputeChat: React.FC = () => {
           ])
           setConnectionStatus('connected')
           setRetryCount(0)
+          // 初始化时不滚动
         } else {
           throw new Error(data.error || '获取开场白失败')
         }
@@ -91,6 +97,7 @@ const CozeDisputeChat: React.FC = () => {
             timestamp: new Date(),
           },
         ])
+        // 初始化时不滚动
       } finally {
         setIsInitializing(false)
       }
@@ -164,6 +171,7 @@ const CozeDisputeChat: React.FC = () => {
     setMessages(prev => [...prev, userMessage])
     setInput('')
     setIsLoading(true)
+    setShouldScrollToBottom(true) // 用户发送消息后滚动
 
     try {
       const assistantResponse = await callCozeAPI(userMessage.content)
@@ -175,6 +183,7 @@ const CozeDisputeChat: React.FC = () => {
       }
 
       setMessages(prev => [...prev, assistantMessage])
+      setShouldScrollToBottom(true) // AI 回复后滚动
     } catch (error) {
       console.error('前端错误:', error)
       setConnectionStatus('disconnected')
@@ -184,6 +193,7 @@ const CozeDisputeChat: React.FC = () => {
         timestamp: new Date(),
       }
       setMessages(prev => [...prev, errorMessage])
+      setShouldScrollToBottom(true) // 错误消息后滚动
     } finally {
       setIsLoading(false)
     }
@@ -230,6 +240,7 @@ const CozeDisputeChat: React.FC = () => {
           ])
           setConnectionStatus('connected')
           setRetryCount(0)
+          // 初始化时不滚动
         } else {
           throw new Error(data.error || '获取开场白失败')
         }
