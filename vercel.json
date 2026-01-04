@@ -5,7 +5,10 @@
   "env": {
     "NEXT_PUBLIC_SUPABASE_URL": "https://duyfvvbgadrwaonvlrun.supabase.co",
     "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1eWZ2dmJnYWRyd2FvbnZscnVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyODM2MjAsImV4cCI6MjA3NTg1OTYyMH0.3wExEYQ0PcdEqcML9WsvM36A74gBBXjfmmtbilwsUZ0",
-    "NODE_ENV": "production"
+    "NODE_ENV": "production",
+    "COZE_API_URL": "https://x6yjs8hc3k.coze.site/stream_run",
+    "COZE_API_TOKEN": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjU4OWU3ZjlkLWQ5YzQtNDkzNi1iZGQzLTI2YWU2OGNhZDMzMiJ9.eyJpc3MiOiJodHRwczovL2FwaS5jb3plLmNuIiwiYXVkIjpbIkREdzJSeVRvemxCY25KZTFGc25pY0RXOExNVndZNE1MIl0sImV4cCI6ODIxMDI2Njg3Njc5OSwiaWF0IjoxNzY3MDYyNDUxLCJzdWIiOiJzcGlmZmU6Ly9hcGkuY296ZS5jbi93b3JrbG9hZF9pZGVudGl0eS9pZDo3NTg5MTU5MzczNTM3MDE3ODk3Iiwic3JjIjoiaW5ib3VuZF9hdXRoX2FjY2Vzc190b2tlbl9pZDo3NTg5NDc1NDM4MzkzNTU3MDU1In0.ZXC-11L9Ezej3voKDBtg5C8RKtr2v2gAmsFUB0iLd_8Xq1mKdv259lbroWe8t23_WcST2ZwcepEszEzoKmqaiDYwI_xkMnYEpBeHrRz5IRb32xA9r8Wls6ZgZcUcWjlTq2ucEEEIEYOqiqWIzPzHfmpGzbZqCPqv4ZcRpKLlF76UeKEkf9d-uMo6AN_Ab-lBKdIygA-1BTnFmvIjl8o9AbUVCqt9Fw5gzmOnGk4wfhQ8M7Wz4pMnF1pRIhtjIJ_q4Bn4ckpeXPAfEXa593eYO87ticUCSBQLIkCtJ4VtsHXw1NKiDWzsnrMqEac8mdgRdf7vYers0bzI56P6VM-zeg",
+    "COZE_PROJECT_ID": "7589147310182039571"
   },
   "functions": {
     "app/api/law/[filename]/route.ts": {
@@ -16,12 +19,21 @@
     },
     "app/api/health-check/route.ts": {
       "maxDuration": 30
+    },
+    "app/api/coze/chat/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/spark-evaluator/chat/route.ts": {
+      "maxDuration": 60
     }
   },
   "build": {
     "env": {
       "NEXT_PUBLIC_SUPABASE_URL": "https://duyfvvbgadrwaonvlrun.supabase.co",
-      "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1eWZ2dmJnYWRyd2FvbnZscnVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyODM2MjAsImV4cCI6MjA3NTg1OTYyMH0.3wExEYQ0PcdEqcML9WsvM36A74gBBXjfmmtbilwsUZ0"
+      "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1eWZ2dmJnYWRyd2FvbnZscnVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyODM2MjAsImV4cCI6MjA3NTg1OTYyMH0.3wExEYQ0PcdEqcML9WsvM36A74gBBXjfmmtbilwsUZ0",
+      "COZE_API_URL": "https://x6yjs8hc3k.coze.site/stream_run",
+      "COZE_API_TOKEN": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjU4OWU3ZjlkLWQ5YzQtNDkzNi1iZGQzLTI2YWU2OGNhZDMzMiJ9.eyJpc3MiOiJodHRwczovL2FwaS5jb3plLmNuIiwiYXVkIjpbIkREdzJSeVRvemxCY25KZTFGc25pY0RXOExNVndZNE1MIl0sImV4cCI6ODIxMDI2Njg3Njc5OSwiaWF0IjoxNzY3MDYyNDUxLCJzdWIiOiJzcGlmZmU6Ly9hcGkuY296ZS5jbi93b3JrbG9hZF9pZGVudGl0eS9pZDo3NTg5MTU5MzczNTM3MDE3ODk3Iiwic3JjIjoiaW5ib3VuZF9hdXRoX2FjY2Vzc190b2tlbl9pZDo3NTg5NDc1NDM4MzkzNTU3MDU1In0.ZXC-11L9Ezej3voKDBtg5C8RKtr2v2gAmsFUB0iLd_8Xq1mKdv259lbroWe8t23_WcST2ZwcepEszEzoKmqaiDYwI_xkMnYEpBeHrRz5IRb32xA9r8Wls6ZgZcUcWjlTq2ucEEEIEYOqiqWIzPzHfmpGzbZqCPqv4ZcRpKLlF76UeKEkf9d-uMo6AN_Ab-lBKdIygA-1BTnFmvIjl8o9AbUVCqt9Fw5gzmOnGk4wfhQ8M7Wz4pMnF1pRIhtjIJ_q4Bn4ckpeXPAfEXa593eYO87ticUCSBQLIkCtJ4VtsHXw1NKiDWzsnrMqEac8mdgRdf7vYers0bzI56P6VM-zeg",
+      "COZE_PROJECT_ID": "7589147310182039571"
     }
   }
 }

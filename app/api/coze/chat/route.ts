@@ -69,14 +69,40 @@ export async function POST(request: NextRequest) {
     console.log('发送到 Coze 的请求:', JSON.stringify(requestBody, null, 2))
 
     // 调用 Coze API
-    const cozeResponse = await fetch(cozeApiUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${cozeApiToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
-    })
+    console.log('开始调用 Coze API...')
+
+    // 设置超时控制（Vercel 最大 60 秒）
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 55000) // 55 秒超时
+
+    let cozeResponse
+    try {
+      cozeResponse = await fetch(cozeApiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${cozeApiToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+        signal: controller.signal,
+      })
+      clearTimeout(timeoutId)
+    } catch (fetchError) {
+      clearTimeout(timeoutId)
+      console.error('Coze API 请求失败:', fetchError)
+      // 如果请求超时或失败，返回模拟响应
+      const mockResponse = generateMockResponse(disputeType, description)
+      return NextResponse.json({
+        success: true,
+        data: {
+          analysis: {
+            summary: mockResponse,
+            raw: { mock: true, error: fetchError.message },
+          },
+        },
+        timestamp: new Date().toISOString(),
+      })
+    }
 
     console.log('Coze API 响应状态:', {
       ok: cozeResponse.ok,
@@ -88,8 +114,8 @@ export async function POST(request: NextRequest) {
       const errorText = await cozeResponse.text()
       console.error('Coze API 错误详情:', errorText)
 
-      // 如果 API 调用失败,返回模拟响应而不是错误
-      console.log('API 调用失败,返回模拟响应')
+      // 如果 API 调用失败，返回模拟响应而不是错误
+      console.log('API 调用失败，返回模拟响应')
       const mockResponse = generateMockResponse(disputeType, description)
       return NextResponse.json({
         success: true,
