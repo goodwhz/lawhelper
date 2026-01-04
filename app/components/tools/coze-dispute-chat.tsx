@@ -13,7 +13,10 @@ const CozeDisputeChat: React.FC = () => {
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isInitializing, setIsInitializing] = useState(true)
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting')
+  const [retryCount, setRetryCount] = useState(0)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const initializationRef = useRef(false)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -25,7 +28,15 @@ const CozeDisputeChat: React.FC = () => {
 
   // 组件加载时从 Coze 获取开场白
   useEffect(() => {
+    // 防止重复初始化
+    if (initializationRef.current) {
+      return
+    }
+
+    initializationRef.current = true
+
     const fetchWelcomeMessage = async () => {
+      setConnectionStatus('connecting')
       try {
         const response = await fetch('/api/coze/chat', {
           method: 'POST',
@@ -47,23 +58,36 @@ const CozeDisputeChat: React.FC = () => {
               timestamp: new Date(),
             },
           ])
+          setConnectionStatus('connected')
+          setRetryCount(0)
         } else {
-          // 如果 API 调用失败,使用默认开场白
-          setMessages([
-            {
-              role: 'assistant',
-              content: '您好!我是您的法律助手,可以帮助您分析劳动和人事争议问题。请告诉我您遇到了什么类型的争议,以及具体情况。',
-              timestamp: new Date(),
-            },
-          ])
+          throw new Error(data.error || '获取开场白失败')
         }
       } catch (error) {
         console.error('获取开场白失败:', error)
+        setConnectionStatus('disconnected')
         // 出错时使用默认开场白
         setMessages([
           {
             role: 'assistant',
-            content: '您好!我是您的法律助手,可以帮助您分析劳动和人事争议问题。请告诉我您遇到了什么类型的争议,以及具体情况。',
+            content: `您好！我是劳动争议法律顾问，很高兴为您服务。
+我可以为您提供以下帮助：
+
+📋 争议类型分析
+工资拖欠、加班费计算
+解除劳动合同赔偿
+就业歧视、社保缴纳
+工伤待遇、竞业限制等
+
+🛡️ 专业服务内容
+法律分析与风险评估
+维权流程指导
+证据收集建议
+解决方案推荐
+
+为了给您提供更精准的建议，我会通过几个简单问题了解您的情况。
+
+第一个问题：请问您遇到的具体劳动争议类型是什么？（工资拖欠 / 解除合同 / 就业歧视 / 社保问题 / 加班费 / 工伤待遇 / 其他）`,
             timestamp: new Date(),
           },
         ])
@@ -76,36 +100,56 @@ const CozeDisputeChat: React.FC = () => {
   }, [])
 
   const callCozeAPI = async (userMessage: string): Promise<string> => {
-    console.log('前端发送请求:', userMessage)
+    console.log('=== 前端开始发送请求 ===')
+    console.log('用户消息:', userMessage)
+    console.log('请求时间:', new Date().toISOString())
+    setConnectionStatus('connecting')
+
+    const requestBody = {
+      disputeType: '劳动争议',
+      description: userMessage,
+    }
+    console.log('请求体:', requestBody)
 
     const response = await fetch('/api/coze/chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        disputeType: '劳动争议',
-        description: userMessage,
-      }),
+      body: JSON.stringify(requestBody),
     })
 
-    console.log('API 响应状态:', response.status, response.statusText)
+    console.log('API 响应状态:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+    })
 
     if (!response.ok) {
       const errorText = await response.text()
       console.error('API 错误响应:', errorText)
+      setConnectionStatus('disconnected')
       throw new Error(`API 调用失败 (${response.status}): ${errorText}`)
     }
 
     const data = await response.json()
-    console.log('API 返回数据:', data)
+    console.log('=== API 返回完整数据 ===')
+    console.log('JSON 数据:', JSON.stringify(data, null, 2))
+    console.log('success:', data.success)
+    console.log('data?.analysis?.summary:', data.data?.analysis?.summary)
 
     if (!data.success) {
       console.error('API 返回错误:', data.error, data.details)
+      setConnectionStatus('disconnected')
       throw new Error(data.error || 'Coze API 调用失败')
     }
 
-    return data.data?.analysis?.summary || '感谢您的咨询。根据您提供的信息,我建议您进一步详细描述争议的具体情况,包括时间、地点、涉及人员等关键信息,以便我为您提供更准确的分析和建议。'
+    const responseText = data.data?.analysis?.summary
+    console.log('最终返回给前端的响应文本长度:', responseText?.length)
+    console.log('响应文本前200字:', responseText?.substring(0, 200))
+
+    setConnectionStatus('connected')
+    return responseText || '感谢您的咨询。根据您提供的信息,我建议您进一步详细描述争议的具体情况,包括时间、地点、涉及人员等关键信息,以便我为您提供更准确的分析和建议。'
   }
 
   const handleSend = async () => {
@@ -133,6 +177,7 @@ const CozeDisputeChat: React.FC = () => {
       setMessages(prev => [...prev, assistantMessage])
     } catch (error) {
       console.error('前端错误:', error)
+      setConnectionStatus('disconnected')
       const errorMessage: Message = {
         role: 'assistant',
         content: `抱歉,系统暂时无法处理您的请求。\n\n错误信息: ${error instanceof Error ? error.message : '未知错误'}\n\n请稍后再试或联系客服。`,
@@ -144,6 +189,61 @@ const CozeDisputeChat: React.FC = () => {
     }
   }
 
+  // 重新连接
+  const handleReconnect = async () => {
+    if (retryCount >= 3) {
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: '重连次数过多，请稍后再试',
+        timestamp: new Date(),
+      }])
+      return
+    }
+
+    setRetryCount(prev => prev + 1)
+    setIsInitializing(true)
+    initializationRef.current = false
+
+    // 重新获取开场白
+    const fetchWelcomeMessage = async () => {
+      setConnectionStatus('connecting')
+      try {
+        const response = await fetch('/api/coze/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            disputeType: '初始化',
+            description: '请用简短、友好的语言介绍一下自己是法律助手,能够帮助用户分析劳动和人事争议问题。',
+          }),
+        })
+
+        const data = await response.json()
+        if (data.success && data.data?.analysis?.summary) {
+          setMessages([
+            {
+              role: 'assistant',
+              content: data.data.analysis.summary,
+              timestamp: new Date(),
+            },
+          ])
+          setConnectionStatus('connected')
+          setRetryCount(0)
+        } else {
+          throw new Error(data.error || '获取开场白失败')
+        }
+      } catch (error) {
+        console.error('重新连接失败:', error)
+        setConnectionStatus('disconnected')
+      } finally {
+        setIsInitializing(false)
+      }
+    }
+
+    await fetchWelcomeMessage()
+  }
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
@@ -152,15 +252,44 @@ const CozeDisputeChat: React.FC = () => {
   }
 
   const quickQuestions = [
-    '工资争议',
+    '工资拖欠',
     '解除合同',
     '加班费',
-    '晋升争议',
-    '调岗争议',
+    '就业歧视',
+    '社保问题',
+    '工伤待遇',
   ]
 
   return (
     <div className="bg-white rounded-lg shadow-md h-[600px] flex flex-col">
+      {/* 连接状态指示器 */}
+      <div className="border-b border-gray-200 px-4 py-2 flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <div className={`w-2 h-2 rounded-full ${
+            connectionStatus === 'connected'
+              ? 'bg-green-500'
+              : connectionStatus === 'connecting'
+                ? 'bg-yellow-500 animate-pulse'
+                : 'bg-red-500'
+          }`}></div>
+          <span className="text-sm text-gray-600">
+            {connectionStatus === 'connected'
+              ? '已连接'
+              : connectionStatus === 'connecting'
+                ? '连接中...'
+                : '未连接'}
+          </span>
+        </div>
+        {connectionStatus === 'disconnected' && (
+          <button
+            onClick={handleReconnect}
+            className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+          >
+            重新连接
+          </button>
+        )}
+      </div>
+
       {/* 消息列表 */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {isInitializing && (
