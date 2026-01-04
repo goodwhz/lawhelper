@@ -1,137 +1,93 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
-import jwt from 'jsonwebtoken'
-import WebSocket from 'ws'
 
-// 讯飞星辰 API 配置
-const SPARK_API_URL = 'wss://spark-openapi.cn-huabei-1.xf-yun.com/v1/assistants/c6lviwhk2sfk_v1'
-const SPARK_API_SECRET = 'YTVlMTJmNTliYTM4MmQwOGM0ZTQzMzVi'
-const SPARK_APP_ID = 'b20ae552'
+// Coze API 配置
+const COZE_API_URL = 'https://qz6hgwr9c2.coze.site/stream_run'
+const COZE_API_TOKEN = 'eyJhbGciOiJSUzI1NiIsImtpZCI6IjEzZGVmNTgyLWE1MGQtNDQ4OC04MmY1LTQ5N2I3N2JjMGRhYiJ9.eyJpc3MiOiJodHRwczovL2FwaS5jb3plLmNuIiwiYXVkIjpbIkVZdE5SRm9vRkl0bXR2SjBOT0hlbGQxdXRjSFJOeFBWIl0sImV4cCI6ODIxMDI2Njg3Njc5OSwiaWF0IjoxNzY3MTcxMTI0LCJzdWIiOiJzcGlmZmU6Ly9hcGkuY296ZS5jbi93b3JrbG9hZF9pZGVudGl0eS9pZDo3NTg5OTM0NDk0ODIwMzM1NjM1Iiwic3JjIjoiaW5ib3VuZF9hdXRoX2FjY2Vzc190b2tlbl9pZDo3NTg5OTQyMTg3ODgyNzA5MDI2In0.EeA18D3oK-Fqeo6pyjLIA-KIg2Og0yQavxImY058fyVLrsU-3BSmeXOpW9cPM3ex61Af27sCiFp_lZZQGKlPeoxGcx_RB6JtSUZK0vrKEllXpiTIn8ZMCa84BjhJE5jp044aepimB58OAnNTTd3eZvAA6guM2CilSXB74lCzE3WjZGqmsH_muWjQzl9m12ZYLlRxKfWnio47i4VFqciZO0d-dj_F0qkoT1r-YwI8N7owz8vnaQ_-SnekXVpjUnYidCz1nNz03BH4GhCOMU7ln1Hj6YlkIb-omlB9gHMoR6YviF5ItkOZ5-W6bz_r48j8Q37SEGoHaC0ydLbov-W2xw'
+const COZE_PROJECT_ID = '7589925531894808617'
 
-// 生成 JWT Token (用于讯飞API鉴权)
-function generateSparkToken(): string {
-  // 获取当前时间戳和过期时间
-  const now = Date.now()
-  const expiration = now + 3600000 // 1小时后过期
+// 调用 Coze API
+async function callCozeAPI(message: string): Promise<string> {
+  try {
+    console.log('调用 Coze API...')
 
-  const payload = {
-    uid: `user_${now.toString()}`,
-    exp: expiration,
-    iat: now,
-  }
-
-  // 使用 API Secret 作为密钥
-  const token = jwt.sign(payload, SPARK_API_SECRET, { algorithm: 'HS256' })
-  return token
-}
-
-// WebSocket 通信函数
-function callSparkWebSocket(message: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    // 生成鉴权 Token
-    try {
-      const token = generateSparkToken()
-
-      // 构建连接 URL
-      const url = `${SPARK_API_URL}?Authorization=${encodeURIComponent(`Bearer ${token}`)}`
-
-      console.log('连接讯飞星辰 API...')
-      const ws = new WebSocket(url)
-
-      let fullResponse = ''
-      let isConnected = false
-
-      ws.on('open', () => {
-        console.log('WebSocket 连接已建立')
-        isConnected = true
-
-        // 发送消息
-        ws.send(JSON.stringify({
-          header: {
-            app_id: SPARK_APP_ID,
-            uid: `user_${Date.now().toString()}`,
-          },
-          parameter: {
-            chat: {
-              domain: 'general',
-              temperature: 0.7,
-              max_tokens: 2048,
-            },
-          },
-          payload: {
-            message: {
-              text: [
-                {
-                  role: 'user',
-                  content: message,
+    const response = await fetch(COZE_API_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${COZE_API_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        content: {
+          query: {
+            prompt: [
+              {
+                type: 'text',
+                content: {
+                  text: message,
                 },
-              ],
-            },
+              },
+            ],
           },
-        }))
-      })
+        },
+        type: 'query',
+        project_id: Number.parseInt(COZE_PROJECT_ID, 10),
+      }),
+    })
 
-      ws.on('message', (data: Buffer) => {
-        try {
-          const response = JSON.parse(data.toString())
-
-          // 处理不同的消息类型
-          if (response.header && response.header.code === 0) {
-            // 成功响应
-            if (response.payload && response.payload.choices) {
-              const choices = response.payload.choices
-              if (choices.text && choices.text.length > 0) {
-                const content = choices.text[0].content
-                fullResponse += content
-              }
-
-              // 检查是否完成
-              if (choices.status === 2) {
-                ws.close()
-                resolve(fullResponse)
-              }
-            }
-          } else if (response.header && response.header.code !== 0) {
-            // 错误响应
-            console.error('讯飞API错误:', response.header)
-            ws.close()
-            reject(new Error(`讯飞API错误: ${response.header.message || '未知错误'}`))
-          }
-        } catch (error) {
-          console.error('解析消息失败:', error)
-        }
-      })
-
-      ws.on('error', (error: Error) => {
-        console.error('WebSocket 错误:', error)
-        reject(error)
-      })
-
-      ws.on('close', () => {
-        console.log('WebSocket 连接已关闭')
-        if (!isConnected) {
-          reject(new Error('无法连接到讯飞API'))
-        } else if (fullResponse) {
-          resolve(fullResponse)
-        }
-      })
-
-      // 设置超时
-      setTimeout(() => {
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.close()
-          reject(new Error('请求超时'))
-        }
-      }, 30000)
-    } catch (error) {
-      reject(error)
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('Coze API 错误:', response.status, errorText)
+      throw new Error(`Coze API 错误: ${response.status} ${errorText}`)
     }
-  })
+
+    // 处理流式响应
+    const reader = response.body?.getReader()
+    if (!reader) {
+      throw new Error('无法读取响应流')
+    }
+
+    const decoder = new TextDecoder()
+    let fullResponse = ''
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) { break }
+
+      const chunk = decoder.decode(value, { stream: true })
+      // Coze 返回的是 SSE 格式，每行以 "data: " 开头
+      const lines = chunk.split('\n')
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6)
+          if (data === '[DONE]') {
+            continue
+          }
+          try {
+            const parsed = JSON.parse(data)
+            // 根据实际响应结构提取内容
+            if (parsed.content || parsed.message || parsed.answer) {
+              fullResponse += parsed.content || parsed.message || parsed.answer || ''
+            }
+          } catch (e) {
+            // 忽略解析错误
+            console.warn('解析 SSE 数据失败:', e)
+          }
+        }
+      }
+    }
+
+    console.log('Coze API 响应成功,响应长度:', fullResponse.length)
+    return fullResponse || '抱歉，没有收到响应。'
+  } catch (error) {
+    console.error('调用 Coze API 失败:', error)
+    throw error
+  }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('=== 讯飞星辰 Chat API 开始处理 ===')
+    console.log('=== Coze Chat API 开始处理 ===')
 
     const body = await request.json()
     console.log('接收到的请求体:', body)
@@ -149,12 +105,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('调用讯飞星辰 API...')
-
-    // 调用讯飞API
-    const aiResponse = await callSparkWebSocket(message)
-
-    console.log('讯飞API 响应成功,响应长度:', aiResponse.length)
+    // 调用 Coze API
+    const aiResponse = await callCozeAPI(message)
 
     return NextResponse.json({
       success: true,
@@ -164,7 +116,7 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString(),
     })
   } catch (error) {
-    console.error('讯飞评估错误:', error)
+    console.error('Coze 评估错误:', error)
 
     // 返回模拟响应作为降级方案
     const mockResponse = generateMockResponse()

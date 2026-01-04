@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
     console.log('Coze 配置:', {
       apiUrl: cozeApiUrl,
       hasToken: !!cozeApiToken,
+      tokenLength: cozeApiToken?.length,
       projectId: cozeProjectId,
     })
 
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest) {
         data: {
           analysis: {
             summary: mockResponse,
-            raw: { mock: true },
+            raw: { mock: true, reason: 'No Token' },
           },
         },
         timestamp: new Date().toISOString(),

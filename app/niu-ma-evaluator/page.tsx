@@ -26,7 +26,7 @@ const NiMaEvaluatorPage: React.FC = () => {
                   🐂🐴 牛马测评仪
                 </h1>
                 <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                  使用讯飞星辰AI技术,为您评估职场处境,提供专业建议
+                  使用AI技术,为您评估职场处境,提供专业建议
                 </p>
               </div>
 

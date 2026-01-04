@@ -33,16 +33,18 @@ const NiMaEvaluatorChat: React.FC = () => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            message: '请用简短、友好的语言介绍一下自己是牛马测评仪,能够帮助用户评估职场处境。',
+            message: '系统指令：请生成一个简洁的开场白（不超过100字）。介绍你是"牛马测评仪"，可以帮助用户评估职场处境、提供专业建议。语调要友好、专业。不要使用emoji表情符号。',
           }),
         })
 
         const data = await response.json()
         if (data.success && data.data?.message) {
+          // 清理响应，移除多余的换行和空格
+          const cleanMessage = data.data.message.replace(/\n+/g, '\n').trim()
           setMessages([
             {
               role: 'assistant',
-              content: data.data.message,
+              content: cleanMessage,
               timestamp: new Date(),
             },
           ])
@@ -50,7 +52,7 @@ const NiMaEvaluatorChat: React.FC = () => {
           setMessages([
             {
               role: 'assistant',
-              content: '您好!我是牛马测评仪,可以帮您评估职场处境,提供专业的分析和建议。请告诉我您的职场情况吧!',
+              content: '您好！我是牛马测评仪，可以帮您评估职场处境、提供专业的分析和建议。请告诉我您的职场情况吧！',
               timestamp: new Date(),
             },
           ])
@@ -60,7 +62,7 @@ const NiMaEvaluatorChat: React.FC = () => {
         setMessages([
           {
             role: 'assistant',
-            content: '您好!我是牛马测评仪,可以帮您评估职场处境,提供专业的分析和建议。请告诉我您的职场情况吧!',
+            content: '您好！我是牛马测评仪，可以帮您评估职场处境、提供专业的分析和建议。请告诉我您的职场情况吧！',
             timestamp: new Date(),
           },
         ])
