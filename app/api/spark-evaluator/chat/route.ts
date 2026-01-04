@@ -101,7 +101,11 @@ async function callCozeAPI(message: string): Promise<string> {
     // 清理响应中的 [object Object]
     const cleanedResponse = fullResponse.replace(/\[object Object\]/g, '')
 
-    return cleanedResponse || '抱歉，没有收到响应。'
+    if (!cleanedResponse) {
+      throw new Error('未收到有效的AI响应')
+    }
+
+    return cleanedResponse
   } catch (error) {
     console.error('调用 Coze API 失败:', error)
     throw error

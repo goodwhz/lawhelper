@@ -1,6 +1,9 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import remarkBreaks from 'remark-breaks'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -20,7 +23,10 @@ const NiMaEvaluatorChat: React.FC = () => {
   const initializationRef = useRef(false)
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    const container = messagesEndRef.current?.parentElement
+    if (container) {
+      container.scrollTop = container.scrollHeight
+    }
   }
 
   useEffect(() => {
@@ -57,14 +63,20 @@ const NiMaEvaluatorChat: React.FC = () => {
         if (data.success && data.data?.message) {
           // 清理响应，移除多余的换行和空格
           const cleanMessage = data.data.message.replace(/\n+/g, '\n').trim()
+
+          // 如果是模拟响应，添加提示
+          const finalMessage = data.isMock
+            ? `⚠️ AI 未响应\n\n${cleanMessage}`
+            : cleanMessage
+
           setMessages([
             {
               role: 'assistant',
-              content: cleanMessage,
+              content: finalMessage,
               timestamp: new Date(),
             },
           ])
-          setConnectionStatus('connected')
+          setConnectionStatus(data.isMock ? 'disconnected' : 'connected')
           setRetryCount(0)
           // 初始化时不滚动
         } else {
@@ -76,7 +88,7 @@ const NiMaEvaluatorChat: React.FC = () => {
         setMessages([
           {
             role: 'assistant',
-            content: '您好！我是牛马测评仪，可以帮您评估职场处境、提供专业的分析和建议。请告诉我您的职场情况吧！',
+            content: '⚠️ AI 未响应\n\n您好！我是牛马测评仪，可以帮您评估职场处境、提供专业的分析和建议。请告诉我您的职场情况吧！',
             timestamp: new Date(),
           },
         ])
@@ -124,7 +136,12 @@ const NiMaEvaluatorChat: React.FC = () => {
           timestamp: new Date(),
         }
         setMessages(prev => [...prev, assistantMessage])
-        setConnectionStatus('connected')
+        // 如果是模拟响应，标记为未连接
+        if (data.isMock) {
+          setConnectionStatus('disconnected')
+        } else {
+          setConnectionStatus('connected')
+        }
         setShouldScrollToBottom(true) // AI 回复后滚动
       } else {
         throw new Error(data.error || '获取AI回复失败')
@@ -134,7 +151,7 @@ const NiMaEvaluatorChat: React.FC = () => {
       setConnectionStatus('disconnected')
       const errorMessage: Message = {
         role: 'assistant',
-        content: `抱歉，系统暂时无法处理您的请求。\n\n错误信息: ${error instanceof Error ? error.message : '未知错误'}\n\n请稍后再试或联系客服。`,
+        content: `⚠️ AI 未响应\n\n抱歉，AI 分析服务暂时无法响应。\n\n错误信息: ${error instanceof Error ? error.message : '未知错误'}\n\n请稍后再试或点击"重新连接"按钮重试。`,
         timestamp: new Date(),
       }
       setMessages(prev => [...prev, errorMessage])
@@ -177,14 +194,20 @@ const NiMaEvaluatorChat: React.FC = () => {
         if (data.success && data.data?.message) {
           // 清理响应，移除多余的换行和空格
           const cleanMessage = data.data.message.replace(/\n+/g, '\n').trim()
+
+          // 如果是模拟响应，添加提示
+          const finalMessage = data.isMock
+            ? `⚠️ AI 未响应\n\n${cleanMessage}`
+            : cleanMessage
+
           setMessages([
             {
               role: 'assistant',
-              content: cleanMessage,
+              content: finalMessage,
               timestamp: new Date(),
             },
           ])
-          setConnectionStatus('connected')
+          setConnectionStatus(data.isMock ? 'disconnected' : 'connected')
           setRetryCount(0)
           // 初始化时不滚动
         } else {
@@ -247,7 +270,7 @@ const NiMaEvaluatorChat: React.FC = () => {
       </div>
 
       {/* 消息列表 */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div ref={messagesEndRef as React.RefObject<HTMLDivElement>} className="flex-1 overflow-y-auto p-4 space-y-4">
         {isInitializing && (
           <div className="flex justify-start">
             <div className="bg-gray-100 rounded-lg px-4 py-3">
@@ -271,7 +294,31 @@ const NiMaEvaluatorChat: React.FC = () => {
                   : 'bg-gray-100 text-gray-800'
               }`}
             >
-              <div className="whitespace-pre-wrap">{message.content}</div>
+              {message.role === 'assistant'
+                ? (
+                  <div className="prose prose-sm max-w-none prose-headings:text-gray-900 prose-p:text-gray-800 prose-ul:text-gray-800 prose-ol:text-gray-800">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm, remarkBreaks]}
+                      components={{
+                        h1: ({ children }) => <h1 className="text-lg font-bold text-gray-900 mb-2 mt-3">{children}</h1>,
+                        h2: ({ children }) => <h2 className="text-base font-semibold text-gray-900 mb-2 mt-2">{children}</h2>,
+                        h3: ({ children }) => <h3 className="text-sm font-semibold text-gray-900 mb-1 mt-2">{children}</h3>,
+                        p: ({ children }) => <p className="text-gray-800 leading-relaxed mb-2">{children}</p>,
+                        ul: ({ children }) => <ul className="list-disc pl-5 mb-2 text-gray-800 space-y-1">{children}</ul>,
+                        ol: ({ children }) => <ol className="list-decimal pl-5 mb-2 text-gray-800 space-y-1">{children}</ol>,
+                        li: ({ children }) => <li className="text-gray-800">{children}</li>,
+                        strong: ({ children }) => <strong className="font-semibold text-gray-900">{children}</strong>,
+                        blockquote: ({ children }) => <blockquote className="border-l-4 border-purple-400 pl-3 my-2 bg-purple-50 py-1 pr-3 text-gray-700">{children}</blockquote>,
+                        code: ({ children }) => <code className="bg-gray-200 px-1 py-0.5 rounded text-xs text-gray-800">{children}</code>,
+                      }}
+                    >
+                      {message.content}
+                    </ReactMarkdown>
+                  </div>
+                )
+                : (
+                  <div className="whitespace-pre-wrap">{message.content}</div>
+                )}
               <div className={`text-xs mt-1 ${
                 message.role === 'user' ? 'text-purple-100' : 'text-gray-500'
               }`}>
@@ -294,7 +341,6 @@ const NiMaEvaluatorChat: React.FC = () => {
             </div>
           </div>
         )}
-        <div ref={messagesEndRef} />
       </div>
 
       {/* 快捷问题 */}
