@@ -64,7 +64,7 @@ const NiMaEvaluatorChat: React.FC = () => {
           // 清理响应，移除多余的换行和空格
           const cleanMessage = data.data.message.replace(/\n+/g, '\n').trim()
 
-          // 如果是模拟响应，添加提示
+          // 如果是模拟响应，添加提示；如果是真实的 AI 响应，直接显示
           const finalMessage = data.isMock
             ? `⚠️ AI 未响应\n\n${cleanMessage}`
             : cleanMessage
@@ -76,6 +76,7 @@ const NiMaEvaluatorChat: React.FC = () => {
               timestamp: new Date(),
             },
           ])
+          // 根据是否为模拟响应设置连接状态
           setConnectionStatus(data.isMock ? 'disconnected' : 'connected')
           setRetryCount(0)
           // 初始化时不滚动
@@ -195,7 +196,7 @@ const NiMaEvaluatorChat: React.FC = () => {
           // 清理响应，移除多余的换行和空格
           const cleanMessage = data.data.message.replace(/\n+/g, '\n').trim()
 
-          // 如果是模拟响应，添加提示
+          // 如果是模拟响应，添加提示；如果是真实的 AI 响应，直接显示
           const finalMessage = data.isMock
             ? `⚠️ AI 未响应\n\n${cleanMessage}`
             : cleanMessage
@@ -207,6 +208,7 @@ const NiMaEvaluatorChat: React.FC = () => {
               timestamp: new Date(),
             },
           ])
+          // 根据是否为模拟响应设置连接状态
           setConnectionStatus(data.isMock ? 'disconnected' : 'connected')
           setRetryCount(0)
           // 初始化时不滚动
@@ -231,25 +233,17 @@ const NiMaEvaluatorChat: React.FC = () => {
     }
   }
 
-  const quickQuestions = [
-    '经常加班没有加班费',
-    '领导不合理安排工作',
-    '工资低于市场水平',
-    '职场被边缘化',
-    '没有晋升机会',
-  ]
-
   return (
-    <div className="bg-white rounded-lg shadow-md h-[600px] flex flex-col">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 h-[600px] flex flex-col">
       {/* 连接状态指示器 */}
-      <div className="border-b border-gray-200 px-4 py-2 flex items-center justify-between">
+      <div className="border-b border-gray-100 px-4 py-3 flex items-center justify-between bg-gray-50/50 rounded-t-xl">
         <div className="flex items-center space-x-2">
           <div className={`w-2 h-2 rounded-full ${
             connectionStatus === 'connected'
               ? 'bg-green-500'
               : connectionStatus === 'connecting'
-                ? 'bg-yellow-500 animate-pulse'
-                : 'bg-red-500'
+                ? 'bg-pink-500 animate-pulse'
+                : 'bg-gray-400'
           }`}></div>
           <span className="text-sm text-gray-600">
             {connectionStatus === 'connected'
@@ -262,7 +256,7 @@ const NiMaEvaluatorChat: React.FC = () => {
         {connectionStatus === 'disconnected' && (
           <button
             onClick={handleReconnect}
-            className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+            className="text-sm text-pink-600 hover:text-pink-700 font-medium transition-colors"
           >
             重新连接
           </button>
@@ -270,10 +264,10 @@ const NiMaEvaluatorChat: React.FC = () => {
       </div>
 
       {/* 消息列表 */}
-      <div ref={messagesEndRef as React.RefObject<HTMLDivElement>} className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div ref={messagesEndRef as React.RefObject<HTMLDivElement>} className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/30">
         {isInitializing && (
           <div className="flex justify-start">
-            <div className="bg-gray-100 rounded-lg px-4 py-3">
+            <div className="bg-white border border-gray-200 rounded-xl px-4 py-3 shadow-sm">
               <div className="flex space-x-2">
                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
@@ -288,10 +282,10 @@ const NiMaEvaluatorChat: React.FC = () => {
             className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-[80%] rounded-lg px-4 py-3 ${
+              className={`max-w-[80%] rounded-xl px-4 py-3 ${
                 message.role === 'user'
-                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
-                  : 'bg-gray-100 text-gray-800'
+                  ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-sm'
+                  : 'bg-white border border-gray-200 text-gray-800 shadow-sm'
               }`}
             >
               {message.role === 'assistant'
@@ -308,8 +302,8 @@ const NiMaEvaluatorChat: React.FC = () => {
                         ol: ({ children }) => <ol className="list-decimal pl-5 mb-2 text-gray-800 space-y-1">{children}</ol>,
                         li: ({ children }) => <li className="text-gray-800">{children}</li>,
                         strong: ({ children }) => <strong className="font-semibold text-gray-900">{children}</strong>,
-                        blockquote: ({ children }) => <blockquote className="border-l-4 border-purple-400 pl-3 my-2 bg-purple-50 py-1 pr-3 text-gray-700">{children}</blockquote>,
-                        code: ({ children }) => <code className="bg-gray-200 px-1 py-0.5 rounded text-xs text-gray-800">{children}</code>,
+                        blockquote: ({ children }) => <blockquote className="border-l-4 border-pink-400 pl-3 my-2 bg-pink-50/50 py-1 pr-3 text-gray-700">{children}</blockquote>,
+                        code: ({ children }) => <code className="bg-gray-100 px-1 py-0.5 rounded text-xs text-gray-800">{children}</code>,
                       }}
                     >
                       {message.content}
@@ -320,7 +314,7 @@ const NiMaEvaluatorChat: React.FC = () => {
                   <div className="whitespace-pre-wrap">{message.content}</div>
                 )}
               <div className={`text-xs mt-1 ${
-                message.role === 'user' ? 'text-purple-100' : 'text-gray-500'
+                message.role === 'user' ? 'text-pink-100' : 'text-gray-400'
               }`}>
                 {message.timestamp.toLocaleTimeString('zh-CN', {
                   hour: '2-digit',
@@ -332,7 +326,7 @@ const NiMaEvaluatorChat: React.FC = () => {
         ))}
         {isLoading && !isInitializing && (
           <div className="flex justify-start">
-            <div className="bg-gray-100 rounded-lg px-4 py-3">
+            <div className="bg-white border border-gray-200 rounded-xl px-4 py-3 shadow-sm">
               <div className="flex space-x-2">
                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
@@ -343,43 +337,25 @@ const NiMaEvaluatorChat: React.FC = () => {
         )}
       </div>
 
-      {/* 快捷问题 */}
-      {!isInitializing && messages.length === 1 && (
-        <div className="border-t border-gray-200 p-3">
-          <div className="text-sm text-gray-600 mb-2">快捷问题:</div>
-          <div className="flex flex-wrap gap-2">
-            {quickQuestions.map((question, index) => (
-              <button
-                key={index}
-                onClick={() => setInput(question)}
-                className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full text-sm transition-colors"
-              >
-                {question}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* 输入区域 */}
-      <div className="border-t border-gray-200 p-4">
+      <div className="border-t border-gray-100 p-4 bg-gray-50/50 rounded-b-xl">
         <div className="flex space-x-2">
           <textarea
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="请描述您的职场处境..."
-            className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
+            className="flex-1 px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/50 focus:border-pink-500 resize-none bg-white transition-all"
             rows={2}
             disabled={isLoading}
           />
           <button
             onClick={handleSend}
             disabled={!input.trim() || isLoading}
-            className={`px-6 py-3 rounded-lg font-semibold transition-colors ${
+            className={`px-6 py-3 rounded-xl font-semibold transition-all ${
               !input.trim() || isLoading
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600'
+                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                : 'bg-gradient-to-r from-pink-500 to-rose-500 text-white hover:from-pink-600 hover:to-rose-600 active:scale-[0.98]'
             }`}
           >
             发送

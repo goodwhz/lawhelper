@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
@@ -28,6 +28,7 @@ const DisputeQuestionnaire: React.FC = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [showResult, setShowResult] = useState(false)
   const [analysisResult, setAnalysisResult] = useState('')
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting')
   const [formData, setFormData] = useState<FormData>({
     disputeType: '',
     disputeTime: '',
@@ -36,6 +37,61 @@ const DisputeQuestionnaire: React.FC = () => {
     description: '',
     contactMethod: '',
   })
+
+  // 组件挂载时检查连接状态
+  useEffect(() => {
+    const checkConnection = async () => {
+      setConnectionStatus('connecting')
+      try {
+        const response = await fetch('/api/coze/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            disputeType: '测试',
+            description: '测试连接',
+          }),
+        })
+        const data = await response.json()
+        if (data.success && data.data?.analysis?.summary) {
+          setConnectionStatus('connected')
+        } else {
+          setConnectionStatus('disconnected')
+        }
+      } catch (error) {
+        console.error('连接检查失败:', error)
+        setConnectionStatus('disconnected')
+      }
+    }
+    checkConnection()
+  }, [])
+
+  // 重新连接函数
+  const handleReconnect = async () => {
+    setConnectionStatus('connecting')
+    try {
+      const response = await fetch('/api/coze/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          disputeType: '测试',
+          description: '测试连接',
+        }),
+      })
+      const data = await response.json()
+      if (data.success && data.data?.analysis?.summary) {
+        setConnectionStatus('connected')
+      } else {
+        setConnectionStatus('disconnected')
+      }
+    } catch (error) {
+      console.error('重新连接失败:', error)
+      setConnectionStatus('disconnected')
+    }
+  }
 
   const questions: Question[] = [
     {
@@ -141,6 +197,7 @@ const DisputeQuestionnaire: React.FC = () => {
 
   const handleSubmit = async () => {
     setIsAnalyzing(true)
+    setConnectionStatus('connecting')
     try {
       const response = await fetch('/api/coze/chat', {
         method: 'POST',
@@ -157,11 +214,13 @@ const DisputeQuestionnaire: React.FC = () => {
       if (data.success && data.data?.analysis?.summary) {
         setAnalysisResult(data.data.analysis.summary)
         setShowResult(true)
+        setConnectionStatus('connected')
       } else {
         // AI 未响应或返回空内容
         const fallbackResponse = generateFallbackResponse()
         setAnalysisResult(fallbackResponse)
         setShowResult(true)
+        setConnectionStatus('disconnected')
       }
     } catch (error) {
       console.error('分析错误:', error)
@@ -169,6 +228,7 @@ const DisputeQuestionnaire: React.FC = () => {
       const fallbackResponse = generateFallbackResponse()
       setAnalysisResult(fallbackResponse)
       setShowResult(true)
+      setConnectionStatus('disconnected')
     } finally {
       setIsAnalyzing(false)
     }
@@ -367,6 +427,36 @@ ${getEvidenceList(disputeType)}
       {!showResult
         ? (
           <>
+            {/* 连接状态指示器 */}
+            <div className="border-b border-gray-200 px-6 py-4 bg-gray-50/50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <div className={`w-2 h-2 rounded-full ${
+                    connectionStatus === 'connected'
+                      ? 'bg-green-500'
+                      : connectionStatus === 'connecting'
+                        ? 'bg-pink-500 animate-pulse'
+                        : 'bg-gray-400'
+                  }`}></div>
+                  <span className="text-sm text-gray-600">
+                    {connectionStatus === 'connected'
+                      ? '已连接'
+                      : connectionStatus === 'connecting'
+                        ? '连接中...'
+                        : '未连接'}
+                  </span>
+                </div>
+                {connectionStatus === 'disconnected' && (
+                  <button
+                    onClick={handleReconnect}
+                    className="text-sm text-pink-600 hover:text-pink-700 font-medium transition-colors"
+                  >
+                    重新连接
+                  </button>
+                )}
+              </div>
+            </div>
+
             {/* 进度条 */}
             <div className="border-b border-gray-200 px-6 py-4">
               <div className="flex items-center justify-between mb-2">

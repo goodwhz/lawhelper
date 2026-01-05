@@ -1,6 +1,127 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 
+// 重试配置
+const MAX_RETRIES = 3
+const RETRY_DELAY = 1000 // 1秒
+const REQUEST_TIMEOUT = 45000 // 45秒超时（Vercel限制60秒，留出余量）
+
+// 从环境变量获取 Coze 配置
+const getCozeConfig = () => {
+  const cozeApiUrl = process.env.COZE_API_URL || process.env.COZE_API_URL
+  const cozeApiToken = process.env.COZE_API_TOKEN || process.env.NIUMA_COZE_API_TOKEN
+  const cozeProjectId = process.env.COZE_PROJECT_ID || '7589147310182039571'
+
+  return { cozeApiUrl, cozeApiToken, cozeProjectId }
+}
+
+// 延迟函数
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+// 带重试的 fetch 请求
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  retries = MAX_RETRIES,
+): Promise<Response> {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT)
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    })
+    clearTimeout(timeoutId)
+
+    // 如果是 5xx 错误或网络错误，可以重试
+    if (!response.ok && retries > 0 && (response.status >= 500 || response.status === 429)) {
+      console.log(`请求失败 (${response.status})，${retries} 次重试中...`)
+      await delay(RETRY_DELAY)
+      return fetchWithRetry(url, options, retries - 1)
+    }
+
+    return response
+  } catch (error: any) {
+    clearTimeout(timeoutId)
+    console.error('Fetch 错误:', error)
+
+    // 如果是超时或网络错误，且还有重试次数
+    if (retries > 0 && (error.name === 'AbortError' || error.message?.includes('network'))) {
+      console.log(`网络错误，${retries} 次重试中...`)
+      await delay(RETRY_DELAY)
+      return fetchWithRetry(url, options, retries - 1)
+    }
+
+    throw error
+  }
+}
+
+// 调用 Coze API
+async function callCozeAPI(requestBody: any, cozeConfig: ReturnType<typeof getCozeConfig>): Promise<string> {
+  console.log('开始调用 Coze API...')
+
+  const { cozeApiUrl, cozeApiToken } = cozeConfig
+
+  const response = await fetchWithRetry(cozeApiUrl!, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${cozeApiToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody),
+  })
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    console.error('Coze API 错误:', response.status, errorText)
+    throw new Error(`Coze API 错误: ${response.status}`)
+  }
+
+  // 处理流式响应 (Server-Sent Events)
+  const responseText = await response.text()
+  console.log('=== Coze API 响应详情 ===')
+  console.log('响应长度:', responseText.length)
+  console.log('响应前500字符:', responseText.substring(0, 500))
+
+  // 解析流式响应,提取答案
+  let aiResponse = ''
+  const lines = responseText.split('\n')
+
+  console.log('总行数:', lines.length)
+  console.log('data: 开头的行数:', lines.filter(line => line.startsWith('data: ')).length)
+
+  for (const line of lines) {
+    if (line.startsWith('data: ')) {
+      try {
+        const data = JSON.parse(line.substring(6))
+        // 提取 answer 字段的内容
+        if (data.content && data.content.answer) {
+          aiResponse += data.content.answer
+        } else if (data.answer && typeof data.answer === 'string') {
+          aiResponse += data.answer
+        } else if (data.message && typeof data.message === 'string') {
+          aiResponse += data.message
+        }
+      } catch (e) {
+        console.error('解析 SSE 行失败:', line.substring(0, 200))
+      }
+    }
+  }
+
+  console.log('提取的 AI 响应长度:', aiResponse.length)
+  console.log('AI 响应前200字:', aiResponse.substring(0, 200))
+
+  // 清理响应
+  const cleanedResponse = aiResponse.replace(/\[object Object\]/g, '').trim()
+
+  if (!cleanedResponse) {
+    throw new Error('未收到有效的AI响应')
+  }
+
+  return cleanedResponse
+}
+
 export async function POST(request: NextRequest) {
   try {
     console.log('=== Coze Chat API 开始处理 ===')
@@ -21,20 +142,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 从环境变量获取 Coze 配置
-    const cozeApiUrl = process.env.COZE_API_URL || 'https://x6yjs8hc3k.coze.site/stream_run'
-    const cozeApiToken = process.env.COZE_API_TOKEN
-    const cozeProjectId = process.env.COZE_PROJECT_ID || '7589147310182039571'
-
+    const cozeConfig = getCozeConfig()
     console.log('Coze 配置:', {
-      apiUrl: cozeApiUrl,
-      hasToken: !!cozeApiToken,
-      tokenLength: cozeApiToken?.length,
-      projectId: cozeProjectId,
+      apiUrl: cozeConfig.cozeApiUrl,
+      hasToken: !!cozeConfig.cozeApiToken,
+      tokenLength: cozeConfig.cozeApiToken?.length,
+      projectId: cozeConfig.cozeProjectId,
     })
 
     // 如果没有配置 Token,返回模拟响应
-    if (!cozeApiToken || cozeApiToken === '<YOUR_TOKEN>') {
+    if (!cozeConfig.cozeApiToken || cozeConfig.cozeApiToken === '<YOUR_TOKEN>') {
       console.log('Coze API Token 未配置,返回模拟响应')
       const mockResponse = generateMockResponse(disputeType, description)
       return NextResponse.json({
@@ -63,122 +180,30 @@ export async function POST(request: NextRequest) {
         },
       },
       type: 'query',
-      project_id: parseInt(cozeProjectId),
+      project_id: parseInt(cozeConfig.cozeProjectId!),
     }
 
     console.log('发送到 Coze 的请求:', JSON.stringify(requestBody, null, 2))
 
-    // 调用 Coze API
-    console.log('开始调用 Coze API...')
-
-    // 设置超时控制（Vercel 最大 60 秒）
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 55000) // 55 秒超时
-
-    let cozeResponse
-    try {
-      cozeResponse = await fetch(cozeApiUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${cozeApiToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-        signal: controller.signal,
-      })
-      clearTimeout(timeoutId)
-    } catch (fetchError) {
-      clearTimeout(timeoutId)
-      console.error('Coze API 请求失败:', fetchError)
-      // 如果请求超时或失败，返回模拟响应
-      const mockResponse = generateMockResponse(disputeType, description)
-      return NextResponse.json({
-        success: true,
-        data: {
-          analysis: {
-            summary: mockResponse,
-            raw: { mock: true, error: fetchError.message },
-          },
-        },
-        timestamp: new Date().toISOString(),
-      })
-    }
-
-    console.log('Coze API 响应状态:', {
-      ok: cozeResponse.ok,
-      status: cozeResponse.status,
-      statusText: cozeResponse.statusText,
-    })
-
-    if (!cozeResponse.ok) {
-      const errorText = await cozeResponse.text()
-      console.error('Coze API 错误详情:', errorText)
-
-      // 如果 API 调用失败，返回模拟响应而不是错误
-      console.log('API 调用失败，返回模拟响应')
-      const mockResponse = generateMockResponse(disputeType, description)
-      return NextResponse.json({
-        success: true,
-        data: {
-          analysis: {
-            summary: mockResponse,
-            raw: { mock: true, error: errorText },
-          },
-        },
-        timestamp: new Date().toISOString(),
-      })
-    }
-
-    // 处理流式响应 (Server-Sent Events)
-    const responseText = await cozeResponse.text()
-    console.log('=== Coze API 响应详情 ===')
-    console.log('响应长度:', responseText.length)
-    console.log('响应前500字符:', responseText.substring(0, 500))
-
-    // 解析流式响应,提取答案
-    let aiResponse = ''
-    const lines = responseText.split('\n')
-
-    console.log('总行数:', lines.length)
-    console.log('data: 开头的行数:', lines.filter(line => line.startsWith('data: ')).length)
-
-    for (const line of lines) {
-      if (line.startsWith('data: ')) {
-        try {
-          const data = JSON.parse(line.substring(6))
-          // 提取 answer 字段的内容
-          if (data.content && data.content.answer) {
-            aiResponse += data.content.answer
-          }
-        } catch (e) {
-          console.error('解析 SSE 行失败:', line.substring(0, 200))
-        }
-      }
-    }
-
-    console.log('提取的 AI 响应长度:', aiResponse.length)
-    console.log('AI 响应前200字:', aiResponse.substring(0, 200))
-
-    // 如果没有提取到内容,返回模拟响应
-    if (!aiResponse.trim()) {
-      console.log('未能从流式响应中提取内容,使用模拟响应')
-      aiResponse = generateMockResponse(disputeType, description)
-    }
+    const aiResponse = await callCozeAPI(requestBody, cozeConfig)
 
     return NextResponse.json({
       success: true,
       data: {
         analysis: {
           summary: aiResponse,
-          raw: responseText,
+          raw: null,
         },
       },
       timestamp: new Date().toISOString(),
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Coze 评估错误:', error)
     // 发生错误时返回 mock response
-    const mockResponse = generateMockResponse(disputeType || '劳动争议', description || '未提供描述')
+    const mockResponse = generateMockResponse(
+      body?.disputeType || '劳动争议',
+      body?.description || '未提供描述',
+    )
     return NextResponse.json({
       success: true,
       data: {

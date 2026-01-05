@@ -38,25 +38,6 @@ const DisputeCenterPage: React.FC = () => {
                 <DisputeQuestionnaire />
               </div>
 
-              {/* 功能说明 */}
-              <div className="grid md:grid-cols-3 gap-6 mb-8">
-                <div className="bg-white rounded-lg shadow p-6">
-                  <div className="text-3xl mb-3">✓</div>
-                  <h3 className="font-semibold text-gray-800 mb-2">简单快捷</h3>
-                  <p className="text-sm text-gray-600">只需填写几项关键信息，即可获得专业分析</p>
-                </div>
-                <div className="bg-white rounded-lg shadow p-6">
-                  <div className="text-3xl mb-3">🎯</div>
-                  <h3 className="font-semibold text-gray-800 mb-2">精准分析</h3>
-                  <p className="text-sm text-gray-600">基于法律知识库，提供针对性的建议</p>
-                </div>
-                <div className="bg-white rounded-lg shadow p-6">
-                  <div className="text-3xl mb-3">📄</div>
-                  <h3 className="font-semibold text-gray-800 mb-2">完整报告</h3>
-                  <p className="text-sm text-gray-600">生成详细的法律分析和解决方案</p>
-                </div>
-              </div>
-
               {/* 使用提示 */}
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-8">
                 <div className="flex items-center mb-3">
