@@ -8,6 +8,7 @@ const CompensationCalculator = lazy(() => import('@/app/components/tools/compens
 const OvertimeCalculator = lazy(() => import('@/app/components/tools/overtime-calculator'))
 const AnnualLeaveCalculator = lazy(() => import('@/app/components/tools/annual-leave-calculator'))
 const ContractGenerator = lazy(() => import('@/app/components/tools/contract-generator'))
+const DocumentTemplates = lazy(() => import('@/app/components/tools/document-templates'))
 
 const ToolsSection: FC = () => {
   const [activeTool, setActiveTool] = useState('compensation')
@@ -18,6 +19,7 @@ const ToolsSection: FC = () => {
     { id: 'overtime', name: '加班费计算器', icon: '⏰', description: '计算各类加班费用' },
     { id: 'annual-leave', name: '年假计算器', icon: '🏖️', description: '计算带薪年假天数' },
     { id: 'contract', name: '合同生成器', icon: '📝', description: '生成劳动合同模板' },
+    { id: 'templates', name: '文书模板库', icon: '📄', description: '下载各类法律文书模板' },
   ]
 
   const renderTool = () => {
@@ -46,6 +48,12 @@ const ToolsSection: FC = () => {
             <ContractGenerator />
           </Suspense>
         )
+      case 'templates':
+        return (
+          <Suspense fallback={<div>加载文书模板库...</div>}>
+            <DocumentTemplates />
+          </Suspense>
+        )
 
       default:
         return (
@@ -65,7 +73,7 @@ const ToolsSection: FC = () => {
               🛠️ 劳动法工具箱
             </h2>
             <p className="text-law-blue-700">
-              专业的劳动法计算工具，帮助您快速解决常见法律计算问题
+              专业的劳动法计算工具和文书模板，帮助您快速解决常见法律计算问题和文书需求
             </p>
           </div>
 

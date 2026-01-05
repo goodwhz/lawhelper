@@ -13,7 +13,47 @@ interface ContractData {
   probationPeriod: number
 }
 
+interface ContractTemplate {
+  id: string
+  title: string
+  category: string
+  downloadUrl: string
+  description: string
+}
+
+const contractTemplates: ContractTemplate[] = [
+  {
+    id: '1',
+    title: '标准劳动合同',
+    category: '合同管理',
+    downloadUrl: '/api/template/劳动合同模板.doc',
+    description: '适用于普通劳动关系的标准劳动合同模板',
+  },
+  {
+    id: '2',
+    title: '劳动合同续签申请书',
+    category: '合同管理',
+    downloadUrl: '/api/template/劳动合同续签申请书.doc',
+    description: '劳动合同到期续签申请的标准格式',
+  },
+  {
+    id: '3',
+    title: '实习协议',
+    category: '合同管理',
+    downloadUrl: '/api/template/实习协议.doc',
+    description: '适用于在校学生实习的协议模板',
+  },
+  {
+    id: '4',
+    title: '兼职劳动合同',
+    category: '合同管理',
+    downloadUrl: '/api/template/兼职劳动合同.doc',
+    description: '适用于兼职人员的劳动合同模板',
+  },
+]
+
 const ContractGenerator: React.FC = () => {
+  const [mode, setMode] = useState<'form' | 'template'>('form')
   const [data, setData] = useState<ContractData>({
     employeeName: '',
     employeeId: '',
@@ -95,139 +135,213 @@ const ContractGenerator: React.FC = () => {
     document.body.removeChild(element)
   }
 
+  const downloadTemplate = (template: ContractTemplate) => {
+    const link = document.createElement('a')
+    link.href = template.downloadUrl
+    link.download = `${template.title}.doc`
+    link.target = '_blank'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
-      <h3 className="text-xl font-semibold mb-4">劳动合同生成器</h3>
+      <h3 className="text-xl font-semibold mb-4">合同生成器</h3>
 
-      <div className="space-y-4">
-        <div className="grid md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              员工姓名
-            </label>
-            <input
-              type="text"
-              value={data.employeeName}
-              onChange={e => setData({ ...data, employeeName: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="请输入员工姓名"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              身份证号码
-            </label>
-            <input
-              type="text"
-              value={data.employeeId}
-              onChange={e => setData({ ...data, employeeId: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="请输入身份证号码"
-            />
-          </div>
+      {/* 模式切换 */}
+      <div className="mb-6">
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={() => setMode('form')}
+            className={`flex-1 py-2 px-4 rounded-md transition-colors ${
+              mode === 'form'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            自定义生成
+          </button>
+          <button
+            onClick={() => setMode('template')}
+            className={`flex-1 py-2 px-4 rounded-md transition-colors ${
+              mode === 'template'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            模板下载
+          </button>
         </div>
+      </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            公司名称
-          </label>
-          <input
-            type="text"
-            value={data.companyName}
-            onChange={e => setData({ ...data, companyName: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="请输入公司名称"
-          />
-        </div>
+      {mode === 'form'
+        ? (
+          <div className="space-y-4">
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  员工姓名
+                </label>
+                <input
+                  type="text"
+                  value={data.employeeName}
+                  onChange={e => setData({ ...data, employeeName: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="请输入员工姓名"
+                />
+              </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            职位
-          </label>
-          <input
-            type="text"
-            value={data.position}
-            onChange={e => setData({ ...data, position: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="请输入职位"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            月薪（元）
-          </label>
-          <input
-            type="number"
-            value={data.salary}
-            onChange={e => setData({ ...data, salary: Number(e.target.value) })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              合同开始日期
-            </label>
-            <input
-              type="date"
-              value={data.contractStartDate}
-              onChange={e => setData({ ...data, contractStartDate: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              合同结束日期
-            </label>
-            <input
-              type="date"
-              value={data.contractEndDate}
-              onChange={e => setData({ ...data, contractEndDate: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            试用期（月）
-          </label>
-          <input
-            type="number"
-            min="1"
-            max="6"
-            value={data.probationPeriod}
-            onChange={e => setData({ ...data, probationPeriod: Number(e.target.value) })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-
-        <button
-          onClick={generateContract}
-          className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
-        >
-          生成劳动合同
-        </button>
-
-        {generatedContract && (
-          <div className="mt-6">
-            <h4 className="font-semibold mb-2">生成的劳动合同</h4>
-            <div className="p-4 bg-gray-50 border border-gray-200 rounded-md max-h-60 overflow-y-auto">
-              <pre className="text-sm whitespace-pre-wrap">{generatedContract}</pre>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  身份证号码
+                </label>
+                <input
+                  type="text"
+                  value={data.employeeId}
+                  onChange={e => setData({ ...data, employeeId: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="请输入身份证号码"
+                />
+              </div>
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                公司名称
+              </label>
+              <input
+                type="text"
+                value={data.companyName}
+                onChange={e => setData({ ...data, companyName: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="请输入公司名称"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                职位
+              </label>
+              <input
+                type="text"
+                value={data.position}
+                onChange={e => setData({ ...data, position: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="请输入职位"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                月薪（元）
+              </label>
+              <input
+                type="number"
+                value={data.salary}
+                onChange={e => setData({ ...data, salary: Number(e.target.value) })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  合同开始日期
+                </label>
+                <input
+                  type="date"
+                  value={data.contractStartDate}
+                  onChange={e => setData({ ...data, contractStartDate: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  合同结束日期
+                </label>
+                <input
+                  type="date"
+                  value={data.contractEndDate}
+                  onChange={e => setData({ ...data, contractEndDate: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                试用期（月）
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="6"
+                value={data.probationPeriod}
+                onChange={e => setData({ ...data, probationPeriod: Number(e.target.value) })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
             <button
-              onClick={downloadContract}
-              className="mt-2 w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors"
+              onClick={generateContract}
+              className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
             >
-              下载合同文本
+              生成劳动合同
             </button>
+
+            {generatedContract && (
+              <div className="mt-6">
+                <h4 className="font-semibold mb-2">生成的劳动合同</h4>
+                <div className="p-4 bg-gray-50 border border-gray-200 rounded-md max-h-60 overflow-y-auto">
+                  <pre className="text-sm whitespace-pre-wrap">{generatedContract}</pre>
+                </div>
+                <button
+                  onClick={downloadContract}
+                  className="mt-2 w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors"
+                >
+                  下载合同文本
+                </button>
+              </div>
+            )}
+          </div>
+        )
+        : (
+          <div className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              {contractTemplates.map(template => (
+                <div key={template.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow flex flex-col h-full">
+                  <div className="flex items-start justify-between mb-3">
+                    <span className="px-2 py-1 text-xs rounded-full bg-indigo-100 text-indigo-800">
+                      {template.category}
+                    </span>
+                  </div>
+                  <h4 className="font-semibold text-lg mb-2">{template.title}</h4>
+                  <p className="text-gray-600 text-sm mb-4 flex-1">{template.description}</p>
+                  <div className="mt-auto">
+                    <button
+                      onClick={() => downloadTemplate(template)}
+                      className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors text-sm"
+                    >
+                      下载模板
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
+              <h4 className="font-semibold text-blue-800 mb-2">使用说明</h4>
+              <ul className="text-sm text-blue-700 space-y-1">
+                <li>• 点击"下载模板"获取标准格式的合同模板</li>
+                <li>• 下载后可根据实际情况修改具体内容</li>
+                <li>• 建议在使用前咨询专业法律人士</li>
+                <li>• 模板仅供参考，具体内容需根据实际情况调整</li>
+              </ul>
+            </div>
           </div>
         )}
-      </div>
     </div>
   )
 }

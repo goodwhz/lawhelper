@@ -131,7 +131,7 @@ export default function InitDataPage() {
     <div className="min-h-screen bg-gray-50">
       {/* 桌面端导航 */}
       <Navigation />
-      
+
       {/* 移动端页面头部 */}
       <MobilePageHeader title="初始化数据" />
 
@@ -177,11 +177,11 @@ export default function InitDataPage() {
                   <div className="text-sm text-gray-600 mt-1">访问内容管理功能</div>
                 </a>
                 <a
-                  href="/documents"
+                  href="/tools"
                   className="block p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 text-center"
                 >
-                  <div className="text-lg font-medium text-gray-900">📄 文档浏览</div>
-                  <div className="text-sm text-gray-600 mt-1">查看已发布的文档</div>
+                  <div className="text-lg font-medium text-gray-900">🛠️ 劳动法工具箱</div>
+                  <div className="text-sm text-gray-600 mt-1">使用计算工具和文书模板</div>
                 </a>
               </div>
             </div>

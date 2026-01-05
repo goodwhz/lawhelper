@@ -7,7 +7,6 @@ import Navigation from '@/app/components/navigation'
 import MobileNavigation from '@/app/components/mobile-navigation'
 import { useProtectedAction } from './auth-guard'
 import { useIsMobile } from '@/hooks/use-is-mobile'
-import FloatingNiuMa from './floating-niu-ma'
 
 const HomePage: FC = () => {
   const router = useRouter()
@@ -37,19 +36,11 @@ const HomePage: FC = () => {
     },
     {
       title: '劳动法工具箱',
-      description: '实用计算工具',
+      description: '实用计算工具与文书模板',
       icon: '🛠️',
       href: '/tools',
       color: 'from-law-orange-500 to-law-orange-600',
-      features: ['赔偿计算器', '加班费计算', '年假计算器', '合同生成器'],
-    },
-    {
-      title: '文书模板库',
-      description: '标准法律文书',
-      icon: '📄',
-      href: '/documents',
-      color: 'from-purple-500 to-purple-600',
-      features: ['辞职信模板', '仲裁申请书', '合同模板', '各类文书'],
+      features: ['赔偿计算器', '加班费计算', '年假计算器', '合同生成与文书模板'],
     },
     {
       title: '法律知识库',
@@ -67,6 +58,14 @@ const HomePage: FC = () => {
       color: 'from-green-500 to-green-600',
       features: ['劳动争议解决', '人事争议处理', '风险评估', '专业指导'],
     },
+    {
+      title: '牛马测评仪',
+      description: '职场处境智能评估',
+      icon: '🐂🐴',
+      href: '/niu-ma-evaluator',
+      color: 'from-pink-500 to-purple-500',
+      features: ['AI智能评估', '职场现状分析', '改善建议', '个性化报告'],
+    },
   ]
 
   // 详细功能介绍
@@ -83,23 +82,13 @@ const HomePage: FC = () => {
     },
     {
       title: '专业计算工具',
-      description: '一站式劳动法计算平台，解决各类赔偿、工资计算问题',
+      description: '一站式劳动法计算平台，包含文书模板库',
       icon: '🛠️',
       href: '/tools',
       color: 'law-orange',
-      benefits: ['一键计算赔偿金额', '自动生成计算报告', '支持多种计算场景', '实时更新算法'],
+      benefits: ['一键计算赔偿金额', '自动生成计算报告', '支持多种计算场景', '集成文书模板下载'],
       buttonText: '使用计算工具',
       image: '/tools-preview.jpg',
-    },
-    {
-      title: '标准文书模板',
-      description: '100+标准法律文书模板，满足各类法律文书需求',
-      icon: '📄',
-      href: '/documents',
-      color: 'purple',
-      benefits: ['全品类文书模板', '一键生成功能', '法律合规审核', '支持在线编辑'],
-      buttonText: '查看文书模板',
-      image: '/documents-preview.jpg',
     },
     {
       title: '法律知识库',
@@ -120,6 +109,16 @@ const HomePage: FC = () => {
       benefits: ['智能争议分析', '风险评估预警', '多路径解决方案', '85%调解成功率'],
       buttonText: '进入争议中心',
       image: '/dispute-preview.jpg',
+    },
+    {
+      title: '牛马测评仪',
+      description: 'AI驱动的职场处境智能评估，为您提供专业的职场诊断和改善建议',
+      icon: '🐂🐴',
+      href: '/niu-ma-evaluator',
+      color: 'purple',
+      benefits: ['AI智能评估系统', '多维度职场分析', '个性化改善建议', '详细评估报告'],
+      buttonText: '开始测评',
+      image: '/niu-ma-preview.jpg',
     },
   ]
 
@@ -223,11 +222,11 @@ const HomePage: FC = () => {
         <div className="text-center mb-12">
           <h2 className="text-4xl font-bold text-law-red-800 mb-4">核心功能</h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            四大核心功能模块，全面提升法律工作效率与准确性
+            五大核心功能模块，全面提升法律工作效率与准确性
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-5 gap-4 md:gap-6 lg:gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6 lg:gap-8">
           {features.map((feature, index) => (
             <div
               key={index}
@@ -493,7 +492,7 @@ const HomePage: FC = () => {
       <div className="bg-law-red-600 text-white py-20 w-full relative overflow-hidden">
         <div className="absolute inset-0 bg-black/10"></div>
         <div className="relative w-full max-w-5xl mx-auto text-center px-4">
-          <h2 className="text-4xl font-bold mb-6">现在，诚邀您加入CoolBrain-Laborlawhelper体验</h2>
+          <h2 className="text-4xl font-bold mb-6">现在,诚邀您加入CoolBrain-Laborlawhelper体验</h2>
           <p className="text-lg md:text-xl mb-8 text-white/90 mx-auto max-w-3xl px-4 break-words">
             亲身感受智能法律助手带来的专业升级和效率飞跃，开启更轻松、更精准、更有保障的法律服务之路。
           </p>
@@ -513,9 +512,6 @@ const HomePage: FC = () => {
           </div>
         </div>
       </div>
-
-      {/* 牛马测评仪悬浮窗 */}
-      <FloatingNiuMa />
     </div>
   )
 }
