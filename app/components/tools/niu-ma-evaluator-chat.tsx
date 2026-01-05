@@ -16,7 +16,7 @@ const NiMaEvaluatorChat: React.FC = () => {
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isInitializing, setIsInitializing] = useState(true)
-  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting')
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected')
   const [retryCount, setRetryCount] = useState(0)
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -46,7 +46,7 @@ const NiMaEvaluatorChat: React.FC = () => {
 
     initializationRef.current = true
 
-    const fetchWelcomeMessage = async () => {
+    const checkConnection = async () => {
       setConnectionStatus('connecting')
       try {
         const response = await fetch('/api/spark-evaluator/chat', {
@@ -55,51 +55,56 @@ const NiMaEvaluatorChat: React.FC = () => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            message: '系统指令：请生成一个简洁的开场白（不超过100字）。介绍你是"牛马测评仪"，可以帮助用户评估职场处境、提供专业建议。语调要友好、专业。不要使用emoji表情符号。',
+            message: '',
           }),
         })
 
         const data = await response.json()
-        if (data.success && data.data?.message) {
-          // 清理响应，移除多余的换行和空格
-          const cleanMessage = data.data.message.replace(/\n+/g, '\n').trim()
 
-          // 如果是模拟响应，添加提示；如果是真实的 AI 响应，直接显示
-          const finalMessage = data.isMock
-            ? `⚠️ AI 未响应\n\n${cleanMessage}`
-            : cleanMessage
+        // 只有非模拟响应才算真正连接成功
+        if (!data.isMock) {
+          // 连接成功，显示固定开场白
+          const welcomeMessage = '您好！我是牛马测评仪，我将通过几轮简单提问，帮你测算当前工作的真实性价比～，现在开始吧！\n\n现在开始第一步：请输入你的年薪（例如一万就输 10000哦）'
 
           setMessages([
             {
               role: 'assistant',
-              content: finalMessage,
+              content: welcomeMessage,
               timestamp: new Date(),
             },
           ])
-          // 根据是否为模拟响应设置连接状态
-          setConnectionStatus(data.isMock ? 'disconnected' : 'connected')
-          setRetryCount(0)
-          // 初始化时不滚动
+          setConnectionStatus('connected')
         } else {
-          throw new Error(data.error || '获取开场白失败')
+          // 模拟响应，显示未响应消息
+          const errorMessage = '⚠️ AI 未响应'
+          setMessages([
+            {
+              role: 'assistant',
+              content: errorMessage,
+              timestamp: new Date(),
+            },
+          ])
+          setConnectionStatus('disconnected')
         }
       } catch (error) {
-        console.error('获取开场白失败:', error)
-        setConnectionStatus('disconnected')
+        console.error('连接失败:', error)
+        // 连接失败，显示未响应消息
+        const errorMessage = '⚠️ AI 未响应'
+
         setMessages([
           {
             role: 'assistant',
-            content: '⚠️ AI 未响应\n\n您好！我是牛马测评仪，可以帮您评估职场处境、提供专业的分析和建议。请告诉我您的职场情况吧！',
+            content: errorMessage,
             timestamp: new Date(),
           },
         ])
-        // 初始化时不滚动
+        setConnectionStatus('disconnected')
       } finally {
         setIsInitializing(false)
       }
     }
 
-    fetchWelcomeMessage()
+    checkConnection()
   }, [])
 
   const handleSend = async () => {
@@ -137,7 +142,7 @@ const NiMaEvaluatorChat: React.FC = () => {
           timestamp: new Date(),
         }
         setMessages(prev => [...prev, assistantMessage])
-        // 如果是模拟响应，标记为未连接
+        // 只有非模拟响应才算真正连接成功
         if (data.isMock) {
           setConnectionStatus('disconnected')
         } else {
@@ -175,55 +180,62 @@ const NiMaEvaluatorChat: React.FC = () => {
 
     setRetryCount(prev => prev + 1)
     setIsInitializing(true)
-    initializationRef.current = false
 
-    // 重新获取开场白
-    const fetchWelcomeMessage = async () => {
-      setConnectionStatus('connecting')
-      try {
-        const response = await fetch('/api/spark-evaluator/chat', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
+    try {
+      const response = await fetch('/api/spark-evaluator/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: '',
+        }),
+      })
+
+      const data = await response.json()
+
+      // 只有非模拟响应才算真正连接成功
+      if (!data.isMock) {
+        // 连接成功，显示固定开场白
+        const welcomeMessage = '您好！我是牛马测评仪，我将通过几轮简单提问，帮你测算当前工作的真实性价比～，现在开始吧！\n\n现在开始第一步：请输入你的年薪（例如一万就输 10000哦）'
+
+        setMessages([
+          {
+            role: 'assistant',
+            content: welcomeMessage,
+            timestamp: new Date(),
           },
-          body: JSON.stringify({
-            message: '系统指令：请生成一个简洁的开场白（不超过100字）。介绍你是"牛马测评仪"，可以帮助用户评估职场处境、提供专业建议。语调要友好、专业。不要使用emoji表情符号。',
-          }),
-        })
-
-        const data = await response.json()
-        if (data.success && data.data?.message) {
-          // 清理响应，移除多余的换行和空格
-          const cleanMessage = data.data.message.replace(/\n+/g, '\n').trim()
-
-          // 如果是模拟响应，添加提示；如果是真实的 AI 响应，直接显示
-          const finalMessage = data.isMock
-            ? `⚠️ AI 未响应\n\n${cleanMessage}`
-            : cleanMessage
-
-          setMessages([
-            {
-              role: 'assistant',
-              content: finalMessage,
-              timestamp: new Date(),
-            },
-          ])
-          // 根据是否为模拟响应设置连接状态
-          setConnectionStatus(data.isMock ? 'disconnected' : 'connected')
-          setRetryCount(0)
-          // 初始化时不滚动
-        } else {
-          throw new Error(data.error || '获取开场白失败')
-        }
-      } catch (error) {
-        console.error('重新连接失败:', error)
+        ])
+        setConnectionStatus('connected')
+      } else {
+        // 模拟响应，显示未响应消息
+        const errorMessage = '⚠️ AI 未响应'
+        setMessages([
+          {
+            role: 'assistant',
+            content: errorMessage,
+            timestamp: new Date(),
+          },
+        ])
         setConnectionStatus('disconnected')
-      } finally {
-        setIsInitializing(false)
       }
-    }
+    } catch (error) {
+      console.error('重新连接失败:', error)
+      // 连接失败，显示未响应消息
+      const errorMessage = '⚠️ AI 未响应'
 
-    await fetchWelcomeMessage()
+      setMessages([
+        {
+          role: 'assistant',
+          content: errorMessage,
+          timestamp: new Date(),
+        },
+      ])
+      setConnectionStatus('disconnected')
+    } finally {
+      setIsInitializing(false)
+      setRetryCount(0)
+    }
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
