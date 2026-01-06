@@ -8,29 +8,24 @@
   NODE_VERSION = "20"
   NEXT_TELEMETRY_DISABLED = "1"
 
-# Netlify Functions 配置
-[functions]
-  node_bundler = "esbuild"
-
-# 重写规则，处理 API 路由
+# Next.js 路由支持
 [[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/api/:splat"
+  from = "/_next/*"
+  to = "/_next/:splat"
   status = 200
 
-# SPA 路由支持
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-
-# 缓存配置
+# 静态资源缓存
 [[headers]]
   for = "/_next/static/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
 [[headers]]
-  for = "/static/*"
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.css"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
