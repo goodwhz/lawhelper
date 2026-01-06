@@ -22,7 +22,7 @@
     "@mdx-js/react": "^3.1.0",
     "@monaco-editor/react": "^4.6.0",
     "@remixicon/react": "^4.6.0",
-    "@supabase/supabase-js": "^2.81.1",
+    "@supabase/supabase-js": "^2.89.0",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "~18.19.0",
     "@types/react-syntax-highlighter": "^15.5.6",

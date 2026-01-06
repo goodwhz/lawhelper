@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 
 interface DocumentTemplate {
   id: string
@@ -13,8 +13,42 @@ interface DocumentTemplate {
 const DocumentTemplates: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [searchTerm, setSearchTerm] = useState('')
+  const [templates, setTemplates] = useState<DocumentTemplate[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const templates: DocumentTemplate[] = [
+  // 从数据库加载模板
+  useEffect(() => {
+    const loadTemplates = async () => {
+      try {
+        const { data, error } = await fetch('/api/templates').then(res => res.json())
+        if (error) {
+          console.error('加载模板失败:', error)
+          // 如果API调用失败，使用默认模板作为后备
+          setTemplates(getDefaultTemplates())
+        } else {
+          // 转换数据库格式为前端需要的格式
+          const transformedTemplates = data.map((template: any) => ({
+            id: template.id,
+            title: template.title,
+            description: template.description,
+            category: template.category,
+            downloadUrl: `/api/template/${template.file_name}`,
+          }))
+          setTemplates(transformedTemplates)
+        }
+      } catch (error) {
+        console.error('加载模板失败:', error)
+        setTemplates(getDefaultTemplates())
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadTemplates()
+  }, [])
+
+  // 默认模板数据（作为后备）
+  const getDefaultTemplates = (): DocumentTemplate[] => [
     {
       id: '1',
       title: '辞职信模板',
@@ -73,7 +107,7 @@ const DocumentTemplates: React.FC = () => {
     },
   ]
 
-  const categories = ['all', '离职文书', '解除合同', '仲裁诉讼', '工伤保险', '日常工作', '工资争议', '合同管理']
+  const categories = ['all', ...Array.from(new Set(templates.map(t => t.category)))]
 
   const filteredTemplates = templates.filter((template) => {
     const matchesCategory = selectedCategory === 'all' || template.category === selectedCategory

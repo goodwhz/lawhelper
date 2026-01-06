@@ -8,15 +8,19 @@ import MobilePageHeader from '@/app/components/ui/MobilePageHeader'
 import PageAuthGuard from '@/app/components/page-auth-guard'
 import ErrorBoundary from '@/app/components/error-boundary'
 import UserManagement from '@/app/components/admin/UserManagement'
-import ContentManagement from '@/app/components/admin/ContentManagement'
+import ProvisionManagement from '@/app/components/admin/ProvisionManagement'
+import ConversationManagement from '@/app/components/admin/ConversationManagement'
+import TemplateManagement from '@/app/components/admin/TemplateManagement'
 
 function AdminPage() {
   const { user } = useAuth()
-  const [activeTab, setActiveTab] = useState<'users' | 'content' | 'sync' | 'settings'>('users')
+  const [activeTab, setActiveTab] = useState<'users' | 'content' | 'templates' | 'conversations' | 'sync' | 'settings'>('users')
 
   const tabs = [
     { id: 'users', label: '用户管理', icon: '👥' },
-    { id: 'content', label: '内容管理', icon: '📚' },
+    { id: 'content', label: '条文管理', icon: '📚' },
+    { id: 'templates', label: '模板管理', icon: '📄' },
+    { id: 'conversations', label: '对话记录', icon: '💬' },
   ]
 
   return (
@@ -47,7 +51,7 @@ function AdminPage() {
           <div className="max-w-7xl mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-8">
             {/* 移动端Tab导航 - 垂直布局 */}
             <div className="lg:hidden mb-4">
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 {tabs.map(tab => (
                   <button
                     key={tab.id}
@@ -101,7 +105,27 @@ function AdminPage() {
 
               {activeTab === 'content' && (
                 <div>
-                  <ContentManagement />
+                  <ProvisionManagement />
+                </div>
+              )}
+
+              {activeTab === 'templates' && (
+                <div className="p-4 lg:p-6">
+                  <div className="mb-4 lg:mb-6">
+                    <h2 className="text-lg lg:text-xl font-semibold text-gray-900 mb-2">文书模板管理</h2>
+                    <p className="text-gray-600 text-sm lg:text-base">管理系统中的文书模板，包括查看模板详情、管理发布状态、查看下载统计等操作。</p>
+                  </div>
+                  <TemplateManagement />
+                </div>
+              )}
+
+              {activeTab === 'conversations' && (
+                <div className="p-4 lg:p-6">
+                  <div className="mb-4 lg:mb-6">
+                    <h2 className="text-lg lg:text-xl font-semibold text-gray-900 mb-2">对话记录管理</h2>
+                    <p className="text-gray-600 text-sm lg:text-base">查看和管理用户对话记录，包括查看对话详情、删除对话等操作。</p>
+                  </div>
+                  <ConversationManagement />
                 </div>
               )}
             </div>
