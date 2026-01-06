@@ -78,6 +78,9 @@ const IntegratedChat: React.FC = () => {
   const abortControllerRef = useRef<AbortController | null>(null)
   const messageAreaRef = useRef<HTMLDivElement>(null)
 
+  // 自动滚动状态
+  const [shouldScrollToBottom, setShouldScrollToBottom] = useState(false)
+
   // 性能优化状态
   const [_isPreloading, _setIsPreloading] = useState(false)
   const [_preloadedConversations, _setPreloadedConversations] = useState<Map<string, ChatMessage[]>>(new Map())
@@ -115,6 +118,24 @@ const IntegratedChat: React.FC = () => {
       setToast(prev => ({ ...prev, show: false }))
     }, 3000)
   }, [])
+
+  // 自动滚动函数
+  const scrollToBottom = useCallback(() => {
+    if (messageAreaRef.current) {
+      messageAreaRef.current.scrollTo({
+        top: messageAreaRef.current.scrollHeight,
+        behavior: 'smooth'
+      })
+    }
+  }, [])
+
+  // 监听消息变化，自动滚动到底部
+  useEffect(() => {
+    if (shouldScrollToBottom) {
+      scrollToBottom()
+      setShouldScrollToBottom(false)
+    }
+  }, [messages, shouldScrollToBottom, scrollToBottom])
 
   // 欢迎界面状态
   const [showWelcome, setShowWelcome] = useState(true)
@@ -251,6 +272,7 @@ const IntegratedChat: React.FC = () => {
       if (cachedMessages && (Date.now() - cachedMessages.timestamp < cachedMessages.ttl)) {
         setMessages(cachedMessages.messages)
         console.log('✅ 从缓存加载消息:', cachedMessages.messages.length, '条')
+        setShouldScrollToBottom(true)
       } else {
         // 从数据库加载消息，但只加载最新的50条以提高性能
         const { data: msgs, error } = await supabase
@@ -277,6 +299,7 @@ const IntegratedChat: React.FC = () => {
         })
 
         setMessages(messages)
+        setShouldScrollToBottom(true)
       }
 
       // 3. 更新状态
@@ -641,6 +664,7 @@ const IntegratedChat: React.FC = () => {
         targetConversation = data
         setCurrentConversation(data)
         setMessages([])
+        setShouldScrollToBottom(true)
         // 发送消息时才跳转到对话页面
         setShowWelcome(false)
 
@@ -700,6 +724,7 @@ const IntegratedChat: React.FC = () => {
 
       // 只显示用户消息和临时AI消息（避免重复）
       setMessages(prev => [...prev, savedUserMessage, tempAiMessage])
+      setShouldScrollToBottom(true)
 
       // 调用Dify API进行流式聊天
       const response = await fetch('/api/dify/chat-stream', {
@@ -789,6 +814,7 @@ const IntegratedChat: React.FC = () => {
                       ? { ...msg, content: aiResponse }
                       : msg,
                   ))
+                  setShouldScrollToBottom(true)
                 }
 
                 if (parsed.conversation_id) { conversationId = parsed.conversation_id }
@@ -961,6 +987,7 @@ const IntegratedChat: React.FC = () => {
 
       // 显示消息
       setMessages([savedUserMessage, tempAiMessage])
+      setShouldScrollToBottom(true)
 
       // 调用Dify API进行流式聊天
       const response = await fetch('/api/dify/chat-stream', {
@@ -1045,6 +1072,7 @@ const IntegratedChat: React.FC = () => {
                       ? { ...msg, content: aiResponse }
                       : msg,
                   ))
+                  setShouldScrollToBottom(true)
                 }
 
                 if (parsed.conversation_id) {
@@ -1173,6 +1201,7 @@ const IntegratedChat: React.FC = () => {
       // 设置为当前对话
       setCurrentConversation(data)
       setMessages([])
+      setShouldScrollToBottom(true)
       // 创建带预设问题的对话时才跳转
       if (presetQuestion) {
         setShowWelcome(false)

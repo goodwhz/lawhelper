@@ -23,19 +23,22 @@ const NiMaEvaluatorChat: React.FC = () => {
   const initializationRef = useRef(false)
 
   const scrollToBottom = () => {
-    const container = messagesEndRef.current?.parentElement
+    const container = messagesEndRef.current
     if (container) {
-      container.scrollTop = container.scrollHeight
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: 'smooth'
+      })
     }
   }
 
   useEffect(() => {
-    // 只在非初始化阶段且需要滚动时才滚动
-    if (shouldScrollToBottom && !isInitializing) {
+    // 需要滚动时自动滚动到底部
+    if (shouldScrollToBottom) {
       scrollToBottom()
       setShouldScrollToBottom(false)
     }
-  }, [messages, shouldScrollToBottom, isInitializing])
+  }, [messages, shouldScrollToBottom])
 
   // 组件加载时获取开场白
   useEffect(() => {
@@ -99,8 +102,10 @@ const NiMaEvaluatorChat: React.FC = () => {
           },
         ])
         setConnectionStatus('disconnected')
+        setShouldScrollToBottom(true)
       } finally {
         setIsInitializing(false)
+        setShouldScrollToBottom(true)
       }
     }
 
@@ -207,6 +212,7 @@ const NiMaEvaluatorChat: React.FC = () => {
           },
         ])
         setConnectionStatus('connected')
+        setShouldScrollToBottom(true)
       } else {
         // 模拟响应，显示未响应消息
         const errorMessage = '⚠️ AI 未响应'
@@ -218,6 +224,7 @@ const NiMaEvaluatorChat: React.FC = () => {
           },
         ])
         setConnectionStatus('disconnected')
+        setShouldScrollToBottom(true)
       }
     } catch (error) {
       console.error('重新连接失败:', error)
@@ -232,6 +239,7 @@ const NiMaEvaluatorChat: React.FC = () => {
         },
       ])
       setConnectionStatus('disconnected')
+      setShouldScrollToBottom(true)
     } finally {
       setIsInitializing(false)
       setRetryCount(0)
@@ -246,7 +254,7 @@ const NiMaEvaluatorChat: React.FC = () => {
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 h-[600px] flex flex-col">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 h-full flex flex-col">
       {/* 连接状态指示器 */}
       <div className="border-b border-gray-100 px-4 py-3 flex items-center justify-between bg-gray-50/50 rounded-t-xl">
         <div className="flex items-center space-x-2">

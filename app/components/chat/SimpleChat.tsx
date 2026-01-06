@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useRef, useCallback } from 'react'
+import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
 
 // Supabase 客户端
@@ -34,6 +34,27 @@ const SimpleChat: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const messageAreaRef = useRef<HTMLDivElement>(null)
+
+  // 自动滚动状态
+  const [shouldScrollToBottom, setShouldScrollToBottom] = useState(false)
+
+  // 自动滚动函数
+  const scrollToBottom = useCallback(() => {
+    if (messageAreaRef.current) {
+      messageAreaRef.current.scrollTo({
+        top: messageAreaRef.current.scrollHeight,
+        behavior: 'smooth'
+      })
+    }
+  }, [])
+
+  // 监听消息变化，自动滚动到底部
+  useEffect(() => {
+    if (shouldScrollToBottom) {
+      scrollToBottom()
+      setShouldScrollToBottom(false)
+    }
+  }, [messages, shouldScrollToBottom, scrollToBottom])
 
   // 确认对话框状态
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -216,13 +237,7 @@ const SimpleChat: React.FC = () => {
 
       setCurrentConversation(conversation)
       setMessages(msgs || [])
-
-      // 滚动到底部
-      setTimeout(() => {
-        if (messageAreaRef.current) {
-          messageAreaRef.current.scrollTop = messageAreaRef.current.scrollHeight
-        }
-      }, 100)
+      setShouldScrollToBottom(true)
     } catch (error) {
       console.error('加载对话失败:', error)
     }
