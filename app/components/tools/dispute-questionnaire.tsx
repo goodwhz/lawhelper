@@ -29,6 +29,7 @@ const DisputeQuestionnaire: React.FC = () => {
   const [showResult, setShowResult] = useState(false)
   const [analysisResult, setAnalysisResult] = useState('')
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting')
+  const [retryCount, setRetryCount] = useState(0)
   const [formData, setFormData] = useState<FormData>({
     disputeType: '',
     disputeTime: '',
@@ -67,9 +68,16 @@ const DisputeQuestionnaire: React.FC = () => {
     checkConnection()
   }, [])
 
-  // 重新连接函数
+  // 重新连接函数(优化版)
   const handleReconnect = async () => {
+    if (retryCount >= 5) {
+      console.warn('重连次数过多，请稍后再试')
+      return
+    }
+
+    setRetryCount(prev => prev + 1)
     setConnectionStatus('connecting')
+
     try {
       const response = await fetch('/api/coze/chat', {
         method: 'POST',
@@ -82,14 +90,23 @@ const DisputeQuestionnaire: React.FC = () => {
         }),
       })
       const data = await response.json()
-      if (data.success && data.data?.analysis?.summary) {
+      if (data.success && (data.data?.analysis?.summary || !data.data?.analysis?.raw?.mock)) {
         setConnectionStatus('connected')
+        setRetryCount(0) // 成功后重置计数
       } else {
         setConnectionStatus('disconnected')
+        // 自动重试
+        if (retryCount < 4) {
+          setTimeout(() => handleReconnect(), 3000)
+        }
       }
     } catch (error) {
       console.error('重新连接失败:', error)
       setConnectionStatus('disconnected')
+      // 自动重试
+      if (retryCount < 4) {
+        setTimeout(() => handleReconnect(), 3000)
+      }
     }
   }
 

@@ -27,7 +27,7 @@ const NiMaEvaluatorChat: React.FC = () => {
     if (container) {
       container.scrollTo({
         top: container.scrollHeight,
-        behavior: 'smooth'
+        behavior: 'smooth',
       })
     }
   }
@@ -172,12 +172,12 @@ const NiMaEvaluatorChat: React.FC = () => {
     }
   }
 
-  // 重新连接
+  // 重新连接(优化版)
   const handleReconnect = async () => {
-    if (retryCount >= 3) {
+    if (retryCount >= 5) {
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: '重连次数过多，请稍后再试',
+        content: '重连次数过多，请刷新页面后再试',
         timestamp: new Date(),
       }])
       return
@@ -185,6 +185,7 @@ const NiMaEvaluatorChat: React.FC = () => {
 
     setRetryCount(prev => prev + 1)
     setIsInitializing(true)
+    setConnectionStatus('connecting')
 
     try {
       const response = await fetch('/api/spark-evaluator/chat', {
@@ -212,10 +213,12 @@ const NiMaEvaluatorChat: React.FC = () => {
           },
         ])
         setConnectionStatus('connected')
+        setRetryCount(0) // 成功后重置计数
         setShouldScrollToBottom(true)
       } else {
         // 模拟响应，显示未响应消息
-        const errorMessage = '⚠️ AI 未响应'
+        const errorMessage = '⚠️ AI 未响应，正在重试...'
+
         setMessages([
           {
             role: 'assistant',
@@ -225,11 +228,18 @@ const NiMaEvaluatorChat: React.FC = () => {
         ])
         setConnectionStatus('disconnected')
         setShouldScrollToBottom(true)
+
+        // 自动重试
+        setTimeout(() => {
+          if (retryCount < 4) {
+            handleReconnect()
+          }
+        }, 3000)
       }
     } catch (error) {
       console.error('重新连接失败:', error)
       // 连接失败，显示未响应消息
-      const errorMessage = '⚠️ AI 未响应'
+      const errorMessage = '⚠️ 连接失败，正在重试...'
 
       setMessages([
         {
@@ -240,9 +250,15 @@ const NiMaEvaluatorChat: React.FC = () => {
       ])
       setConnectionStatus('disconnected')
       setShouldScrollToBottom(true)
+
+      // 自动重试
+      setTimeout(() => {
+        if (retryCount < 4) {
+          handleReconnect()
+        }
+      }, 3000)
     } finally {
       setIsInitializing(false)
-      setRetryCount(0)
     }
   }
 

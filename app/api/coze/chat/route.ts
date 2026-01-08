@@ -2,9 +2,9 @@ import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 
 // 重试配置
-const MAX_RETRIES = 3
-const RETRY_DELAY = 1000 // 1秒
-const REQUEST_TIMEOUT = 45000 // 45秒超时（Vercel限制60秒，留出余量）
+const MAX_RETRIES = 5
+const RETRY_DELAY = 2000 // 2秒
+const REQUEST_TIMEOUT = 60000 // 60秒超时（Netlify函数限制）
 
 // 从环境变量获取 Coze 配置
 const getCozeConfig = () => {
@@ -18,7 +18,7 @@ const getCozeConfig = () => {
 // 延迟函数
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
-// 带重试的 fetch 请求
+// 带重试的 fetch 请求(优化版)
 async function fetchWithRetry(
   url: string,
   options: RequestInit,
@@ -34,11 +34,14 @@ async function fetchWithRetry(
     })
     clearTimeout(timeoutId)
 
-    // 如果是 5xx 错误或网络错误，可以重试
-    if (!response.ok && retries > 0 && (response.status >= 500 || response.status === 429)) {
-      console.log(`请求失败 (${response.status})，${retries} 次重试中...`)
-      await delay(RETRY_DELAY)
-      return fetchWithRetry(url, options, retries - 1)
+    // 如果是 5xx 错误或 429 限流，可以重试
+    if (!response.ok && retries > 0) {
+      const shouldRetry = response.status >= 500 || response.status === 429 || response.status === 408
+      if (shouldRetry) {
+        console.log(`请求失败 (${response.status})，${retries} 次重试中...`)
+        await delay(RETRY_DELAY * (MAX_RETRIES - retries + 1)) // 递增延迟
+        return fetchWithRetry(url, options, retries - 1)
+      }
     }
 
     return response
@@ -46,10 +49,18 @@ async function fetchWithRetry(
     clearTimeout(timeoutId)
     console.error('Fetch 错误:', error)
 
-    // 如果是超时或网络错误，且还有重试次数
-    if (retries > 0 && (error.name === 'AbortError' || error.message?.includes('network'))) {
+    // 如果是超时、网络错误或连接错误，且还有重试次数
+    const shouldRetry = retries > 0 && (
+      error.name === 'AbortError'
+      || error.message?.includes('network')
+      || error.message?.includes('ECONN')
+      || error.message?.includes('ETIMEDOUT')
+      || error.message?.includes('fetch failed')
+    )
+
+    if (shouldRetry) {
       console.log(`网络错误，${retries} 次重试中...`)
-      await delay(RETRY_DELAY)
+      await delay(RETRY_DELAY * (MAX_RETRIES - retries + 1)) // 递增延迟
       return fetchWithRetry(url, options, retries - 1)
     }
 
@@ -103,7 +114,7 @@ async function callCozeAPI(requestBody: any, cozeConfig: ReturnType<typeof getCo
         } else if (data.message && typeof data.message === 'string') {
           aiResponse += data.message
         }
-      } catch (e) {
+      } catch {
         console.error('解析 SSE 行失败:', line.substring(0, 200))
       }
     }
@@ -218,7 +229,7 @@ export async function POST(request: NextRequest) {
 }
 
 // 生成模拟响应(用于 Token 无效或 API 调用失败时)
-function generateMockResponse(disputeType: string, description: string): string {
+function generateMockResponse(disputeType: string, _description: string): string {
   const responses = {
     工资争议: `
 根据您提供的工资争议情况,我为您提供以下分析和建议:
