@@ -226,14 +226,14 @@ const HomePage: FC = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6 lg:gap-8">
+        <div className="grid grid-cols-1 xl:grid-cols-3 2xl:grid-cols-5 gap-4 md:gap-6 xl:gap-8">
           {features.map((feature, index) => (
             <div
               key={index}
               onClick={() => executeProtectedAction(() => router.push(feature.href), { requireAuth: true })}
               className="cursor-pointer"
             >
-              <div className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-3 h-full flex flex-col border border-gray-100 overflow-hidden max-w-sm mx-auto">
+              <div className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-3 h-full flex flex-col border border-gray-100 overflow-hidden">
                 {/* 顶部装饰条 */}
                 <div className={`h-2 bg-gradient-to-r ${feature.color}`}></div>
 
