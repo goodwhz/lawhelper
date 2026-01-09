@@ -355,7 +355,7 @@ const NiMaEvaluatorChat: React.FC = () => {
                         code: ({ children }) => <code className="bg-gray-100 px-1 py-0.5 rounded text-xs text-gray-800">{children}</code>,
                       }}
                     >
-                      {message.content}
+                      {message.content || ''}
                     </ReactMarkdown>
                   </div>
                 )

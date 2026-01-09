@@ -4,12 +4,11 @@ import ReactMarkdown from 'react-markdown'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import type { ChatMessage } from './types'
-import { 
+import {
   ClipboardDocumentIcon as CopyIcon,
   HandThumbUpIcon as ThumbsUpIcon,
   HandThumbDownIcon as ThumbsDownIcon,
   ArrowPathIcon as RotateCcwIcon,
-  EllipsisHorizontalIcon as MoreHorizontalIcon
 } from '@heroicons/react/24/outline'
 
 interface MessageBubbleProps {
@@ -70,8 +69,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
       <div className={`flex max-w-3xl ${isUser ? 'flex-row-reverse' : 'flex-row'} items-start gap-3`}>
         {/* 头像 */}
         <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-          isUser 
-            ? 'bg-blue-600 text-white' 
+          isUser
+            ? 'bg-blue-600 text-white'
             : 'bg-gray-100 text-gray-600 border border-gray-200'
         }`}>
           {isUser ? 'U' : 'AI'}
@@ -92,35 +91,39 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
             onMouseLeave={() => setShowActions(false)}
           >
             {/* Markdown 渲染 */}
-            {isAssistant ? (
-              <ReactMarkdown
-                className="prose prose-sm max-w-none break-words"
-                components={{
-                  code({ node, inline, className, children, ...props }) {
-                    const match = /language-(\w+)/.exec(className || '')
-                    return !inline && match ? (
-                      <SyntaxHighlighter
-                        style={oneDark}
-                        language={match[1]}
-                        PreTag="div"
-                        className="rounded-lg !bg-gray-900 !p-3 text-sm"
-                        {...props}
-                      >
-                        {String(children).replace(/\n$/, '')}
-                      </SyntaxHighlighter>
-                    ) : (
-                      <code className={`${className} px-1 py-0.5 bg-gray-100 rounded text-sm`} {...props}>
-                        {children}
-                      </code>
-                    )
-                  },
-                }}
-              >
-                {message.content}
-              </ReactMarkdown>
-            ) : (
-              <div className="whitespace-pre-wrap break-words">{message.content}</div>
-            )}
+            {isAssistant
+              ? (
+                <ReactMarkdown
+                  className="prose prose-sm max-w-none break-words"
+                  components={{
+                    code({ node, inline, className, children, ...props }) {
+                      const match = /language-(\w+)/.exec(className || '')
+                      return !inline && match
+                        ? (
+                          <SyntaxHighlighter
+                            style={oneDark}
+                            language={match[1]}
+                            PreTag="div"
+                            className="rounded-lg !bg-gray-900 !p-3 text-sm"
+                            {...props}
+                          >
+                            {String(children).replace(/\n$/, '')}
+                          </SyntaxHighlighter>
+                        )
+                        : (
+                          <code className={`${className} px-1 py-0.5 bg-gray-100 rounded text-sm`} {...props}>
+                            {children}
+                          </code>
+                        )
+                    },
+                  }}
+                >
+                  {message.content || ''}
+                </ReactMarkdown>
+              )
+              : (
+                <div className="whitespace-pre-wrap break-words">{message.content}</div>
+              )}
 
             {/* 加载状态 */}
             {isStreaming && isAssistant && (
@@ -185,7 +188,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
               <p className="text-sm text-gray-600 mb-2">请告诉我们原因：</p>
               <textarea
                 value={feedbackReason}
-                onChange={(e) => setFeedbackReason(e.target.value)}
+                onChange={e => setFeedbackReason(e.target.value)}
                 className="w-full p-2 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                 rows={3}
                 placeholder="您的反馈对我们很重要..."

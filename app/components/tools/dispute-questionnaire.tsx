@@ -623,7 +623,7 @@ ${getEvidenceList(disputeType)}
                     code: ({ children }) => <code className="bg-gray-100 px-1 py-0.5 rounded text-sm text-gray-800">{children}</code>,
                   }}
                 >
-                  {analysisResult}
+                  {analysisResult || ''}
                 </ReactMarkdown>
               </div>
 
