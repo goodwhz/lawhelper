@@ -160,18 +160,16 @@ const NiMaEvaluatorChat: React.FC = () => {
           timestamp: new Date(),
         }
         setMessages(prev => [...prev, assistantMessage])
-        // 只有非模拟响应才算真正连接成功
-        if (data.isMock) {
-          setConnectionStatus('disconnected')
-        } else {
-          setConnectionStatus('connected')
-        }
+        // 保持当前连接状态，不改变
+        // 如果之前是 connected，就保持 connected
+        // 如果之前是 disconnected，就保持 disconnected
         setShouldScrollToBottom(true) // AI 回复后滚动
       } else {
         throw new Error(data.error || '获取AI回复失败')
       }
     } catch (error) {
       console.error('AI 响应错误:', error)
+      // 只有在真正的网络错误时才设置为 disconnected
       setConnectionStatus('disconnected')
       const errorMessage: Message = {
         role: 'assistant',
