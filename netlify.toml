@@ -15,6 +15,12 @@
   to = "/_next/:splat"
   status = 200
 
+# 兼容旧 API 路径的拼写错误 (临时方案)
+[[redirects]]
+  from = "/api/spark-evlaator/:splat"
+  to = "/api/spark-evaluator/:splat"
+  status = 301
+
 # 静态资源缓存
 [[headers]]
   for = "/_next/static/*"
