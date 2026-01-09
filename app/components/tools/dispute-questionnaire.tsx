@@ -38,9 +38,17 @@ const DisputeQuestionnaire: React.FC = () => {
     description: '',
     contactMethod: '',
   })
+  const isCheckingRef = useRef(false) // 防止并发连接检查
 
-  // 组件挂载时检查连接状态
+  // 组件挂载时检查连接状态(延迟执行,减少并发)
   useEffect(() => {
+    // 防止并发连接检查
+    if (isCheckingRef.current) {
+      return
+    }
+
+    isCheckingRef.current = true
+
     const checkConnection = async () => {
       setConnectionStatus('connecting')
       try {
@@ -63,9 +71,21 @@ const DisputeQuestionnaire: React.FC = () => {
       } catch (error) {
         console.error('连接检查失败:', error)
         setConnectionStatus('disconnected')
+      } finally {
+        isCheckingRef.current = false
       }
     }
-    checkConnection()
+
+    // 延迟执行,减少并发压力
+    const delay = Math.random() * 1000 + 500 // 0.5-1.5秒随机延迟
+    const timer = setTimeout(() => {
+      checkConnection()
+    }, delay)
+
+    return () => {
+      clearTimeout(timer)
+      isCheckingRef.current = false
+    }
   }, [])
 
   // 重新连接函数(优化版)

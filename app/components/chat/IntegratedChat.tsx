@@ -124,7 +124,7 @@ const IntegratedChat: React.FC = () => {
     if (messageAreaRef.current) {
       messageAreaRef.current.scrollTo({
         top: messageAreaRef.current.scrollHeight,
-        behavior: 'smooth'
+        behavior: 'smooth',
       })
     }
   }, [])
@@ -359,8 +359,10 @@ const IntegratedChat: React.FC = () => {
           console.warn(`预加载对话 ${conv.title} 失败:`, error)
         }
 
-        // 每个对话之间添加小延迟，避免同时发送太多请求
-        await new Promise(resolve => setTimeout(resolve, 100))
+        // 每个对话之间添加延迟，避免同时发送太多请求
+        // 增大延迟到200-400ms,进一步降低并发压力
+        const delay = Math.random() * 200 + 200
+        await new Promise(resolve => setTimeout(resolve, delay))
       }
     } catch (error) {
       console.error('预加载失败:', error)

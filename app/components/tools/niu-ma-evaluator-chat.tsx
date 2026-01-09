@@ -21,6 +21,7 @@ const NiMaEvaluatorChat: React.FC = () => {
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const initializationRef = useRef(false)
+  const isCheckingRef = useRef(false) // 防止并发连接检查
 
   const scrollToBottom = () => {
     const container = messagesEndRef.current
@@ -40,15 +41,17 @@ const NiMaEvaluatorChat: React.FC = () => {
     }
   }, [messages, shouldScrollToBottom])
 
-  // 组件加载时获取开场白
+  // 组件加载时获取开场白(延迟执行,减少并发)
   useEffect(() => {
     // 防止重复初始化
-    if (initializationRef.current) {
+    if (initializationRef.current || isCheckingRef.current) {
       return
     }
 
     initializationRef.current = true
+    isCheckingRef.current = true
 
+    // 延迟1-2秒后执行连接检查,避免多个组件同时初始化
     const checkConnection = async () => {
       setConnectionStatus('connecting')
       try {
@@ -106,10 +109,20 @@ const NiMaEvaluatorChat: React.FC = () => {
       } finally {
         setIsInitializing(false)
         setShouldScrollToBottom(true)
+        isCheckingRef.current = false
       }
     }
 
-    checkConnection()
+    // 延迟执行,减少并发压力
+    const delay = Math.random() * 1000 + 500 // 0.5-1.5秒随机延迟
+    const timer = setTimeout(() => {
+      checkConnection()
+    }, delay)
+
+    return () => {
+      clearTimeout(timer)
+      isCheckingRef.current = false
+    }
   }, [])
 
   const handleSend = async () => {
