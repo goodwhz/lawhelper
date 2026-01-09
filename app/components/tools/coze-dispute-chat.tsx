@@ -16,6 +16,8 @@ const CozeDisputeChat: React.FC = () => {
   const [isInitializing, setIsInitializing] = useState(true)
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting')
   const [retryCount, setRetryCount] = useState(0)
+  const [maxRetries] = useState(10) // 最大重试次数
+  const [retryDelay] = useState(2000) // 重试延迟（毫秒）
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(false)
   const [lastAssistantHasQuestion, setLastAssistantHasQuestion] = useState(false)
   const [quickAnswers, setQuickAnswers] = useState<string[]>([])
@@ -206,45 +208,66 @@ const CozeDisputeChat: React.FC = () => {
     }
     console.log('请求体:', requestBody)
 
-    const response = await fetch('/api/coze/chat', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
-    })
+    // 带重试的 API 调用
+    const attemptAPICall = async (attempt: number): Promise<string> => {
+      console.log(`🔄 尝试 API 调用 (${attempt}/${maxRetries})...`)
 
-    console.log('API 响应状态:', {
-      status: response.status,
-      statusText: response.statusText,
-      ok: response.ok,
-    })
+      try {
+        const response = await fetch('/api/coze/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+        })
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('API 错误响应:', errorText)
-      setConnectionStatus('disconnected')
-      throw new Error(`API 调用失败 (${response.status}): ${errorText}`)
+        console.log('API 响应状态:', {
+          status: response.status,
+          statusText: response.statusText,
+          ok: response.ok,
+        })
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${await response.text()}`)
+        }
+
+        const data = await response.json()
+        console.log('=== API 返回完整数据 ===')
+        console.log('JSON 数据:', JSON.stringify(data, null, 2))
+        console.log('success:', data.success)
+        console.log('data?.analysis?.summary:', data.data?.analysis?.summary)
+
+        if (!data.success) {
+          throw new Error(data.error || 'Coze API 调用失败')
+        }
+
+        const responseText = data.data?.analysis?.summary
+        console.log('最终返回给前端的响应文本长度:', responseText?.length)
+        console.log('响应文本前200字:', responseText?.substring(0, 200))
+
+        setConnectionStatus('connected')
+        return responseText || '感谢您的咨询。根据您提供的信息,我建议您进一步详细描述争议的具体情况,包括时间、地点、涉及人员等关键信息,以便我为您提供更准确的分析和建议。'
+      } catch (error) {
+        console.error(`❌ API 调用失败 (${attempt}/${maxRetries}):`, error)
+        setConnectionStatus('disconnected')
+
+        // 如果还有重试机会，延迟后继续重试
+        if (attempt < maxRetries) {
+          const delay = retryDelay * attempt // 指数退避
+          console.log(`⏳ ${delay}ms 后将尝试第 ${attempt + 1} 次调用...`)
+          await new Promise(resolve => setTimeout(resolve, delay))
+
+          // 递归调用继续重试
+          return attemptAPICall(attempt + 1)
+        }
+
+        // 所有重试都失败，抛出错误
+        throw error
+      }
     }
 
-    const data = await response.json()
-    console.log('=== API 返回完整数据 ===')
-    console.log('JSON 数据:', JSON.stringify(data, null, 2))
-    console.log('success:', data.success)
-    console.log('data?.analysis?.summary:', data.data?.analysis?.summary)
-
-    if (!data.success) {
-      console.error('API 返回错误:', data.error, data.details)
-      setConnectionStatus('disconnected')
-      throw new Error(data.error || 'Coze API 调用失败')
-    }
-
-    const responseText = data.data?.analysis?.summary
-    console.log('最终返回给前端的响应文本长度:', responseText?.length)
-    console.log('响应文本前200字:', responseText?.substring(0, 200))
-
-    setConnectionStatus('connected')
-    return responseText || '感谢您的咨询。根据您提供的信息,我建议您进一步详细描述争议的具体情况,包括时间、地点、涉及人员等关键信息,以便我为您提供更准确的分析和建议。'
+    // 开始尝试调用
+    return attemptAPICall(1)
   }
 
   const handleSend = async () => {
@@ -380,10 +403,10 @@ const CozeDisputeChat: React.FC = () => {
 
   // 重新连接
   const handleReconnect = async () => {
-    if (retryCount >= 3) {
+    if (retryCount >= maxRetries) {
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: '重连次数过多，请稍后再试',
+        content: `重连次数已达${maxRetries}次，请稍后再试。您可以刷新页面或联系客服。`,
         timestamp: new Date(),
       }])
       return
@@ -393,10 +416,13 @@ const CozeDisputeChat: React.FC = () => {
     setIsInitializing(true)
     initializationRef.current = false
 
-    // 重新获取开场白
-    const fetchWelcomeMessage = async () => {
-      setConnectionStatus('connecting')
+    // 自动重试连接
+    const attemptConnection = async (attempt: number): Promise<boolean> => {
+      console.log(`🔄 尝试连接 (${attempt}/${maxRetries})...`)
+
       try {
+        setConnectionStatus('connecting')
+
         const response = await fetch('/api/coze/chat', {
           method: 'POST',
           headers: {
@@ -408,8 +434,14 @@ const CozeDisputeChat: React.FC = () => {
           }),
         })
 
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`)
+        }
+
         const data = await response.json()
+
         if (data.success && data.data?.analysis?.summary) {
+          console.log('✅ 连接成功！')
           setMessages([
             {
               role: 'assistant',
@@ -419,19 +451,32 @@ const CozeDisputeChat: React.FC = () => {
           ])
           setConnectionStatus('connected')
           setRetryCount(0)
-          // 初始化时不滚动
+          setIsInitializing(false)
+          return true
         } else {
           throw new Error(data.error || '获取开场白失败')
         }
       } catch (error) {
-        console.error('重新连接失败:', error)
+        console.error(`❌ 连接失败 (${attempt}/${maxRetries}):`, error)
         setConnectionStatus('disconnected')
-      } finally {
+
+        // 如果还有重试机会，延迟后继续重试
+        if (attempt < maxRetries) {
+          console.log(`⏳ ${retryDelay}ms 后将尝试第 ${attempt + 1} 次连接...`)
+          await new Promise(resolve => setTimeout(resolve, retryDelay))
+
+          // 递归调用继续重试
+          return attemptConnection(attempt + 1)
+        }
+
+        // 所有重试都失败
         setIsInitializing(false)
+        return false
       }
     }
 
-    await fetchWelcomeMessage()
+    // 开始尝试连接
+    await attemptConnection(1)
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -466,19 +511,20 @@ const CozeDisputeChat: React.FC = () => {
             {connectionStatus === 'connected'
               ? '已连接'
               : connectionStatus === 'connecting'
-                ? '连接中...'
+                ? `连接中... (${retryCount}/${maxRetries})`
                 : '未连接'}
           </span>
         </div>
         {connectionStatus === 'disconnected' && (
           <button
             onClick={handleReconnect}
-            className="text-sm bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-4 py-1.5 rounded-lg font-medium transition-all duration-300 flex items-center space-x-1 shadow-sm hover:shadow-md"
+            disabled={isInitializing}
+            className="text-sm bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-4 py-1.5 rounded-lg font-medium transition-all duration-300 flex items-center space-x-1 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className={`w-4 h-4 ${isInitializing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-            <span>重新连接</span>
+            <span>{isInitializing ? `重连中 (${retryCount}/${maxRetries})` : '重新连接'}</span>
           </button>
         )}
       </div>
@@ -693,12 +739,13 @@ const CozeDisputeChat: React.FC = () => {
               </div>
               <button
                 onClick={handleReconnect}
-                className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-all duration-300 flex items-center space-x-2 shadow-md hover:shadow-lg"
+                disabled={isInitializing}
+                className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-all duration-300 flex items-center space-x-2 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className={`w-4 h-4 ${isInitializing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
-                <span>重新连接</span>
+                <span>{isInitializing ? `重连中 (${retryCount}/${maxRetries})` : '重新连接'}</span>
               </button>
             </div>
           )

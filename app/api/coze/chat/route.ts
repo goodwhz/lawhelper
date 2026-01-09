@@ -93,29 +93,57 @@ async function callCozeAPI(requestBody: any, cozeConfig: ReturnType<typeof getCo
   const responseText = await response.text()
   console.log('=== Coze API 响应详情 ===')
   console.log('响应长度:', responseText.length)
-  console.log('响应前500字符:', responseText.substring(0, 500))
+  console.log('响应前1000字符:', responseText.substring(0, 1000))
 
   // 解析流式响应,提取答案
   let aiResponse = ''
   const lines = responseText.split('\n')
 
   console.log('总行数:', lines.length)
-  console.log('data: 开头的行数:', lines.filter(line => line.startsWith('data: ')).length)
+  console.log('data: 开头的行数:', lines.filter(line => line.startsWith('data:')).length)
+  console.log('event: 开头的行数:', lines.filter(line => line.startsWith('event:')).length)
 
   for (const line of lines) {
+    // 跳过空行和注释行
+    if (!line.trim() || line.startsWith(':')) {
+      continue
+    }
+
+    // 处理 SSE data 行
     if (line.startsWith('data: ')) {
+      const dataStr = line.substring(6).trim()
+
+      // 跳过空数据和结束标记
+      if (!dataStr || dataStr === '[DONE]' || dataStr === 'done') {
+        continue
+      }
+
       try {
-        const data = JSON.parse(line.substring(6))
-        // 提取 answer 字段的内容
+        const data = JSON.parse(dataStr)
+        console.log('解析的数据片段:', JSON.stringify(data, null, 2))
+
+        // 尝试多种可能的字段结构
         if (data.content && data.content.answer) {
           aiResponse += data.content.answer
         } else if (data.answer && typeof data.answer === 'string') {
           aiResponse += data.answer
         } else if (data.message && typeof data.message === 'string') {
           aiResponse += data.message
+        } else if (data.choices && data.choices[0]?.delta?.content) {
+          // OpenAI 兼容格式
+          aiResponse += data.choices[0].delta.content
+        } else if (data.delta && data.delta.content) {
+          // Delta 格式
+          aiResponse += data.delta.content
+        } else if (typeof data === 'string') {
+          // 直接是字符串
+          aiResponse += data
+        } else {
+          console.log('未知的数据结构:', Object.keys(data))
         }
-      } catch {
+      } catch (e) {
         console.error('解析 SSE 行失败:', line.substring(0, 200))
+        console.error('错误详情:', e)
       }
     }
   }
@@ -127,6 +155,7 @@ async function callCozeAPI(requestBody: any, cozeConfig: ReturnType<typeof getCo
   const cleanedResponse = aiResponse.replace(/\[object Object\]/g, '').trim()
 
   if (!cleanedResponse) {
+    console.error('未收到有效的AI响应，原始响应:', responseText)
     throw new Error('未收到有效的AI响应')
   }
 
