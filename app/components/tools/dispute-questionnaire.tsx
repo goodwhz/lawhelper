@@ -236,8 +236,8 @@ const DisputeQuestionnaire: React.FC = () => {
 
   const handleSubmit = async () => {
     setIsAnalyzing(true)
-    setConnectionStatus('connecting')
     setRenderError(false)
+    // 不要改变连接状态，保持显示"已连接"或"未连接"的状态
     try {
       const response = await fetch('/api/coze/chat', {
         method: 'POST',
@@ -255,9 +255,14 @@ const DisputeQuestionnaire: React.FC = () => {
         // 验证响应内容是否为有效字符串
         const responseContent = data.data.analysis.summary
         if (typeof responseContent === 'string' && responseContent.trim().length > 0) {
-          setAnalysisResult(responseContent)
+          // 清理 Markdown 内容后再设置
+          const sanitizedContent = sanitizeMarkdown(responseContent)
+          setAnalysisResult(sanitizedContent)
           setShowResult(true)
-          setConnectionStatus('connected')
+          // 保持为 connected 状态
+          if (connectionStatus === 'disconnected') {
+            setConnectionStatus('connected')
+          }
         } else {
           throw new Error('响应内容无效')
         }
@@ -266,7 +271,7 @@ const DisputeQuestionnaire: React.FC = () => {
         const fallbackResponse = generateFallbackResponse()
         setAnalysisResult(fallbackResponse)
         setShowResult(true)
-        setConnectionStatus('disconnected')
+        // 使用备用响应时不改变连接状态
       }
     } catch (error) {
       console.error('分析错误:', error)
@@ -274,10 +279,32 @@ const DisputeQuestionnaire: React.FC = () => {
       const fallbackResponse = generateFallbackResponse()
       setAnalysisResult(fallbackResponse)
       setShowResult(true)
+      // 网络错误时设置为 disconnected
       setConnectionStatus('disconnected')
     } finally {
       setIsAnalyzing(false)
     }
+  }
+
+  // 清理 Markdown 内容，避免解析错误
+  const sanitizeMarkdown = (content: string): string => {
+    return content
+      // 移除所有表格语法 | | |
+      .replace(/\|/g, '-')
+      // 修复不正确的代码块
+      .replace(/```(\w*)\s*$/gm, '```\n')
+      // 移除可能导致解析错误的特殊字符组合
+      .replace(/\\_/g, '_')
+      // 修复连续的空格
+      .replace(/  +/g, ' ')
+      // 确保标题后有空格
+      .replace(/^(#{1,6})([^\s#])/gm, '$1 $2')
+      // 清理空行
+      .replace(/\n{3,}/g, '\n\n')
+      // 移除可能导致解析错误的特殊格式
+      .replace(/<br\s*\/?>/gi, '\n')
+      // 修复嵌套格式
+      .replace(/\*\*([^*]+)\*\*/g, '**$1**')
   }
 
   // 生成备用响应（当 AI 未响应时）
@@ -287,7 +314,7 @@ const DisputeQuestionnaire: React.FC = () => {
     const disputeTime = formData.disputeTime || '未提供'
     const amount = formData.amount || '未提供'
 
-    return `## ⚠️ AI 未响应
+    const content = `## ⚠️ AI 未响应
 
 很抱歉，AI 分析服务暂时无法响应。以下是基于您提供的信息生成的参考分析。
 
@@ -398,7 +425,9 @@ ${getEvidenceList(disputeType)}
 
 ---
 
-**注**：以上分析基于您提供的信息，仅供参考。具体案件建议咨询专业律师或法律援助机构。`.replace(/\|/g, '-') // 避免表格语法导致解析错误
+**注**：以上分析基于您提供的信息，仅供参考。具体案件建议咨询专业律师或法律援助机构。`
+
+    return sanitizeMarkdown(content)
   }
 
   // 根据争议类型生成具体的风险分析
@@ -478,21 +507,25 @@ ${getEvidenceList(disputeType)}
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <div className={`w-2 h-2 rounded-full ${
-                    connectionStatus === 'connected'
-                      ? 'bg-green-500'
-                      : connectionStatus === 'connecting'
-                        ? 'bg-pink-500 animate-pulse'
-                        : 'bg-gray-400'
+                    isAnalyzing
+                      ? 'bg-blue-500 animate-pulse'
+                      : connectionStatus === 'connected'
+                        ? 'bg-green-500'
+                        : connectionStatus === 'connecting'
+                          ? 'bg-pink-500 animate-pulse'
+                          : 'bg-gray-400'
                   }`}></div>
                   <span className="text-sm text-gray-600">
-                    {connectionStatus === 'connected'
-                      ? '已连接'
-                      : connectionStatus === 'connecting'
-                        ? '连接中...'
-                        : '未连接'}
+                    {isAnalyzing
+                      ? '分析中...'
+                      : connectionStatus === 'connected'
+                        ? '已连接'
+                        : connectionStatus === 'connecting'
+                          ? '连接中...'
+                          : '未连接'}
                   </span>
                 </div>
-                {connectionStatus === 'disconnected' && (
+                {connectionStatus === 'disconnected' && !isAnalyzing && (
                   <button
                     onClick={handleReconnect}
                     className="text-sm text-pink-600 hover:text-pink-700 font-medium transition-colors"
@@ -621,10 +654,13 @@ ${getEvidenceList(disputeType)}
                   ? (
                     <div className="bg-red-50 border border-red-200 rounded-lg p-6">
                       <h3 className="text-lg font-semibold text-red-800 mb-2">⚠️ 渲染错误</h3>
-                      <p className="text-red-700 mb-4">分析结果内容格式异常，无法正常显示。</p>
+                      <p className="text-red-700 mb-4">分析结果内容格式异常，正在显示纯文本版本。</p>
+                      <div className="bg-white border border-gray-200 rounded-lg p-4 max-h-96 overflow-y-auto whitespace-pre-wrap text-sm text-gray-700">
+                        {analysisResult}
+                      </div>
                       <button
                         onClick={() => setRenderError(false)}
-                        className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+                        className="mt-4 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
                       >
                         重试显示
                       </button>
@@ -632,18 +668,23 @@ ${getEvidenceList(disputeType)}
                   )
                   : analysisResult
                     ? (
-                      <ErrorBoundary fallback={
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-                          <h3 className="text-lg font-semibold text-yellow-800 mb-2">⚠️ 显示异常</h3>
-                          <p className="text-yellow-700 mb-4">分析结果无法正常渲染。</p>
-                          <button
-                            onClick={() => setRenderError(true)}
-                            className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600"
-                          >
-                            显示简化版本
-                          </button>
-                        </div>
-                      }>
+                      <ErrorBoundary
+                        fallback={
+                          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                            <h3 className="text-lg font-semibold text-yellow-800 mb-2">⚠️ 显示异常</h3>
+                            <p className="text-yellow-700 mb-4">分析结果无法正常渲染，正在显示纯文本版本。</p>
+                            <div className="bg-white border border-gray-200 rounded-lg p-4 max-h-96 overflow-y-auto whitespace-pre-wrap text-sm text-gray-700">
+                              {analysisResult}
+                            </div>
+                            <button
+                              onClick={() => setRenderError(true)}
+                              className="mt-4 bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600"
+                            >
+                              显示错误版本
+                            </button>
+                          </div>
+                        }
+                      >
                         <ReactMarkdown
                           remarkPlugins={[remarkGfm, remarkBreaks]}
                           components={{
@@ -657,6 +698,12 @@ ${getEvidenceList(disputeType)}
                             strong: ({ children }) => <strong className="font-semibold text-gray-900">{children}</strong>,
                             blockquote: ({ children }) => <blockquote className="border-l-4 border-blue-500 pl-4 my-4 bg-blue-50 py-2 pr-4 text-gray-700">{children}</blockquote>,
                             code: ({ children }) => <code className="bg-gray-100 px-1 py-0.5 rounded text-sm text-gray-800">{children}</code>,
+                            table: ({ children }) => <div className="overflow-x-auto my-4"><table className="min-w-full border border-gray-300">{children}</table></div>,
+                            thead: ({ children }) => <thead className="bg-gray-50">{children}</thead>,
+                            tbody: ({ children }) => <tbody>{children}</tbody>,
+                            tr: ({ children }) => <tr className="border-b border-gray-300">{children}</tr>,
+                            th: ({ children }) => <th className="px-4 py-2 text-left border border-gray-300">{children}</th>,
+                            td: ({ children }) => <td className="px-4 py-2 border border-gray-300">{children}</td>,
                           }}
                         >
                           {analysisResult}
