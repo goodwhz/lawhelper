@@ -137,7 +137,7 @@ const NiMaEvaluatorChat: React.FC = () => {
     setMessages(prev => [...prev, userMessage])
     setInput('')
     setIsLoading(true)
-    setConnectionStatus('connecting')
+    // 不改变连接状态，保持当前状态
     setShouldScrollToBottom(true) // 用户发送消息后滚动
 
     try {
