@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
+import ErrorBoundary from '@/app/components/error-boundary'
 
 interface Question {
   id: string
@@ -30,6 +31,7 @@ const DisputeQuestionnaire: React.FC = () => {
   const [analysisResult, setAnalysisResult] = useState('')
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting')
   const [retryCount, setRetryCount] = useState(0)
+  const [renderError, setRenderError] = useState(false)
   const [formData, setFormData] = useState<FormData>({
     disputeType: '',
     disputeTime: '',
@@ -235,6 +237,7 @@ const DisputeQuestionnaire: React.FC = () => {
   const handleSubmit = async () => {
     setIsAnalyzing(true)
     setConnectionStatus('connecting')
+    setRenderError(false)
     try {
       const response = await fetch('/api/coze/chat', {
         method: 'POST',
@@ -249,9 +252,15 @@ const DisputeQuestionnaire: React.FC = () => {
 
       const data = await response.json()
       if (data.success && data.data?.analysis?.summary) {
-        setAnalysisResult(data.data.analysis.summary)
-        setShowResult(true)
-        setConnectionStatus('connected')
+        // 验证响应内容是否为有效字符串
+        const responseContent = data.data.analysis.summary
+        if (typeof responseContent === 'string' && responseContent.trim().length > 0) {
+          setAnalysisResult(responseContent)
+          setShowResult(true)
+          setConnectionStatus('connected')
+        } else {
+          throw new Error('响应内容无效')
+        }
       } else {
         // AI 未响应或返回空内容
         const fallbackResponse = generateFallbackResponse()
@@ -389,7 +398,7 @@ ${getEvidenceList(disputeType)}
 
 ---
 
-**注**：以上分析基于您提供的信息，仅供参考。具体案件建议咨询专业律师或法律援助机构。`
+**注**：以上分析基于您提供的信息，仅供参考。具体案件建议咨询专业律师或法律援助机构。`.replace(/\|/g, '-') // 避免表格语法导致解析错误
   }
 
   // 根据争议类型生成具体的风险分析
@@ -608,23 +617,55 @@ ${getEvidenceList(disputeType)}
             <div className="p-6">
               {/* 分析结果 */}
               <div className="prose prose-sm max-w-none prose-headings:text-gray-900 prose-p:text-gray-800 prose-ul:text-gray-800 prose-ol:text-gray-800">
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm, remarkBreaks]}
-                  components={{
-                    h1: ({ children }) => <h1 className="text-2xl font-bold text-gray-900 mb-4 mt-6">{children}</h1>,
-                    h2: ({ children }) => <h2 className="text-xl font-semibold text-gray-900 mb-3 mt-5">{children}</h2>,
-                    h3: ({ children }) => <h3 className="text-lg font-semibold text-gray-900 mb-2 mt-4">{children}</h3>,
-                    p: ({ children }) => <p className="text-gray-800 leading-relaxed mb-4">{children}</p>,
-                    ul: ({ children }) => <ul className="list-disc pl-6 mb-4 text-gray-800 space-y-2">{children}</ul>,
-                    ol: ({ children }) => <ol className="list-decimal pl-6 mb-4 text-gray-800 space-y-2">{children}</ol>,
-                    li: ({ children }) => <li className="text-gray-800">{children}</li>,
-                    strong: ({ children }) => <strong className="font-semibold text-gray-900">{children}</strong>,
-                    blockquote: ({ children }) => <blockquote className="border-l-4 border-blue-500 pl-4 my-4 bg-blue-50 py-2 pr-4 text-gray-700">{children}</blockquote>,
-                    code: ({ children }) => <code className="bg-gray-100 px-1 py-0.5 rounded text-sm text-gray-800">{children}</code>,
-                  }}
-                >
-                  {analysisResult || ''}
-                </ReactMarkdown>
+                {renderError
+                  ? (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+                      <h3 className="text-lg font-semibold text-red-800 mb-2">⚠️ 渲染错误</h3>
+                      <p className="text-red-700 mb-4">分析结果内容格式异常，无法正常显示。</p>
+                      <button
+                        onClick={() => setRenderError(false)}
+                        className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+                      >
+                        重试显示
+                      </button>
+                    </div>
+                  )
+                  : analysisResult
+                    ? (
+                      <ErrorBoundary fallback={
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                          <h3 className="text-lg font-semibold text-yellow-800 mb-2">⚠️ 显示异常</h3>
+                          <p className="text-yellow-700 mb-4">分析结果无法正常渲染。</p>
+                          <button
+                            onClick={() => setRenderError(true)}
+                            className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600"
+                          >
+                            显示简化版本
+                          </button>
+                        </div>
+                      }>
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm, remarkBreaks]}
+                          components={{
+                            h1: ({ children }) => <h1 className="text-2xl font-bold text-gray-900 mb-4 mt-6">{children}</h1>,
+                            h2: ({ children }) => <h2 className="text-xl font-semibold text-gray-900 mb-3 mt-5">{children}</h2>,
+                            h3: ({ children }) => <h3 className="text-lg font-semibold text-gray-900 mb-2 mt-4">{children}</h3>,
+                            p: ({ children }) => <p className="text-gray-800 leading-relaxed mb-4">{children}</p>,
+                            ul: ({ children }) => <ul className="list-disc pl-6 mb-4 text-gray-800 space-y-2">{children}</ul>,
+                            ol: ({ children }) => <ol className="list-decimal pl-6 mb-4 text-gray-800 space-y-2">{children}</ol>,
+                            li: ({ children }) => <li className="text-gray-800">{children}</li>,
+                            strong: ({ children }) => <strong className="font-semibold text-gray-900">{children}</strong>,
+                            blockquote: ({ children }) => <blockquote className="border-l-4 border-blue-500 pl-4 my-4 bg-blue-50 py-2 pr-4 text-gray-700">{children}</blockquote>,
+                            code: ({ children }) => <code className="bg-gray-100 px-1 py-0.5 rounded text-sm text-gray-800">{children}</code>,
+                          }}
+                        >
+                          {analysisResult}
+                        </ReactMarkdown>
+                      </ErrorBoundary>
+                    )
+                    : (
+                      <p className="text-gray-600">加载分析结果...</p>
+                    )}
               </div>
 
               {/* 申诉建议 */}
