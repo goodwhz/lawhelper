@@ -33,30 +33,36 @@
 已在 `netlify.toml` 中添加以下配置:
 
 ```toml
-[functions]
-  timeout = 60
-  node_bundler = "esbuild"
+[build]
+  command = "npm run build"
+  publish = ".next"
 
-[functions."/api/coze/*"]
-  timeout = 90
+[build.environment]
+  NODE_VERSION = "20"
+  NEXT_TELEMETRY_DISABLED = "1"
+  NPM_FLAGS = "--legacy-peer-deps"
 
-[functions."/api/spark-evaluator/*"]
-  timeout = 90
+# 静态资源缓存
+[[headers]]
+  for = "/_next/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
 
-[functions."/api/dify/*"]
-  timeout = 90
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
 
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
-  force = true
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
 ```
 
 **说明:**
-- 增加函数超时时间至 60-90 秒
-- 添加 API 路由重定向规则
-- 为特定 API 配置更长超时
+- 简化了配置,移除了可能引起语法错误的函数配置
+- Netlify Edge Functions会自动使用合理的超时时间
+- API超时在后端代码中通过 `fetchWithRetry` 函数控制
 
 ### 步骤 2: 优化 API 路由
 

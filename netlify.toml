@@ -15,13 +15,6 @@
   to = "/_next/:splat"
   status = 200
 
-# API 函数重定向(确保Next.js API路由正常工作)
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
-  force = true
-
 # 静态资源缓存
 [[headers]]
   for = "/_next/static/*"
@@ -37,18 +30,3 @@
   for = "/*.css"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
-
-# API函数的超时配置(Netlify函数超时)
-[functions]
-  timeout = 60
-  node_bundler = "esbuild"
-
-# 特定API函数配置
-[functions."/api/coze/*"]
-  timeout = 90
-
-[functions."/api/spark-evaluator/*"]
-  timeout = 90
-
-[functions."/api/dify/*"]
-  timeout = 90
