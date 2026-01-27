@@ -15,7 +15,7 @@ const DisputeCenterPage: React.FC = () => {
     <ErrorBoundary>
       <PageAuthGuard requireAuth={true}>
         <div className="min-h-screen bg-white">
-          {/* 桌面端导航 */}
+          {/* 导航栏 */}
           <Navigation />
 
           {/* 移动端页面头部 */}

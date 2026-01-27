@@ -3,7 +3,6 @@
 import React, { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import Navigation from '@/app/components/navigation'
-import MobileNavigation from '@/app/components/mobile-navigation'
 import MobilePageHeader from '@/app/components/ui/MobilePageHeader'
 import PageAuthGuard from '@/app/components/page-auth-guard'
 import ErrorBoundary from '@/app/components/error-boundary'
@@ -27,15 +26,11 @@ function AdminPage() {
     <ErrorBoundary>
       <PageAuthGuard adminOnly={true}>
         <div className="min-h-screen bg-gray-50">
-          {/* 桌面端导航 */}
-          <div className="hidden lg:block">
-            <Navigation />
-          </div>
-          
+          {/* 导航栏 */}
+          <Navigation />
+
           {/* 移动端页面头部 */}
-          <div className="lg:hidden">
-            <MobilePageHeader title="后台管理" />
-          </div>
+          <MobilePageHeader title="后台管理" />
 
           <div className="bg-white shadow">
             <div className="max-w-7xl mx-auto pt-24 pb-6 px-4 sm:px-6 lg:px-8">

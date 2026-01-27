@@ -45,7 +45,7 @@ const Navigation: FC = () => {
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 bg-white shadow-lg border-b border-gray-200 z-50 hidden lg:block">
+      <nav className="fixed top-0 left-0 right-0 bg-white shadow-lg border-b border-gray-200 z-30 block">
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex justify-between items-center py-4">
             {/* 左侧区域 - Logo */}
@@ -102,7 +102,7 @@ const Navigation: FC = () => {
 
                   {/* 用户下拉菜单 */}
                   {showUserMenu && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 animate-in fade-in slide-in-from-top-1 duration-200">
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20 animate-in fade-in slide-in-from-top-1 duration-200">
                       <div className="px-4 py-2 border-b border-gray-100">
                         <p className="text-sm font-medium text-gray-900 truncate">{user?.name || user?.email}</p>
                         <p className="text-xs text-gray-500 truncate">{user?.email}</p>
@@ -161,7 +161,7 @@ const Navigation: FC = () => {
       {/* 点击外部关闭用户菜单 */}
       {showUserMenu && (
         <div
-          className="fixed inset-0 z-40"
+          className="fixed inset-0 z-10"
           onClick={() => setShowUserMenu(false)}
         />
       )}

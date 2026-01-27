@@ -162,7 +162,10 @@ async function callCozeAPI(message: string, cozeConfig: ReturnType<typeof getCoz
     // 清理响应中的 [object Object]
     const cleanedResponse = fullResponse.replace(/\[object Object\]/g, '').trim()
 
+    console.log('完整响应内容:', cleanedResponse)
+
     if (!cleanedResponse) {
+      console.error('Coze 返回了空响应!')
       throw new Error('未收到有效的AI响应')
     }
 
@@ -177,13 +180,25 @@ export async function POST(request: NextRequest) {
   try {
     console.log('=== Coze Chat API 开始处理 ===')
 
+    // 调试：检查环境变量
+    console.log('环境变量检查:', {
+      hasNIUMA_URL: !!process.env.NIUMA_COZE_API_URL,
+      hasNIUMA_TOKEN: !!process.env.NIUMA_COZE_API_TOKEN,
+      hasNIUMA_PROJECT_ID: !!process.env.NIUMA_COZE_PROJECT_ID,
+      hasCOZE_URL: !!process.env.COZE_API_URL,
+      hasCOZE_TOKEN: !!process.env.COZE_API_TOKEN,
+      NIUMA_URL: process.env.NIUMA_COZE_API_URL,
+      NIUMA_TOKEN_LENGTH: process.env.NIUMA_COZE_API_TOKEN?.length,
+    })
+
     const body = await request.json()
     console.log('接收到的请求体:', body)
 
     const { message } = body
 
-    if (!message) {
-      console.log('参数验证失败: 缺少消息内容')
+    // 修改验证逻辑：允许空消息（用于获取开场白），但拒绝 null 或 undefined
+    if (message === null || message === undefined) {
+      console.log('参数验证失败: 消息内容为 null 或 undefined')
       return NextResponse.json(
         {
           success: false,
@@ -193,12 +208,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // 空字符串是合法的（用于获取开场白）
+    console.log('接收到的消息:', message || '(空消息，获取开场白)')
+
     const cozeConfig = getCozeConfig()
     console.log('Coze 配置:', {
       apiUrl: cozeConfig.cozeApiUrl,
       hasToken: !!cozeConfig.cozeApiToken,
       tokenLength: cozeConfig.cozeApiToken?.length,
       projectId: cozeConfig.cozeProjectId,
+      messageLength: message?.length || 0,
+      messageIsEmpty: message?.trim() === '',
     })
 
     // 检查是否配置了 Token
@@ -217,6 +237,30 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // 如果是空消息或问候语,返回固定的开场白
+    const messageIsEmpty = message?.trim() === ''
+    const isGreeting = ['你好', '您好', 'hi', 'hello'].includes(message?.trim().toLowerCase())
+
+    if (messageIsEmpty || isGreeting) {
+      console.log('=== 开场白处理 ===')
+      console.log('发送开场白:', messageIsEmpty ? '(空消息)' : message)
+
+      // 牛马测评仪的标准开场白
+      const welcomeMessage = `您好，这里是牛马测评仪，请选择您所需的评估版本：
+简易版（5-10 个问题，快速评估）
+详细版（12 + 个问题，全面分析）
+请回复数字 1 或 2`
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          message: welcomeMessage,
+        },
+        isMock: false,
+        timestamp: new Date().toISOString(),
+      })
+    }
+
     // 调用 Coze API
     const aiResponse = await callCozeAPI(message, cozeConfig)
 
@@ -225,6 +269,7 @@ export async function POST(request: NextRequest) {
       data: {
         message: aiResponse,
       },
+      isMock: false,
       timestamp: new Date().toISOString(),
     })
   } catch (error: any) {

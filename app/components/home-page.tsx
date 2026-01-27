@@ -12,7 +12,7 @@ const HomePage: FC = () => {
   const router = useRouter()
   const { executeProtectedAction } = useProtectedAction()
   const [isVisible, setIsVisible] = useState(false)
-  const isMobile = useIsMobile()
+  const isMobile = useIsMobile(640) // 使用 640px 断点，与 Navigation 组件一致
   // const [scrolled, setScrolled] = useState(false) // 暂时未使用
 
   useEffect(() => {
@@ -21,7 +21,7 @@ const HomePage: FC = () => {
 
   // 间隔带配置 - 可直观调整这些值
   const spacerConfig = {
-    height: '90px', // 间隔带高度，可修改为 '8px', '24px', '32px' 等
+    height: '140px', // 增加高度，让背景图框架更长
     color: 'rgb(100,16,19)', // 间隔带颜色
   }
 
@@ -171,11 +171,14 @@ const HomePage: FC = () => {
         onCreateNewChat={() => {}}
       />
 
-      {/* 根据设备类型显示对应的导航栏 */}
-      {isMobile ? <MobileNavigation /> : <Navigation />}
+      {/* 导航栏 - 桌面端导航栏始终显示，移动端导航栏隐藏 */}
+      <Navigation />
+      <MobileNavigation />
 
-      {/* 红色间隔带 - 通过修改spacerConfig.height直观调整粗细 */}
-      <div className="w-full" style={{ height: spacerConfig.height, backgroundColor: spacerConfig.color }}></div>
+      {/* 红色间隔带 - 仅在移动端显示，避免覆盖桌面导航栏 */}
+      {isMobile && (
+        <div className="w-full" style={{ height: spacerConfig.height, backgroundColor: spacerConfig.color }}></div>
+      )}
 
       {/* 首页- 现代化设计 */}
       <div className="relative overflow-hidden">
@@ -189,15 +192,16 @@ const HomePage: FC = () => {
           <div className="absolute inset-0 bg-black/40"></div>
         </div>
 
-        <div className="relative text-center py-12 sm:py-16 lg:py-20 px-4 max-w-6xl mx-auto">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 sm:mb-6 leading-tight drop-shadow-lg">
+        {/* 主内容区域 - 确保在导航栏下方，与间隔带配合 */}
+        <div className="relative z-10 text-center pt-32 sm:pt-40 lg:pt-48 pb-16 sm:pb-20 lg:pb-24 px-4 max-w-6xl mx-auto">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 sm:mb-8 lg:mb-10 leading-tight drop-shadow-lg">
             CoolBrain-LaborLawhelper
           </h1>
-          <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold text-white mb-6 sm:mb-8 leading-relaxed drop-shadow-md">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold text-white mb-8 sm:mb-10 lg:mb-12 leading-relaxed drop-shadow-md">
             专为劳动者打造的法律智能助手
           </h2>
 
-          <p className="text-base sm:text-lg md:text-xl text-white/90 mb-6 sm:mb-8 max-w-4xl mx-auto leading-relaxed drop-shadow-sm">
+          <p className="text-base sm:text-lg md:text-xl text-white/90 mb-8 sm:mb-10 lg:mb-12 max-w-4xl mx-auto leading-relaxed drop-shadow-sm">
             CoolBrain-LaborLawhelper基于新一代法律大模型，深度融合各种真实业务流程，集AI智能问答、法律计算工具、法规知识库于一体的综合性劳动法服务平台
           </p>
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">

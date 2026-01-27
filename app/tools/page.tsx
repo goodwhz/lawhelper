@@ -11,13 +11,13 @@ const ToolsPage: React.FC = () => {
   return (
     <ErrorBoundary>
       <PageAuthGuard requireAuth={true}>
-        <div className="min-h-screen bg-white">
-          {/* 桌面端导航 */}
+        <div className="min-h-screen bg-white pt-20 lg:pt-24">
+          {/* 导航栏 */}
           <Navigation />
-          
+
           {/* 移动端页面头部 */}
           <MobilePageHeader title="工具箱" />
-          
+
           {/* 主内容区域 */}
           <ToolsSection />
         </div>

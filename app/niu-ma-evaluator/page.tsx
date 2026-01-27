@@ -12,7 +12,7 @@ const NiMaEvaluatorPage: React.FC = () => {
     <ErrorBoundary>
       <PageAuthGuard requireAuth={true}>
         <div className="h-screen bg-gray-50 flex flex-col">
-          {/* 桌面端导航 */}
+          {/* 导航栏 */}
           <Navigation />
 
           {/* 移动端页面头部 */}

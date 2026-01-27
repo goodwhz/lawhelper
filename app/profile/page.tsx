@@ -315,9 +315,9 @@ function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* 桌面端导航 */}
+      {/* 导航栏 */}
       <Navigation />
-      
+
       {/* 移动端页面头部 */}
       <MobilePageHeader title="个人资料" />
 

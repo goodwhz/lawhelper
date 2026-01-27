@@ -65,7 +65,7 @@ const MobileNavigation = () => {
   return (
     <>
       {/* 移动端导航栏 */}
-      <nav className="lg:hidden fixed top-0 left-0 right-0 bg-white shadow-lg border-b border-gray-200 z-50 mobile-safe-top">
+      <nav className="hidden fixed top-0 left-0 right-0 bg-white shadow-lg border-b border-gray-200 z-20 mobile-safe-top">
         <div className="px-4">
           <div className="flex justify-between items-center py-3">
             {/* Logo区域 */}
@@ -101,7 +101,7 @@ const MobileNavigation = () => {
                     </button>
                     {/* 用户下拉菜单 */}
                     {isUserMenuOpen && (
-                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 animate-in fade-in slide-in-from-top-1 duration-200">
+                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-30 animate-in fade-in slide-in-from-top-1 duration-200">
                         <div className="px-4 py-2 border-b border-gray-100">
                           <p className="text-sm font-medium text-gray-900 truncate">{user?.name || user?.email}</p>
                           <p className="text-xs text-gray-500 truncate">{user?.email}</p>
@@ -171,7 +171,7 @@ const MobileNavigation = () => {
 
       {/* 移动端侧边菜单 */}
       {isMenuOpen && (
-        <div className="lg:hidden fixed inset-0 z-50 flex">
+        <div className="sm:hidden fixed inset-0 z-10 flex">
           {/* 背景遮罩 */}
           <div
             className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
@@ -321,7 +321,7 @@ const MobileNavigation = () => {
       {/* 用户菜单背景遮罩 */}
       {isUserMenuOpen && (
         <div
-          className="fixed inset-0 z-40"
+          className="fixed inset-0 z-5"
           onClick={() => setIsUserMenuOpen(false)}
         />
       )}

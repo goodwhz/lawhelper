@@ -18,6 +18,20 @@ export const supabase = createClient(supabaseUrl!, supabaseAnonKey!, {
     flowType: 'implicit', // 使用implicit流程，与现有登录兼容
     autoRefreshToken: true,
     debug: process.env.NODE_ENV === 'development',
+    // 减少不必要的请求
+    multiTab: false,
+  },
+  // 增加全局超时时间
+  global: {
+    headers: {
+      'X-Client-Info': 'unknown',
+    },
+  },
+  // 启用实时功能但降低频率
+  realtime: {
+    params: {
+      eventsPerSecond: 10,
+    },
   },
 })
 
