@@ -43,8 +43,6 @@ interface Category {
   is_active?: boolean
 }
 
-
-
 interface User {
   id: string
   email: string
@@ -66,14 +64,11 @@ export default function ProvisionManagement() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [documents, setDocuments] = useState<Document[]>([])
   const [categories, setCategories] = useState<Category[]>([])
-  const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
 
   // 批量选择状态
   const [selectedItems, setSelectedItems] = useState<string[]>([])
   const [selectAll, setSelectAll] = useState(false)
-
-
 
   // 确认对话框状态
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -82,10 +77,12 @@ export default function ProvisionManagement() {
     message: string
     onConfirm: () => void
     type?: 'danger' | 'warning' | 'info'
+    isLoading?: boolean
   }>({
     isOpen: false,
     message: '',
     onConfirm: () => {},
+    isLoading: false,
   })
 
   // 加载数据
@@ -98,13 +95,11 @@ export default function ProvisionManagement() {
     try {
       console.log('开始加载数据...')
 
-      const [documentsRes, categoriesRes, usersRes] = await Promise.all([
+      const [documentsRes, categoriesRes] = await Promise.all([
         // 从现有的 law_documents 表读取数据
         supabase.from('law_documents').select('*'),
         // 从现有的 law_categories 表读取数据
         supabase.from('law_categories').select('*'),
-        // 从 user_profiles 表读取用户数据
-        supabase.from('user_profiles').select('*'),
       ])
 
       console.log('数据库查询结果:', {
@@ -117,11 +112,6 @@ export default function ProvisionManagement() {
           data: categoriesRes.data,
           error: categoriesRes.error,
           count: categoriesRes.data?.length || 0,
-        },
-        users: {
-          data: usersRes.data,
-          error: usersRes.error,
-          count: usersRes.data?.length || 0,
         },
       })
 
@@ -137,15 +127,6 @@ export default function ProvisionManagement() {
       } else {
         console.log(`成功加载 ${categoriesRes.data?.length || 0} 个分类`)
         setCategories(categoriesRes.data || [])
-      }
-
-
-
-      if (usersRes.error) {
-        console.error('用户查询错误:', usersRes.error)
-      } else {
-        console.log(`成功加载 ${usersRes.data?.length || 0} 个用户`)
-        setUsers(usersRes.data || [])
       }
     } catch (error) {
       console.error('加载数据失败:', error)
@@ -165,8 +146,6 @@ export default function ProvisionManagement() {
       handleSearch()
     }
   }
-
-
 
   // 获取所有标签
   const allTags = useMemo(() => {
@@ -243,8 +222,6 @@ export default function ProvisionManagement() {
       return 0
     })
   }, [categories, searchQuery, sortBy, sortOrder])
-
-
 
   // 文档操作
   const [showDocumentForm, setShowDocumentForm] = useState(false)
@@ -638,7 +615,6 @@ export default function ProvisionManagement() {
               </div>
             </button>
 
-
           </div>
         </div>
 
@@ -886,7 +862,6 @@ export default function ProvisionManagement() {
             </div>
           )}
 
-
         </div>
       </div>
 
@@ -916,8 +891,6 @@ export default function ProvisionManagement() {
         />
       )}
 
-
-
       {/* 确认对话框 */}
       <ConfirmDialog
         isOpen={confirmDialog.isOpen}
@@ -926,6 +899,7 @@ export default function ProvisionManagement() {
         onConfirm={confirmDialog.onConfirm}
         onCancel={() => setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} })}
         type={confirmDialog.type}
+        isLoading={confirmDialog.isLoading}
       />
     </div>
   )

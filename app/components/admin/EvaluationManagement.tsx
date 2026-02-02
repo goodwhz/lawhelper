@@ -40,10 +40,12 @@ export default function EvaluationManagement() {
     message: string
     onConfirm: () => void
     type?: 'danger' | 'warning' | 'info'
+    isLoading?: boolean
   }>({
     isOpen: false,
     message: '',
     onConfirm: () => {},
+    isLoading: false,
   })
 
   // 加载数据
@@ -235,8 +237,13 @@ export default function EvaluationManagement() {
       case 'delete':
         message = `确定要删除选中的 ${itemCount} 个测评吗？此操作将标记为删除，不可撤销！`
         onConfirm = async () => {
-          await batchDeleteEvaluations(selectedItems)
-          setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} })
+          // 先设置 loading 状态
+          setConfirmDialog(prev => ({ ...prev, isLoading: true }))
+          try {
+            await batchDeleteEvaluations(selectedItems)
+          } finally {
+            setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} })
+          }
         }
         break
     }
@@ -247,6 +254,7 @@ export default function EvaluationManagement() {
       message,
       onConfirm,
       type: operation === 'delete' ? 'danger' : 'warning',
+      isLoading: false,
     })
   }
 
@@ -431,8 +439,12 @@ export default function EvaluationManagement() {
                                   title: '删除测评',
                                   message: `确定要删除测评 "${evaluation.title || '未命名测评'}" 吗？此操作将标记为删除，不可撤销！`,
                                   onConfirm: async () => {
-                                    await deleteEvaluation(evaluation.id)
-                                    setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} })
+                                    setConfirmDialog(prev => ({ ...prev, isLoading: true }))
+                                    try {
+                                      await deleteEvaluation(evaluation.id)
+                                    } finally {
+                                      setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} })
+                                    }
                                   },
                                   type: 'danger',
                                 })
@@ -643,6 +655,7 @@ export default function EvaluationManagement() {
         onConfirm={confirmDialog.onConfirm}
         onCancel={() => setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} })}
         type={confirmDialog.type}
+        isLoading={confirmDialog.isLoading}
       />
     </div>
   )

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { useAuth } from '@/contexts/AuthContext'
 import ConfirmDialog from '@/app/components/ui/ConfirmDialog'
@@ -39,7 +39,7 @@ export default function TemplateManagement() {
     description: '',
     category: '',
     tags: '',
-    file: null as File | null
+    file: null as File | null,
   })
 
   // 确认对话框状态
@@ -49,10 +49,12 @@ export default function TemplateManagement() {
     message: string
     onConfirm: () => void
     type?: 'danger' | 'warning' | 'info'
+    isLoading?: boolean
   }>({
     isOpen: false,
     message: '',
     onConfirm: () => {},
+    isLoading: false,
   })
 
   // 加载模板数据
@@ -85,9 +87,9 @@ export default function TemplateManagement() {
 
   // 过滤和排序模板
   const filteredTemplates = templates
-    .filter(template => {
-      const matchesSearch = template.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          template.description.toLowerCase().includes(searchTerm.toLowerCase())
+    .filter((template) => {
+      const matchesSearch = template.title.toLowerCase().includes(searchTerm.toLowerCase())
+        || template.description.toLowerCase().includes(searchTerm.toLowerCase())
       const matchesCategory = !categoryFilter || template.category === categoryFilter
       return matchesSearch && matchesCategory
     })
@@ -112,14 +114,14 @@ export default function TemplateManagement() {
         ...prev,
         file,
         title: file.name.replace(/\.[^/.]+$/, ''), // 使用文件名作为默认标题
-        file_name: file.name
+        file_name: file.name,
       }))
     }
   }
 
   const handleAddTemplate = async () => {
     if (!newTemplate.title || !newTemplate.category || !newTemplate.file) {
-      alert('请填写标题、分类并选择文件')
+      console.warn('请填写标题、分类并选择文件')
       return
     }
 
@@ -149,18 +151,17 @@ export default function TemplateManagement() {
         description: '',
         category: '',
         tags: '',
-        file: null
+        file: null,
       })
       setShowAddForm(false)
-      
+
       // 重新加载模板列表
       await loadTemplates()
-      
-      alert('模板添加成功！')
 
+      console.log('模板添加成功！')
     } catch (error) {
       console.error('添加模板失败:', error)
-      alert(`添加模板失败: ${error instanceof Error ? error.message : '未知错误'}`)
+      console.error(`添加模板失败: ${error instanceof Error ? error.message : '未知错误'}`)
     } finally {
       setUploading(false)
     }
@@ -272,7 +273,7 @@ export default function TemplateManagement() {
                 </div>
               </div>
             </div>
-            
+
             <select
               value={categoryFilter}
               onChange={e => setCategoryFilter(e.target.value)}
@@ -301,7 +302,7 @@ export default function TemplateManagement() {
               <option value="download_count-asc">下载次数 ↑</option>
             </select>
           </div>
-          
+
           {/* 新增模板按钮 */}
           <button
             onClick={() => setShowAddForm(true)}
@@ -427,17 +428,19 @@ export default function TemplateManagement() {
                   disabled={uploading}
                   className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 disabled:bg-green-300 transition-colors flex items-center justify-center gap-2"
                 >
-                  {uploading ? (
-                    <>
-                      <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                      上传中...
-                    </>
-                  ) : (
-                    '确认添加'
-                  )}
+                  {uploading
+                    ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        上传中...
+                      </>
+                    )
+                    : (
+                      '确认添加'
+                    )}
                 </button>
                 <button
                   onClick={() => setShowAddForm(false)}
@@ -472,8 +475,8 @@ export default function TemplateManagement() {
                     <button
                       onClick={() => togglePublish(template.id, template.is_published)}
                       className={`text-xs px-2 py-1 rounded ${
-                        template.is_published 
-                          ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                        template.is_published
+                          ? 'bg-green-100 text-green-800 hover:bg-green-200'
                           : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
                       }`}
                     >
@@ -482,8 +485,8 @@ export default function TemplateManagement() {
                     <button
                       onClick={() => toggleFeatured(template.id, template.is_featured)}
                       className={`text-xs px-2 py-1 rounded ${
-                        template.is_featured 
-                          ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200' 
+                        template.is_featured
+                          ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
                           : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
                       }`}
                     >
@@ -551,6 +554,7 @@ export default function TemplateManagement() {
         onConfirm={confirmDialog.onConfirm}
         onCancel={() => setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} })}
         type={confirmDialog.type}
+        isLoading={confirmDialog.isLoading}
       />
     </div>
   )
@@ -559,13 +563,13 @@ export default function TemplateManagement() {
 // 分类颜色映射
 function getCategoryColor(category: string) {
   const colors = {
-    '离职文书': 'bg-red-100 text-red-800',
-    '解除合同': 'bg-orange-100 text-orange-800',
-    '仲裁诉讼': 'bg-purple-100 text-purple-800',
-    '工伤保险': 'bg-blue-100 text-blue-800',
-    '日常工作': 'bg-green-100 text-green-800',
-    '工资争议': 'bg-yellow-100 text-yellow-800',
-    '合同管理': 'bg-indigo-100 text-indigo-800',
+    离职文书: 'bg-red-100 text-red-800',
+    解除合同: 'bg-orange-100 text-orange-800',
+    仲裁诉讼: 'bg-purple-100 text-purple-800',
+    工伤保险: 'bg-blue-100 text-blue-800',
+    日常工作: 'bg-green-100 text-green-800',
+    工资争议: 'bg-yellow-100 text-yellow-800',
+    合同管理: 'bg-indigo-100 text-indigo-800',
   }
   return colors[category as keyof typeof colors] || 'bg-gray-100 text-gray-800'
 }

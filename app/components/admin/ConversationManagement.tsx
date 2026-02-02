@@ -59,10 +59,12 @@ export default function ConversationManagement() {
     message: string
     onConfirm: () => void
     type?: 'danger' | 'warning' | 'info'
+    isLoading?: boolean
   }>({
     isOpen: false,
     message: '',
     onConfirm: () => {},
+    isLoading: false,
   })
 
   // 加载数据
@@ -250,8 +252,12 @@ export default function ConversationManagement() {
       case 'delete':
         message = `确定要删除选中的 ${itemCount} 个对话吗？此操作将同时删除所有关联的消息，不可撤销！`
         onConfirm = async () => {
-          await batchDeleteConversations(selectedItems)
-          setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} })
+          setConfirmDialog(prev => ({ ...prev, isLoading: true }))
+          try {
+            await batchDeleteConversations(selectedItems)
+          } finally {
+            setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} })
+          }
         }
         break
     }
@@ -262,6 +268,7 @@ export default function ConversationManagement() {
       message,
       onConfirm,
       type: operation === 'delete' ? 'danger' : 'warning',
+      isLoading: false,
     })
   }
 
@@ -431,8 +438,12 @@ export default function ConversationManagement() {
                                   title: '删除对话',
                                   message: `确定要删除对话 "${conv.title || '未命名对话'}" 吗？此操作将同时删除所有关联的消息，不可撤销！`,
                                   onConfirm: async () => {
-                                    await deleteConversation(conv.id)
-                                    setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} })
+                                    setConfirmDialog(prev => ({ ...prev, isLoading: true }))
+                                    try {
+                                      await deleteConversation(conv.id)
+                                    } finally {
+                                      setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} })
+                                    }
                                   },
                                   type: 'danger',
                                 })
@@ -544,6 +555,7 @@ export default function ConversationManagement() {
         onConfirm={confirmDialog.onConfirm}
         onCancel={() => setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} })}
         type={confirmDialog.type}
+        isLoading={confirmDialog.isLoading}
       />
     </div>
   )

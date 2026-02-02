@@ -55,10 +55,12 @@ const UserManagement: React.FC = () => {
     message: string
     onConfirm: () => void
     type?: 'danger' | 'warning' | 'info'
+    isLoading?: boolean
   }>({
     isOpen: false,
     message: '',
     onConfirm: () => {},
+    isLoading: false,
   })
 
   const limit = 20
@@ -136,7 +138,7 @@ const UserManagement: React.FC = () => {
     } finally {
       setLoading(false)
     }
-  }, [isAdmin, currentPage, searchQuery, roleFilter, sortBy, sortOrder])
+  }, [isAdmin, currentPage, searchQuery, roleFilter, sortBy, sortOrder, getCurrentUserToken])
 
   // 获取当前用户token
   const getCurrentUserToken = async () => {
@@ -868,6 +870,7 @@ const UserManagement: React.FC = () => {
         onConfirm={confirmDialog.onConfirm}
         onCancel={() => setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} })}
         type={confirmDialog.type}
+        isLoading={confirmDialog.isLoading}
       />
     </div>
   )
