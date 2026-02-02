@@ -13,8 +13,10 @@ const nextConfig = {
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   },
 
-  // 添加空白的 turbopack 配置以避免警告
-  turbopack: {},
+  // 配置 turbopack 明确指定项目根目录
+  turbopack: {
+    root: __dirname,
+  },
 
   // 配置 webpack 以解析父目录的 node_modules
   webpack: (config) => {

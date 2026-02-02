@@ -15,7 +15,13 @@ interface Message {
   timestamp: Date
 }
 
-const NiMaEvaluatorChat: React.FC = () => {
+type EvaluatorVersion = 'simple' | 'normal'
+
+interface NiMaEvaluatorChatProps {
+  version: EvaluatorVersion
+}
+
+const NiMaEvaluatorChat: React.FC<NiMaEvaluatorChatProps> = ({ version }) => {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -130,11 +136,16 @@ const NiMaEvaluatorChat: React.FC = () => {
     initializationRef.current = true
     isCheckingRef.current = true
 
+    // 根据版本选择 API 端点
+    const apiEndpoint = version === 'simple'
+      ? '/api/spark-evaluator/simple'
+      : '/api/spark-evaluator/chat'
+
     // 延迟1-2秒后执行连接检查,避免多个组件同时初始化
     const checkConnection = async () => {
       setConnectionStatus('connecting')
       try {
-        const response = await fetch('/api/spark-evaluator/chat', {
+        const response = await fetch(apiEndpoint, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -220,7 +231,7 @@ const NiMaEvaluatorChat: React.FC = () => {
       clearTimeout(timer)
       isCheckingRef.current = false
     }
-  }, [])
+  }, [version])
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) { return }
@@ -238,7 +249,12 @@ const NiMaEvaluatorChat: React.FC = () => {
     setShouldScrollToBottom(true) // 用户发送消息后滚动
 
     try {
-      const response = await fetch('/api/spark-evaluator/chat', {
+      // 根据版本选择 API 端点
+      const apiEndpoint = version === 'simple'
+        ? '/api/spark-evaluator/simple'
+        : '/api/spark-evaluator/chat'
+
+      const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -304,7 +320,12 @@ const NiMaEvaluatorChat: React.FC = () => {
     setConnectionStatus('connecting')
 
     try {
-      const response = await fetch('/api/spark-evaluator/chat', {
+      // 根据版本选择 API 端点
+      const apiEndpoint = version === 'simple'
+        ? '/api/spark-evaluator/simple'
+        : '/api/spark-evaluator/chat'
+
+      const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

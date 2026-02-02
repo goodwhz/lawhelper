@@ -10,16 +10,18 @@ import UserManagement from '@/app/components/admin/UserManagement'
 import ProvisionManagement from '@/app/components/admin/ProvisionManagement'
 import ConversationManagement from '@/app/components/admin/ConversationManagement'
 import TemplateManagement from '@/app/components/admin/TemplateManagement'
+import EvaluationManagement from '@/app/components/admin/EvaluationManagement'
 
 function AdminPage() {
   const { user } = useAuth()
-  const [activeTab, setActiveTab] = useState<'users' | 'content' | 'templates' | 'conversations' | 'sync' | 'settings'>('users')
+  const [activeTab, setActiveTab] = useState<'users' | 'content' | 'templates' | 'conversations' | 'evaluations' | 'sync' | 'settings'>('users')
 
   const tabs = [
     { id: 'users', label: '用户管理', icon: '👥' },
     { id: 'content', label: '条文管理', icon: '📚' },
     { id: 'templates', label: '模板管理', icon: '📄' },
     { id: 'conversations', label: '对话记录', icon: '💬' },
+    { id: 'evaluations', label: '测评管理', icon: '🐂' },
   ]
 
   return (
@@ -121,6 +123,16 @@ function AdminPage() {
                     <p className="text-gray-600 text-sm lg:text-base">查看和管理用户对话记录，包括查看对话详情、删除对话等操作。</p>
                   </div>
                   <ConversationManagement />
+                </div>
+              )}
+
+              {activeTab === 'evaluations' && (
+                <div className="p-4 lg:p-6">
+                  <div className="mb-4 lg:mb-6">
+                    <h2 className="text-lg lg:text-xl font-semibold text-gray-900 mb-2">测评管理</h2>
+                    <p className="text-gray-600 text-sm lg:text-base">查看和管理牛马测评仪的测评记录，包括查看测评详情、测评结果、删除测评等操作。</p>
+                  </div>
+                  <EvaluationManagement />
                 </div>
               )}
             </div>

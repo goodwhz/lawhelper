@@ -1,0 +1,110 @@
+'use client'
+
+import React, { useState } from 'react'
+import NiMaEvaluatorChat from '@/app/components/tools/niu-ma-evaluator-chat'
+import Navigation from '@/app/components/navigation'
+import MobilePageHeader from '@/app/components/ui/MobilePageHeader'
+import PageAuthGuard from '@/app/components/page-auth-guard'
+import ErrorBoundary from '@/app/components/error-boundary'
+
+type EvaluatorVersion = 'simple' | 'normal'
+
+const NiMaEvaluatorPage: React.FC = () => {
+  const [selectedVersion, setSelectedVersion] = useState<EvaluatorVersion | null>(null)
+
+  return (
+    <ErrorBoundary>
+      <PageAuthGuard requireAuth={true}>
+        <div className="h-screen bg-gray-50 flex flex-col">
+          {/* 导航栏 */}
+          <Navigation />
+
+          {/* 移动端页面头部 */}
+          <MobilePageHeader title="牛马测评仪" />
+
+          {/* 主要内容区域，占据剩余空间 */}
+          <div className="flex-1 bg-gradient-to-br from-pink-50 via-white to-rose-50 pt-20 lg:pt-24 overflow-hidden">
+            <div className="h-full max-w-7xl mx-auto px-4 flex flex-col">
+              {selectedVersion === null ? (
+                /* 版本选择界面 */
+                <div className="flex-1 bg-white rounded-2xl shadow-sm border border-gray-100 p-8 flex flex-col justify-center items-center">
+                  <div className="max-w-2xl w-full">
+                    <h1 className="text-3xl font-bold text-gray-900 mb-4 text-center">欢迎使用牛马测评仪</h1>
+                    <p className="text-gray-600 mb-8 text-center">请选择您需要的评估版本</p>
+
+                    <div className="grid md:grid-cols-2 gap-6">
+                      {/* 简易版 */}
+                      <div
+                        className="border-2 border-gray-200 rounded-xl p-6 cursor-pointer hover:border-pink-500 hover:shadow-lg transition-all group"
+                        onClick={() => setSelectedVersion('simple')}
+                      >
+                        <div className="text-center">
+                          <div className="text-4xl mb-4">⚡</div>
+                          <h2 className="text-xl font-bold text-gray-900 mb-3">简易版</h2>
+                          <div className="text-gray-600 text-sm space-y-2">
+                            <p>• 5-10 个问题</p>
+                            <p>• 快速评估</p>
+                            <p>• 适合快速了解基本情况</p>
+                          </div>
+                          <div className="mt-4 text-pink-500 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+                            点击开始 →
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 正常版 */}
+                      <div
+                        className="border-2 border-gray-200 rounded-xl p-6 cursor-pointer hover:border-pink-500 hover:shadow-lg transition-all group"
+                        onClick={() => setSelectedVersion('normal')}
+                      >
+                        <div className="text-center">
+                          <div className="text-4xl mb-4">📊</div>
+                          <h2 className="text-xl font-bold text-gray-900 mb-3">正常版</h2>
+                          <div className="text-gray-600 text-sm space-y-2">
+                            <p>• 12+ 个问题</p>
+                            <p>• 全面分析</p>
+                            <p>• 适合深入了解职场处境</p>
+                          </div>
+                          <div className="mt-4 text-pink-500 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+                            点击开始 →
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* 对话界面 */
+                <div className="flex-1 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col min-h-0">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h2 className="text-xl font-semibold text-gray-900">
+                        {selectedVersion === 'simple' ? '简易版测评' : '正常版测评'}
+                      </h2>
+                      <p className="text-gray-500 text-sm">
+                        {selectedVersion === 'simple'
+                          ? '快速评估您的职场处境'
+                          : 'AI 将为您进行全方位的测评分析'}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setSelectedVersion(null)}
+                      className="text-sm text-gray-600 hover:text-pink-600 font-medium transition-colors"
+                    >
+                      返回选择
+                    </button>
+                  </div>
+                  <div className="flex-1 min-h-0">
+                    <NiMaEvaluatorChat version={selectedVersion} />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </PageAuthGuard>
+    </ErrorBoundary>
+  )
+}
+
+export default NiMaEvaluatorPage
