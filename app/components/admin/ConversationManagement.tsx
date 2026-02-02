@@ -67,11 +67,7 @@ export default function ConversationManagement() {
     isLoading: false,
   })
 
-  // 加载数据
-  useEffect(() => {
-    loadData()
-  }, [])
-
+  // 加载数据的函数
   const loadData = async () => {
     setLoading(true)
     try {
@@ -132,6 +128,11 @@ export default function ConversationManagement() {
       setLoading(false)
     }
   }
+
+  // 加载数据
+  useEffect(() => {
+    loadData()
+  }, [])
 
   // 执行搜索
   const handleSearch = () => {

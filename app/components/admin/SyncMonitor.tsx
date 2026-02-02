@@ -83,7 +83,7 @@ const SyncMonitor: React.FC = () => {
     } finally {
       setLoading(false)
     }
-  }, [isAdmin])
+  }, [])
 
   // 强制同步
   const forceSync = async () => {
@@ -157,7 +157,8 @@ const SyncMonitor: React.FC = () => {
       const interval = setInterval(fetchSyncStatus, 30000)
       return () => clearInterval(interval)
     }
-  }, [isAdmin, fetchSyncStatus])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin])
 
   // 检查用户权限
   if (!isAdmin) {

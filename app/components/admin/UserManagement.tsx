@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import ConfirmDialog from '@/app/components/ui/ConfirmDialog'
+import { supabase } from '@/lib/supabaseClient'
 
 interface User {
   id: string
@@ -28,6 +29,18 @@ interface UsersResponse {
 
 const UserManagement: React.FC = () => {
   const { user: currentUser, isAdmin } = useAuth()
+
+  // 获取当前用户 token 的辅助函数
+  const getUserToken = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      return session?.access_token || null
+    } catch (error) {
+      console.error('获取 token 失败:', error)
+      return null
+    }
+  }
+
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -90,7 +103,7 @@ const UserManagement: React.FC = () => {
         return
       }
 
-      const token = await getCurrentUserToken()
+      const token = await getUserToken()
 
       if (!token) {
         console.error('未找到用户token，用户可能未登录')
@@ -138,104 +151,12 @@ const UserManagement: React.FC = () => {
     } finally {
       setLoading(false)
     }
-  }, [isAdmin, currentPage, searchQuery, roleFilter, sortBy, sortOrder, getCurrentUserToken])
-
-  // 获取当前用户token
-  const getCurrentUserToken = async () => {
-    try {
-      console.log('开始获取用户token...')
-      console.log('当前用户状态:', {
-        hasUser: !!currentUser,
-        userEmail: currentUser?.email,
-        isAdmin,
-      })
-
-      // 如果没有用户，直接返回null
-      if (!currentUser) {
-        console.warn('用户未登录')
-        return null
-      }
-
-      // 直接从Supabase获取当前session
-      const { supabase } = await import('@/lib/supabaseClient')
-
-      // 首先尝试获取当前用户（这个方法更可靠）
-      const { data: { user }, error: userError } = await supabase.auth.getUser()
-
-      console.log('getUser结果:', {
-        hasUser: !!user,
-        userId: user?.id,
-        userEmail: user?.email,
-        error: userError?.message,
-      })
-
-      if (userError) {
-        console.error('获取用户失败:', userError)
-      }
-
-      // 然后尝试获取session
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-
-      console.log('getSession结果:', {
-        hasSession: !!session,
-        hasAccessToken: !!session?.access_token,
-        hasUser: !!session?.user,
-        sessionUserId: session?.user?.id,
-        currentUserId: currentUser?.id,
-        error: sessionError?.message,
-      })
-
-      if (sessionError) {
-        console.error('获取session失败:', sessionError)
-      }
-
-      // 优先使用session中的token
-      if (session?.access_token) {
-        console.log('✅ 成功从session获取到token')
-        return session.access_token
-      }
-
-      // 尝试从不同的存储键获取token
-      if (typeof window !== 'undefined') {
-        const possibleKeys = [
-          'supabase.auth.token',
-          `sb-${process.env.NEXT_PUBLIC_SUPABASE_URL?.split('//')[1]?.split('.')[0]}-auth-token`,
-          'sb-auth-token',
-        ]
-
-        for (const key of possibleKeys) {
-          const tokenData = localStorage.getItem(key)
-          if (tokenData) {
-            try {
-              if (typeof tokenData === 'string' && tokenData.startsWith('ey')) {
-                console.log(`✅ 从${key}获取到JWT token`)
-                return tokenData
-              } else {
-                const parsed = JSON.parse(tokenData)
-                if (parsed.accessToken || parsed.access_token) {
-                  console.log(`✅ 从${key}获取到token`)
-                  return parsed.accessToken || parsed.access_token
-                }
-              }
-            } catch (e) {
-              console.warn(`解析${key}失败:`, e)
-            }
-          }
-        }
-      }
-
-      console.warn('❌ 未找到有效的用户token')
-      return null
-    } catch (error) {
-      console.error('获取用户token异常:', error)
-      return null
-    }
-  }
+  }, [isAdmin])
 
   // 更新用户信息
   const updateUser = async (userId: string) => {
     try {
-      const token = await getCurrentUserToken()
+      const token = await getUserToken()
       if (!token) { return }
 
       const response = await fetch('/api/admin/users', {
@@ -270,7 +191,7 @@ const UserManagement: React.FC = () => {
   // 删除单个用户
   const deleteUser = async (userId: string) => {
     try {
-      const token = await getCurrentUserToken()
+      const token = await getUserToken()
       if (!token) { return }
 
       const response = await fetch(`/api/admin/users/${userId}`, {
@@ -301,7 +222,7 @@ const UserManagement: React.FC = () => {
   // 批量操作用户
   const batchOperateUsers = async (action: 'updateRole' | 'delete', role?: 'user' | 'admin') => {
     try {
-      const token = await getCurrentUserToken()
+      const token = await getUserToken()
       if (!token) { return }
 
       const response = await fetch('/api/admin/users/batch', {
@@ -369,7 +290,8 @@ const UserManagement: React.FC = () => {
     } else {
       setLoading(false)
     }
-  }, [currentPage, searchQuery, roleFilter, sortBy, sortOrder, isAdmin, fetchUsers])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, searchQuery, roleFilter, sortBy, sortOrder, isAdmin])
 
   useEffect(() => {
     setSelectAll(selectedUsers.length === users.length && users.length > 0)
